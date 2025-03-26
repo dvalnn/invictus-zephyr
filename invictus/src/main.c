@@ -7,7 +7,11 @@
 #include <zephyr/kernel.h>
 
 int main(void) {
-  printk("Hello World! %s\n", CONFIG_BOARD_TARGET);
+  while (1) {
+    printk("Hello World! %s\n", CONFIG_BOARD_TARGET);
+    k_timeout_t timeout = K_MSEC(1000);
+    k_sleep(timeout);
+  }
 
   return 0;
 }
