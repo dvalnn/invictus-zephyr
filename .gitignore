@@ -1,0 +1,16 @@
+# ignore zephyr workspace stuff that is managed by west
+.west
+bootloader
+build
+modules
+tools
+zephyr
+
+# other ignores
+.cache
+
+# direnv
+.direnv
+
+# compile commands
+compile_commands.json
