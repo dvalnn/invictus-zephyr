@@ -41,6 +41,7 @@
 
           # Project specific dependencies
           clang-tools # for clangd
+          glibc_multi
         ];
 
         shellHook = ''
