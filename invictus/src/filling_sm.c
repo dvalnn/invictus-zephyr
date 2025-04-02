@@ -1,107 +1,490 @@
-#include <zephyr/smf.h>
+#include "filling_sm.h"
 
 /* Forward declaration of state table */
 static const struct smf_state filling_states[];
 
 /* List of possible states */
 enum filling_state {
-    // TOP Level
-    ABORT,
-    IDLE,
-    MANUAL_OP, // NOTE: Acept manual override commands from the ground station
+	IDLE,
+	ABORT,
+	MANUAL_OP, // NOTE: Acept manual override commands from the ground station
 
-    // SAFE PAUSE
-    SAFE_PAUSE, // parent state
-    SAFE_PAUSE_IDLE,
-    SAFE_PAUSE_VENT,
+	// SAFE PAUSE
+	SAFE_PAUSE, // parent state
+	SAFE_PAUSE_IDLE,
+	SAFE_PAUSE_VENT,
 
-    // FILLING_COPV (filling N)
-    FILLING_COPV, // parent state
-    FILLING_COPV_IDLE,
-    FILLING_COPV_FILL,
+	// FILLING_COPV (filling N)
+	FILLING_COPV, // parent state
+	FILLING_COPV_IDLE,
+	FILLING_COPV_FILL,
 
-    // PRE_PRESSURIZING
-    PRE_PRESSURIZING, // parent state
-    PRE_PRESSURIZING_IDLE,
-    PRE_PRESSURIZING_VENT,
-    PRE_PRESSURIZING_FILL_N,
+	// PRE_PRESSURIZING
+	PRE_PRESSURIZING, // parent state
+	PRE_PRESSURIZING_IDLE,
+	PRE_PRESSURIZING_VENT,
+	PRE_PRESSURIZING_FILL_N,
 
-    // FILLING_N20
-    FILLING_N20, // parent state
-    FILLING_N20_IDLE,
-    FILLING_N20_FILL,
-    FILLING_N20_VENT,
+	// FILLING_N20
+	FILLING_N20, // parent state
+	FILLING_N20_IDLE,
+	FILLING_N20_FILL,
+	FILLING_N20_VENT,
 
-    // POST_PRESSURIZING
-    POST_PRESSURIZING, // parent state
-    POST_PRESSURIZING_IDLE,
-    POST_PRESSURIZING_VENT,
-    POST_PRESSURIZING_FILL_N,
+	// POST_PRESSURIZING
+	POST_PRESSURIZING, // parent state
+	POST_PRESSURIZING_IDLE,
+	POST_PRESSURIZING_VENT,
+	POST_PRESSURIZING_FILL_N,
 };
 
-/* User defined object */
-struct s_object {
-    /* This must be first */
-    struct smf_ctx ctx;
+static bool transition_global(struct filling_sm_object *s)
+{
+	enum cmd_global cmd = CMD_GLOBAL(s->command);
+	if (!cmd) {
+		return false;
+	}
 
-    /* Other state specific data add here */
-} s_obj;
+	switch (cmd) {
+	case CMD_STOP:
+		smf_set_state(SMF_CTX(s), &filling_states[IDLE]);
+		break;
+
+	case CMD_ABORT:
+		smf_set_state(SMF_CTX(s), &filling_states[ABORT]);
+		break;
+
+	case CMD_PAUSE:
+		smf_set_state(SMF_CTX(s), &filling_states[SAFE_PAUSE]);
+		break;
+	}
+
+	return true;
+}
 
 /* State Callbacks */
 
-static void abort_entry(void *o) {
-    struct s_object *s = (struct s_object *)o;
-    (void)s; // unused
+static void idle_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
 
-    // Do something
-    // ...
+	// Do something
+	// ...
 }
 
-static void abort_run(void *o) {
-    struct s_object *s = (struct s_object *)o;
-    (void)s; // unused
+static void idle_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
 
-    // Do something
-    // ...
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	enum cmd_idle cmd = CMD_IDLE(s->command);
+	if (!cmd) {
+		return;
+	}
+
+	switch (cmd) {
+	case CMD_FILL_COPV:
+		smf_set_state(SMF_CTX(s), &filling_states[FILLING_COPV]);
+		break;
+	case CMD_PRE_PRESSURIZE:
+		smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING]);
+		break;
+	case CMD_FILL_N20:
+		smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20]);
+		break;
+	case CMD_POST_PRESSURIZE:
+		smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING]);
+		break;
+	}
 }
 
-static void abort_exit(void *o) {
-    struct s_object *s = (struct s_object *)o;
-    (void)s; // unused
+static void idle_exit(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s;
 
-    // Do something
-    // ...
+	// Do something
+	// ...
+}
+
+static void abort_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+
+	// Do something
+	// ...
+}
+
+static void abort_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	enum cmd_other cmd = CMD_OTHER(s->command);
+	if (!cmd) {
+		return;
+	}
+
+	switch (cmd) {
+	case CMD_READY:
+		smf_set_state(SMF_CTX(s), &filling_states[IDLE]);
+		break;
+
+	case CMD_RESUME:
+		break;
+	}
+}
+
+static void abort_exit(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+
+	// Do something
+	// ...
+}
+
+static void safe_pause_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	enum cmd_other cmd = CMD_OTHER(s->command);
+	if (!cmd) {
+		return;
+	}
+
+	switch (cmd) {
+	case CMD_READY:
+		break;
+	case CMD_RESUME:
+		smf_set_state(SMF_CTX(s), &filling_states[IDLE]);
+		break;
+	}
+}
+
+static void safe_pause_idle_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	if (s->n_pressure > s->s_p_config.trigger_np) {
+		smf_set_state(SMF_CTX(s), &filling_states[SAFE_PAUSE_VENT]);
+	}
+}
+
+static void safe_pause_vent_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	if (s->n_pressure <= s->s_p_config.target_np) {
+		smf_set_state(SMF_CTX(s), &filling_states[SAFE_PAUSE_IDLE]);
+	}
+}
+
+static void filling_copv_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s;
+
+	// Do something
+	// ...
+}
+
+static void filling_copv_idle_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	if (s->n_pressure <= s->f_copv_config.target_np) {
+		smf_set_state(SMF_CTX(s), &filling_states[FILLING_COPV_FILL]);
+	}
+}
+
+static void filling_copv_fill_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	if (s->n_pressure >= s->f_copv_config.target_np) {
+		smf_set_state(SMF_CTX(s), &filling_states[FILLING_COPV_IDLE]);
+	}
+}
+
+static void pre_pressurizing_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s;
+
+	// Do something
+	// ...
+}
+
+static void pre_pressurizing_idle_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	// TODO: Double check this condition
+	if (s->n_pressure > s->pre_p_config.trigger_n2op) {
+		smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_VENT]);
+		return;
+	}
+
+	if (s->n2o_pressure < s->pre_p_config.target_n2op) {
+		smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_FILL_N]);
+	}
+}
+
+static void pre_pressurizing_fill_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	if (s->n2o_pressure >= s->pre_p_config.target_n2op) {
+		smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_IDLE]);
+	}
+}
+
+static void pre_pressurizing_vent_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	// TODO: Double check this condition
+	if (s->n_pressure <= s->pre_p_config.target_n2op) {
+		smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_IDLE]);
+	}
+}
+
+static void filling_n20_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s;
+
+	// Do something
+	// ...
+}
+
+static void filling_n20_idle_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	if (s->n2o_weight < s->f_n20_config.target_weight) {
+		smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_FILL]);
+	}
+}
+
+static void filling_n20_fill_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	if (s->n2o_pressure >= s->f_n20_config.trigger_n2op &&
+	    s->temperature > s->f_n20_config.trigger_temp) {
+		smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_VENT]);
+		return;
+	}
+
+	if (s->n2o_weight >= s->f_n20_config.target_weight) {
+		smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_IDLE]);
+	}
+}
+
+static void filling_n20_vent_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	if (s->n2o_pressure <= s->f_n20_config.target_n2op ||
+	    s->temperature <= s->f_n20_config.trigger_temp) {
+		smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_FILL]);
+	}
+}
+
+static void post_pressurizing_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s;
+
+	// Do something
+	// ...
+}
+
+static void post_pressurizing_idle_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	if (s->n_pressure > s->post_p_config.trigger_n2op) {
+		smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_VENT]);
+		return;
+	}
+
+	if (s->n2o_pressure < s->post_p_config.target_n2op) {
+		smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_FILL_N]);
+	}
+}
+
+static void post_pressurizing_fill_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	if (s->n2o_pressure >= s->post_p_config.target_n2op) {
+		smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_IDLE]);
+	}
+}
+
+static void post_pressurizing_vent_run(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+
+	// Do something
+	// ...
+
+	if (transition_global(s)) {
+		return;
+	}
+
+	if (s->n_pressure <= s->post_p_config.target_n2op) {
+		smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_IDLE]);
+	}
 }
 
 /* Populate State table */
 static const struct smf_state filling_states[] = {
+	// clang-format off
+    //
+	// SMF_CREATE_STATE(s_entry_cb,  s_run_cb,   s_exit_cb,  s_parent,  s_initial_o),
+    //
+    // Parent states have initial transitions to their respective idle states
+    
+    [IDLE]      = SMF_CREATE_STATE(idle_entry, idle_run, idle_exit, NULL, NULL),
+	[ABORT]     = SMF_CREATE_STATE(abort_entry, abort_run, abort_exit, NULL, NULL),
+	[MANUAL_OP] = SMF_CREATE_STATE(NULL, NULL, NULL, NULL, NULL), // TODO
 
-    // SMF_CREATE_STATE(s_entry_cb, s_run_cb, s_exit_cb, s_parent, s_initial_o),
+	[SAFE_PAUSE]        = SMF_CREATE_STATE(NULL, safe_pause_run, NULL, NULL, &filling_states[SAFE_PAUSE_IDLE]),
+	[SAFE_PAUSE_IDLE]   = SMF_CREATE_STATE(NULL, safe_pause_idle_run, NULL, &filling_states[SAFE_PAUSE], NULL),
+	[SAFE_PAUSE_VENT]   = SMF_CREATE_STATE(NULL, safe_pause_vent_run, NULL, &filling_states[SAFE_PAUSE], NULL),
 
-    [ABORT] = SMF_CREATE_STATE(abort_entry, abort_run, abort_exit, NULL, NULL),
-    [IDLE] = SMF_CREATE_STATE(NULL, NULL, NULL, NULL, NULL),
-    [MANUAL_OP] = SMF_CREATE_STATE(NULL, NULL, NULL, NULL, NULL),
+	[FILLING_COPV]      = SMF_CREATE_STATE(NULL, filling_copv_run, NULL, NULL, &filling_states[FILLING_COPV_IDLE]),
+	[FILLING_COPV_IDLE] = SMF_CREATE_STATE(NULL, filling_copv_idle_run, NULL, &filling_states[FILLING_COPV], NULL),
+	[FILLING_COPV_FILL] = SMF_CREATE_STATE(NULL, filling_copv_fill_run, NULL, &filling_states[FILLING_COPV], NULL),
 
-    [SAFE_PAUSE] = SMF_CREATE_STATE(NULL, NULL, NULL, NULL, NULL),
-    [SAFE_PAUSE_IDLE] = SMF_CREATE_STATE(NULL, NULL, NULL, &filling_states[SAFE_PAUSE], NULL),
-    [SAFE_PAUSE_VENT] = SMF_CREATE_STATE(NULL, NULL, NULL, &filling_states[SAFE_PAUSE], NULL),
+	[PRE_PRESSURIZING]          = SMF_CREATE_STATE(NULL, pre_pressurizing_run, NULL, NULL, &filling_states[PRE_PRESSURIZING_IDLE]),
+	[PRE_PRESSURIZING_IDLE]     = SMF_CREATE_STATE(NULL, pre_pressurizing_idle_run, NULL, &filling_states[PRE_PRESSURIZING], NULL),
+	[PRE_PRESSURIZING_VENT]     = SMF_CREATE_STATE(NULL, pre_pressurizing_vent_run, NULL, &filling_states[PRE_PRESSURIZING], NULL),
+	[PRE_PRESSURIZING_FILL_N]   = SMF_CREATE_STATE(NULL, pre_pressurizing_fill_run, NULL, &filling_states[PRE_PRESSURIZING], NULL),
 
-    [FILLING_COPV] = SMF_CREATE_STATE(NULL, NULL, NULL, NULL, NULL),
-    [FILLING_COPV_IDLE] = SMF_CREATE_STATE(NULL, NULL, NULL, &filling_states[FILLING_COPV], NULL),
-    [FILLING_COPV_FILL] = SMF_CREATE_STATE(NULL, NULL, NULL, &filling_states[FILLING_COPV], NULL),
+	[FILLING_N20]       = SMF_CREATE_STATE(NULL, filling_n20_run, NULL, NULL, &filling_states[FILLING_N20_IDLE]),
+	[FILLING_N20_IDLE]  = SMF_CREATE_STATE(NULL, filling_n20_idle_run, NULL, &filling_states[FILLING_N20], NULL),
+	[FILLING_N20_FILL]  = SMF_CREATE_STATE(NULL, filling_n20_fill_run, NULL, &filling_states[FILLING_N20], NULL),
+	[FILLING_N20_VENT]  = SMF_CREATE_STATE(NULL, filling_n20_vent_run, NULL, &filling_states[FILLING_N20], NULL),
 
-    [PRE_PRESSURIZING] = SMF_CREATE_STATE(NULL, NULL, NULL, NULL, NULL),
-    [PRE_PRESSURIZING_IDLE] = SMF_CREATE_STATE( NULL, NULL, NULL, &filling_states[PRE_PRESSURIZING], NULL),
-    [PRE_PRESSURIZING_VENT] = SMF_CREATE_STATE( NULL, NULL, NULL, &filling_states[PRE_PRESSURIZING], NULL),
-    [PRE_PRESSURIZING_FILL_N] = SMF_CREATE_STATE( NULL, NULL, NULL, &filling_states[PRE_PRESSURIZING], NULL),
+	[POST_PRESSURIZING]         = SMF_CREATE_STATE(NULL, post_pressurizing_run, NULL, NULL, &filling_states[POST_PRESSURIZING_IDLE]),
+	[POST_PRESSURIZING_IDLE]    = SMF_CREATE_STATE(NULL, post_pressurizing_idle_run, NULL, &filling_states[POST_PRESSURIZING], NULL),
+	[POST_PRESSURIZING_VENT]    = SMF_CREATE_STATE(NULL, post_pressurizing_vent_run, NULL, &filling_states[POST_PRESSURIZING], NULL),
+	[POST_PRESSURIZING_FILL_N]  = SMF_CREATE_STATE(NULL, post_pressurizing_fill_run, NULL, &filling_states[POST_PRESSURIZING], NULL),
 
-    [FILLING_N20] = SMF_CREATE_STATE(NULL, NULL, NULL, NULL, NULL),
-    [FILLING_N20_IDLE] = SMF_CREATE_STATE(NULL, NULL, NULL, &filling_states[FILLING_N20], NULL),
-    [FILLING_N20_FILL] = SMF_CREATE_STATE(NULL, NULL, NULL, &filling_states[FILLING_N20], NULL),
-    [FILLING_N20_VENT] = SMF_CREATE_STATE(NULL, NULL, NULL, &filling_states[FILLING_N20], NULL),
-
-    [POST_PRESSURIZING] = SMF_CREATE_STATE(NULL, NULL, NULL, NULL, NULL),
-    [POST_PRESSURIZING_IDLE] = SMF_CREATE_STATE( NULL, NULL, NULL, &filling_states[POST_PRESSURIZING], NULL),
-    [POST_PRESSURIZING_VENT] = SMF_CREATE_STATE( NULL, NULL, NULL, &filling_states[POST_PRESSURIZING], NULL),
-    [POST_PRESSURIZING_FILL_N] = SMF_CREATE_STATE( NULL, NULL, NULL, &filling_states[POST_PRESSURIZING], NULL),
+	// clang-format on
 };
+
+void filling_sm_init(struct filling_sm_object *initial_s_obj)
+{
+	smf_set_initial(SMF_CTX(initial_s_obj), &filling_states[IDLE]);
+}
