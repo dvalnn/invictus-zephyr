@@ -1,13 +1,13 @@
 #include "filling_sm.h"
 
 #include <zephyr/logging/log.h>
-#include <zephyr/kernel.h>
-#include <zephyr/smf.h>
 
 LOG_MODULE_REGISTER(filling_sm, LOG_LEVEL_DBG);
 
-/* Forward declaration of state table */
 #ifndef UNIT_TEST
+/* Forward declaration of state table.
+ * If unittesting, the state table is exported from the header file instead.
+ */
 static const struct smf_state filling_states[];
 #endif
 
@@ -182,9 +182,10 @@ static void safe_pause_idle_run(void *o)
 		return;
 	}
 
-	if (s->n_pressure > s->s_p_config.trigger_np) {
-		LOG_DBG("SAFE_PAUSE_IDLE: n_pressure (%d) > trigger_np (%d) -> SAFE_PAUSE_VENT",
-			s->n_pressure, s->s_p_config.trigger_np);
+	if (s->data.n_pressure > s->s_p_config.trigger_np) {
+		LOG_DBG("SAFE_PAUSE_IDLE: data.n_pressure (%d) > trigger_np (%d) -> "
+			"SAFE_PAUSE_VENT",
+			s->data.n_pressure, s->s_p_config.trigger_np);
 		smf_set_state(SMF_CTX(s), &filling_states[SAFE_PAUSE_VENT]);
 	}
 }
@@ -201,9 +202,10 @@ static void safe_pause_vent_run(void *o)
 		return;
 	}
 
-	if (s->n_pressure <= s->s_p_config.target_np) {
-		LOG_DBG("SAFE_PAUSE_VENT: n_pressure (%d) <= target_np (%d) -> SAFE_PAUSE_IDLE",
-			s->n_pressure, s->s_p_config.target_np);
+	if (s->data.n_pressure <= s->s_p_config.target_np) {
+		LOG_DBG("SAFE_PAUSE_VENT: data.n_pressure (%d) <= target_np (%d) -> "
+			"SAFE_PAUSE_IDLE",
+			s->data.n_pressure, s->s_p_config.target_np);
 		smf_set_state(SMF_CTX(s), &filling_states[SAFE_PAUSE_IDLE]);
 	}
 }
@@ -229,9 +231,10 @@ static void filling_copv_idle_run(void *o)
 		return;
 	}
 
-	if (s->n_pressure <= s->f_copv_config.target_np) {
-		LOG_DBG("FILLING_COPV_IDLE: n_pressure (%d) <= target_np (%d) -> FILLING_COPV_FILL",
-			s->n_pressure, s->f_copv_config.target_np);
+	if (s->data.n_pressure <= s->f_copv_config.target_np) {
+		LOG_DBG("FILLING_COPV_IDLE: data.n_pressure (%d) <= target_np (%d) -> "
+			"FILLING_COPV_FILL",
+			s->data.n_pressure, s->f_copv_config.target_np);
 		smf_set_state(SMF_CTX(s), &filling_states[FILLING_COPV_FILL]);
 	}
 }
@@ -248,9 +251,10 @@ static void filling_copv_fill_run(void *o)
 		return;
 	}
 
-	if (s->n_pressure >= s->f_copv_config.target_np) {
-		LOG_DBG("FILLING_COPV_FILL: n_pressure (%d) >= target_np (%d) -> FILLING_COPV_IDLE",
-			s->n_pressure, s->f_copv_config.target_np);
+	if (s->data.n_pressure >= s->f_copv_config.target_np) {
+		LOG_DBG("FILLING_COPV_FILL: data.n_pressure (%d) >= target_np (%d) -> "
+			"FILLING_COPV_IDLE",
+			s->data.n_pressure, s->f_copv_config.target_np);
 		smf_set_state(SMF_CTX(s), &filling_states[FILLING_COPV_IDLE]);
 	}
 }
@@ -277,18 +281,18 @@ static void pre_pressurizing_idle_run(void *o)
 	}
 
 	// TODO: Double check this condition
-	if (s->n_pressure > s->pre_p_config.trigger_n2op) {
-		LOG_DBG("PRE_PRESSURIZING_IDLE: n_pressure (%d) > trigger_n2op (%d) -> "
+	if (s->data.n_pressure > s->pre_p_config.trigger_n2op) {
+		LOG_DBG("PRE_PRESSURIZING_IDLE: data.n_pressure (%d) > trigger_n2op (%d) -> "
 			"PRE_PRESSURIZING_VENT",
-			s->n_pressure, s->pre_p_config.trigger_n2op);
+			s->data.n_pressure, s->pre_p_config.trigger_n2op);
 		smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_VENT]);
 		return;
 	}
 
-	if (s->n2o_pressure < s->pre_p_config.target_n2op) {
-		LOG_DBG("PRE_PRESSURIZING_IDLE: n2o_pressure (%d) < target_n2op (%d) -> "
+	if (s->data.n2o_pressure < s->pre_p_config.target_n2op) {
+		LOG_DBG("PRE_PRESSURIZING_IDLE: data.n2o_pressure (%d) < target_n2op (%d) -> "
 			"PRE_PRESSURIZING_FILL_N",
-			s->n2o_pressure, s->pre_p_config.target_n2op);
+			s->data.n2o_pressure, s->pre_p_config.target_n2op);
 		smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_FILL_N]);
 	}
 }
@@ -305,10 +309,10 @@ static void pre_pressurizing_fill_run(void *o)
 		return;
 	}
 
-	if (s->n2o_pressure >= s->pre_p_config.target_n2op) {
-		LOG_DBG("PRE_PRESSURIZING_FILL_N: n2o_pressure (%d) >= target_n2op (%d) -> "
+	if (s->data.n2o_pressure >= s->pre_p_config.target_n2op) {
+		LOG_DBG("PRE_PRESSURIZING_FILL_N: data.n2o_pressure (%d) >= target_n2op (%d) -> "
 			"PRE_PRESSURIZING_IDLE",
-			s->n2o_pressure, s->pre_p_config.target_n2op);
+			s->data.n2o_pressure, s->pre_p_config.target_n2op);
 		smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_IDLE]);
 	}
 }
@@ -326,10 +330,10 @@ static void pre_pressurizing_vent_run(void *o)
 	}
 
 	// TODO: Double check this condition
-	if (s->n_pressure <= s->pre_p_config.target_n2op) {
-		LOG_DBG("PRE_PRESSURIZING_VENT: n_pressure (%d) <= target_n2op (%d) -> "
+	if (s->data.n_pressure <= s->pre_p_config.target_n2op) {
+		LOG_DBG("PRE_PRESSURIZING_VENT: data.n_pressure (%d) <= target_n2op (%d) -> "
 			"PRE_PRESSURIZING_IDLE",
-			s->n_pressure, s->pre_p_config.target_n2op);
+			s->data.n_pressure, s->pre_p_config.target_n2op);
 		smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_IDLE]);
 	}
 }
@@ -355,10 +359,10 @@ static void filling_n20_idle_run(void *o)
 		return;
 	}
 
-	if (s->n2o_weight < s->f_n20_config.target_weight) {
-		LOG_DBG("FILLING_N20_IDLE: n2o_weight (%d) < target_weight (%d) -> "
+	if (s->data.n2o_weight < s->f_n20_config.target_weight) {
+		LOG_DBG("FILLING_N20_IDLE: data.n2o_weight (%d) < target_weight (%d) -> "
 			"FILLING_N20_FILL",
-			s->n2o_weight, s->f_n20_config.target_weight);
+			s->data.n2o_weight, s->f_n20_config.target_weight);
 		smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_FILL]);
 	}
 }
@@ -375,19 +379,20 @@ static void filling_n20_fill_run(void *o)
 		return;
 	}
 
-	if (s->n2o_pressure >= s->f_n20_config.trigger_n2op &&
-	    s->temperature > s->f_n20_config.trigger_temp) {
-		LOG_DBG("FILLING_N20_FILL: Conditions met (n2o_pressure=%d, temperature=%d) -> "
+	if (s->data.n2o_pressure >= s->f_n20_config.trigger_n2op &&
+	    s->data.temperature > s->f_n20_config.trigger_temp) {
+		LOG_DBG("FILLING_N20_FILL: Conditions met (data.n2o_pressure=%d, "
+			"data.temperature=%d) -> "
 			"FILLING_N20_VENT",
-			s->n2o_pressure, s->temperature);
+			s->data.n2o_pressure, s->data.temperature);
 		smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_VENT]);
 		return;
 	}
 
-	if (s->n2o_weight >= s->f_n20_config.target_weight) {
-		LOG_DBG("FILLING_N20_FILL: n2o_weight (%d) >= target_weight (%d) -> "
+	if (s->data.n2o_weight >= s->f_n20_config.target_weight) {
+		LOG_DBG("FILLING_N20_FILL: data.n2o_weight (%d) >= target_weight (%d) -> "
 			"FILLING_N20_IDLE",
-			s->n2o_weight, s->f_n20_config.target_weight);
+			s->data.n2o_weight, s->f_n20_config.target_weight);
 		smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_IDLE]);
 	}
 }
@@ -404,11 +409,12 @@ static void filling_n20_vent_run(void *o)
 		return;
 	}
 
-	if (s->n2o_pressure <= s->f_n20_config.target_n2op ||
-	    s->temperature <= s->f_n20_config.trigger_temp) {
-		LOG_DBG("FILLING_N20_VENT: Conditions met (n2o_pressure=%d, temperature=%d) -> "
+	if (s->data.n2o_pressure <= s->f_n20_config.target_n2op ||
+	    s->data.temperature <= s->f_n20_config.trigger_temp) {
+		LOG_DBG("FILLING_N20_VENT: Conditions met (data.n2o_pressure=%d, "
+			"data.temperature=%d) -> "
 			"FILLING_N20_FILL",
-			s->n2o_pressure, s->temperature);
+			s->data.n2o_pressure, s->data.temperature);
 		smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_FILL]);
 	}
 }
@@ -434,18 +440,18 @@ static void post_pressurizing_idle_run(void *o)
 		return;
 	}
 
-	if (s->n_pressure > s->post_p_config.trigger_n2op) {
-		LOG_DBG("POST_PRESSURIZING_IDLE: n_pressure (%d) > trigger_n2op (%d) -> "
+	if (s->data.n_pressure > s->post_p_config.trigger_n2op) {
+		LOG_DBG("POST_PRESSURIZING_IDLE: data.n_pressure (%d) > trigger_n2op (%d) -> "
 			"POST_PRESSURIZING_VENT",
-			s->n_pressure, s->post_p_config.trigger_n2op);
+			s->data.n_pressure, s->post_p_config.trigger_n2op);
 		smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_VENT]);
 		return;
 	}
 
-	if (s->n2o_pressure < s->post_p_config.target_n2op) {
-		LOG_DBG("POST_PRESSURIZING_IDLE: n2o_pressure (%d) < target_n2op (%d) -> "
+	if (s->data.n2o_pressure < s->post_p_config.target_n2op) {
+		LOG_DBG("POST_PRESSURIZING_IDLE: data.n2o_pressure (%d) < target_n2op (%d) -> "
 			"POST_PRESSURIZING_FILL_N",
-			s->n2o_pressure, s->post_p_config.target_n2op);
+			s->data.n2o_pressure, s->post_p_config.target_n2op);
 		smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_FILL_N]);
 	}
 }
@@ -462,10 +468,10 @@ static void post_pressurizing_fill_run(void *o)
 		return;
 	}
 
-	if (s->n2o_pressure >= s->post_p_config.target_n2op) {
-		LOG_DBG("POST_PRESSURIZING_FILL_N: n2o_pressure (%d) >= target_n2op (%d) -> "
+	if (s->data.n2o_pressure >= s->post_p_config.target_n2op) {
+		LOG_DBG("POST_PRESSURIZING_FILL_N: data.n2o_pressure (%d) >= target_n2op (%d) -> "
 			"POST_PRESSURIZING_IDLE",
-			s->n2o_pressure, s->post_p_config.target_n2op);
+			s->data.n2o_pressure, s->post_p_config.target_n2op);
 		smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_IDLE]);
 	}
 }
@@ -482,10 +488,10 @@ static void post_pressurizing_vent_run(void *o)
 		return;
 	}
 
-	if (s->n_pressure <= s->post_p_config.target_n2op) {
-		LOG_DBG("POST_PRESSURIZING_VENT: n_pressure (%d) <= target_n2op (%d) -> "
+	if (s->data.n_pressure <= s->post_p_config.target_n2op) {
+		LOG_DBG("POST_PRESSURIZING_VENT: data.n_pressure (%d) <= target_n2op (%d) -> "
 			"POST_PRESSURIZING_IDLE",
-			s->n_pressure, s->post_p_config.target_n2op);
+			s->data.n_pressure, s->post_p_config.target_n2op);
 		smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_IDLE]);
 	}
 }

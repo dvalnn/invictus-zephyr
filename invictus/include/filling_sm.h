@@ -75,14 +75,15 @@ struct filling_sm_object {
 	/* This must be first */
 	struct smf_ctx ctx;
 
-	// Current command
 	cmd_t command;
+	int modbus_client_iface;
 
-	// Filling data
-	uint16_t n_pressure;
-	uint16_t n2o_pressure;
-	uint16_t n2o_weight;
-	uint16_t temperature;
+	struct filling_data {
+		uint16_t n_pressure;
+		uint16_t n2o_pressure;
+		uint16_t n2o_weight;
+		uint16_t temperature;
+	} data;
 
 	struct safe_pause_config {
 		uint16_t target_np;
