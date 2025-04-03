@@ -36,6 +36,41 @@ enum cmd_other {
 
 typedef uint32_t cmd_t;
 
+/* List of possible states */
+enum filling_state {
+	IDLE,
+	ABORT,
+	MANUAL_OP, // NOTE: Acept manual override commands from the ground station
+
+	// SAFE PAUSE
+	SAFE_PAUSE, // parent state
+	SAFE_PAUSE_IDLE,
+	SAFE_PAUSE_VENT,
+
+	// FILLING_COPV (filling N)
+	FILLING_COPV, // parent state
+	FILLING_COPV_IDLE,
+	FILLING_COPV_FILL,
+
+	// PRE_PRESSURIZING
+	PRE_PRESSURIZING, // parent state
+	PRE_PRESSURIZING_IDLE,
+	PRE_PRESSURIZING_VENT,
+	PRE_PRESSURIZING_FILL_N,
+
+	// FILLING_N20
+	FILLING_N20, // parent state
+	FILLING_N20_IDLE,
+	FILLING_N20_FILL,
+	FILLING_N20_VENT,
+
+	// POST_PRESSURIZING
+	POST_PRESSURIZING, // parent state
+	POST_PRESSURIZING_IDLE,
+	POST_PRESSURIZING_VENT,
+	POST_PRESSURIZING_FILL_N,
+};
+
 /* User defined object */
 struct filling_sm_object {
 	/* This must be first */
