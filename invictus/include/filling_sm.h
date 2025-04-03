@@ -1,7 +1,6 @@
 #ifndef _FILLING_SM_H_
 #define _FILLING_SM_H_
 
-#include <zephyr/kernel.h>
 #include <zephyr/smf.h>
 
 #define CMD_OTHER_START  0x00010000
@@ -112,6 +111,10 @@ struct filling_sm_object {
 		uint16_t trigger_n2op;
 	} post_p_config;
 };
+
+#ifdef UNIT_TEST
+extern const struct smf_state filling_states[];
+#endif
 
 void filling_sm_init(struct filling_sm_object *initial_s_obj);
 

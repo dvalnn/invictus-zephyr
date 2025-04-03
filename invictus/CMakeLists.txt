@@ -6,3 +6,4 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(invictus)
 
 target_sources(app PRIVATE src/main.c src/filling_sm.c)
+target_include_directories(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

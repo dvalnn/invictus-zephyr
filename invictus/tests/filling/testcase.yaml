@@ -1,0 +1,6 @@
+common:
+  tags: extensibility
+  integration_platforms:
+    - qemu_cortex_m0
+tests:
+  invictus: {}
