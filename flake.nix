@@ -49,6 +49,7 @@
 
         shellHook = ''
           export ZEPHYR_BASE=$(pwd)/zephyr
+          alias twister="python3 $(pwd)/zephyr/scripts/twister -T $(pwd)/invictus/tests -G"
         '';
       };
     };

@@ -14,3 +14,6 @@ zephyr
 
 # compile commands
 compile_commands.json
+
+#test artifacts
+twister-out*

@@ -1,0 +1,2 @@
+testcases:
+  - path: tests/invictus/filling/state_machine
