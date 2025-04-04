@@ -45,6 +45,9 @@
 
           # monitor
           minicom
+
+          # other python dependencies
+          python312Packages.pymodbus
         ];
 
         shellHook = ''

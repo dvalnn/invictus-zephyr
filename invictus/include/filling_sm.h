@@ -78,11 +78,14 @@ struct filling_sm_object {
 	cmd_t command;
 	int modbus_client_iface;
 
-	struct filling_data {
-		uint16_t n_pressure;
-		uint16_t n2o_pressure;
-		uint16_t n2o_weight;
-		uint16_t temperature;
+	union filling_data {
+		struct f_data_fields {
+			uint16_t n_pressure;
+			uint16_t n2o_pressure;
+			uint16_t n2o_weight;
+			uint16_t temperature;
+		} fields;
+		uint16_t raw[4];
 	} data;
 
 	struct safe_pause_config {

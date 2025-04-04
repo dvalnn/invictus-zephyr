@@ -18,7 +18,7 @@ const static struct modbus_iface_param client_param = {
 			.baud = 19200,
 			// NOTE: In RTU mode, modbus uses CRC checks, so parity can be NONE
 			.parity = UART_CFG_PARITY_NONE,
-			.stop_bits_client = UART_CFG_STOP_BITS_2,
+			.stop_bits_client = UART_CFG_STOP_BITS_1,
 		},
 };
 
@@ -53,7 +53,7 @@ int main(void)
 		k_sleep(K_MSEC(100));
 	}
 
-	LOG_INF("Client connected to server on %s", dev->name);
+	LOG_INF("Client connected on %s", dev->name);
 #endif
 
 	if (init_modbus_master()) {
@@ -62,16 +62,12 @@ int main(void)
 	}
 
 	const int slave_addr = 0x01;
-	uint16_t holding_regs[4] = {0};
 
 	struct filling_sm_object filling_sm_obj = {
 		.modbus_client_iface = client_iface,
 		.data =
 			{
-				.n_pressure = 0,
-				.n2o_pressure = 0,
-				.n2o_weight = 0,
-				.temperature = 0,
+				.raw = {0},
 			},
 		.f_copv_config =
 			{
@@ -99,24 +95,25 @@ int main(void)
 	filling_sm_init(&filling_sm_obj);
 
 	while (1) {
+		k_sleep(K_MSEC(1000)); // For now, looping every second is fine
+				       //
 		smf_run_state(SMF_CTX(&filling_sm_obj));
 
 		// Do modbus stuff here, later we will move this to a separate thread
 		//
-		if (modbus_read_holding_regs(client_iface, slave_addr, 0, holding_regs,
-					     ARRAY_SIZE(holding_regs)) < 0) {
+		if (modbus_read_holding_regs(client_iface, slave_addr, 0, filling_sm_obj.data.raw,
+					     ARRAY_SIZE(filling_sm_obj.data.raw)) < 0) {
 			LOG_ERR("Failed to read holding registers");
 			continue;
 		}
 
-		LOG_HEXDUMP_INF(holding_regs, sizeof(holding_regs), "Holding Registers");
+		LOG_INF("N2 Pressure: %d", filling_sm_obj.data.fields.n_pressure);
+		LOG_INF("N2O Pressure: %d", filling_sm_obj.data.fields.n2o_pressure);
+		LOG_INF("N2O Weight: %d", filling_sm_obj.data.fields.n2o_weight);
+		LOG_INF("Temperature: %d", filling_sm_obj.data.fields.temperature);
 
-		filling_sm_obj.data.n_pressure = holding_regs[0];
-		filling_sm_obj.data.n2o_pressure = holding_regs[1];
-		filling_sm_obj.data.n2o_weight = holding_regs[2];
-		filling_sm_obj.data.temperature = holding_regs[3];
-
-		k_sleep(K_MSEC(1000)); // For now, looping every second is fine
+		LOG_HEXDUMP_INF(filling_sm_obj.data.raw, sizeof(filling_sm_obj.data.raw),
+				"Raw holding registers");
 	}
 
 	return 0;
