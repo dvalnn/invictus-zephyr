@@ -12,10 +12,11 @@ static void reset_test_obj(void)
 	memset(&test_obj, 0, sizeof(test_obj));
 
 	/* Set default configuration values for testing */
-	test_obj.n_pressure = 0;
-	test_obj.n2o_pressure = 0;
-	test_obj.n2o_weight = 0;
-	test_obj.temperature = 0;
+	test_obj.data.fields.n2o_pressure = 0;
+	test_obj.data.fields.n2o_weight = 0;
+	test_obj.data.fields.n_pressure = 0;
+	test_obj.data.fields.temperature = 0;
+
 	test_obj.s_p_config.target_np = 100;
 	test_obj.s_p_config.trigger_np = 50;
 	test_obj.f_copv_config.target_np = 75;
