@@ -7,8 +7,10 @@
 static DEFAULT_FSM_OBJECT(test_obj, 0);
 
 /* Reset the test object with default values */
-static void reset_test_obj(void)
+static void filling_sm_suite_before(void *data)
 {
+	ARG_UNUSED(data);
+
 	test_obj.command = 0; // clear commands
 
 	// clear sensor data
@@ -18,12 +20,11 @@ static void reset_test_obj(void)
 	test_obj.data.pre_tank_pressure = 0;
 }
 
-ZTEST_SUITE(filling_sm_suite, NULL, NULL, NULL, NULL, NULL);
+ZTEST_SUITE(filling_sm_suite, NULL, NULL, filling_sm_suite_before, NULL, NULL);
 
 /* Test: Verify that the initial state is IDLE */
 ZTEST(filling_sm_suite, test_initial_state)
 {
-	reset_test_obj();
 
 	/* Initialize the state machine */
 	filling_sm_init(&test_obj);
@@ -35,7 +36,6 @@ ZTEST(filling_sm_suite, test_initial_state)
 /* Test: Transition from IDLE to FILLING_COPV_IDLE via CMD_FILL_COPV */
 ZTEST(filling_sm_suite, test_idle_to_filling_copv)
 {
-	reset_test_obj();
 
 	/* Initialize the state machine */
 	filling_sm_init(&test_obj);
