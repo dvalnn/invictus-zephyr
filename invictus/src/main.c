@@ -63,35 +63,7 @@ int main(void)
 
 	const int slave_addr = 0x01;
 
-	struct filling_sm_object filling_sm_obj = {
-		.modbus_client_iface = client_iface,
-		.data =
-			{
-				.raw = {0},
-			},
-		.f_copv_config =
-			{
-				.target_np = 0,
-			},
-		.pre_p_config =
-			{
-				.trigger_n2op = 0,
-				.target_n2op = 0,
-			},
-		.f_n20_config =
-			{
-				.target_n2op = 0,
-				.target_weight = 0,
-				.trigger_n2op = 0,
-				.trigger_temp = 0,
-			},
-		.post_p_config =
-			{
-				.trigger_n2op = 0,
-				.target_n2op = 0,
-			},
-	};
-
+	DEFAULT_FSM_OBJECT(filling_sm_obj, client_iface);
 	filling_sm_init(&filling_sm_obj);
 
 	while (1) {
@@ -107,12 +79,9 @@ int main(void)
 			continue;
 		}
 
-		LOG_INF("N2 Pressure: %d", filling_sm_obj.data.fields.n_pressure);
-		LOG_INF("N2O Pressure: %d", filling_sm_obj.data.fields.n2o_pressure);
-		LOG_INF("N2O Weight: %d", filling_sm_obj.data.fields.n2o_weight);
-		LOG_INF("Temperature: %d", filling_sm_obj.data.fields.temperature);
+		LOG_FILLING_DATA(&filling_sm_obj);
 
-		LOG_HEXDUMP_INF(filling_sm_obj.data.raw, sizeof(filling_sm_obj.data.raw),
+		LOG_HEXDUMP_DBG(filling_sm_obj.data.raw, sizeof(filling_sm_obj.data.raw),
 				"Raw holding registers");
 	}
 

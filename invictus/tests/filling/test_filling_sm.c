@@ -4,33 +4,18 @@
 #include "filling_sm.h"
 
 /* Global test object for the state machine */
-static struct filling_sm_object test_obj;
+static DEFAULT_FSM_OBJECT(test_obj, 0);
 
 /* Reset the test object with default values */
 static void reset_test_obj(void)
 {
-	memset(&test_obj, 0, sizeof(test_obj));
+	test_obj.command = 0; // clear commands
 
-	/* Set default configuration values for testing */
-	test_obj.data.fields.n2o_pressure = 0;
-	test_obj.data.fields.n2o_weight = 0;
-	test_obj.data.fields.n_pressure = 0;
-	test_obj.data.fields.temperature = 0;
-
-	test_obj.s_p_config.target_np = 100;
-	test_obj.s_p_config.trigger_np = 50;
-	test_obj.f_copv_config.target_np = 75;
-	test_obj.pre_p_config.target_n2op = 80;
-	test_obj.pre_p_config.trigger_n2op = 40;
-	test_obj.f_n20_config.target_n2op = 90;
-	test_obj.f_n20_config.target_weight = 100;
-	test_obj.f_n20_config.trigger_n2op = 60;
-	test_obj.f_n20_config.trigger_temp = 25;
-	test_obj.post_p_config.target_n2op = 85;
-	test_obj.post_p_config.trigger_n2op = 45;
-
-	/* Clear any command */
-	test_obj.command = 0;
+	// clear sensor data
+	test_obj.data.main_tank_pressure = 0;
+	test_obj.data.main_tank_weight = 0;
+	test_obj.data.main_tank_temperature = 0;
+	test_obj.data.pre_tank_pressure = 0;
 }
 
 ZTEST_SUITE(filling_sm_suite, NULL, NULL, NULL, NULL, NULL);
@@ -63,7 +48,7 @@ ZTEST(filling_sm_suite, test_idle_to_filling_copv)
 
 	/* Check if the state has transitioned to FILLING_COPV_IDLE */
 	zassert_equal(test_obj.ctx.current, &filling_states[FILLING_COPV_IDLE],
-		      "State did not transition to FILLING_COPV_IDLE"
+		      "State did not transition to FILLING_COPV_IDLE: "
 		      "Current state: %p",
 		      test_obj.ctx.current);
 
@@ -74,7 +59,7 @@ ZTEST(filling_sm_suite, test_idle_to_filling_copv)
 
 	/* Check if the state has transitioned back to IDLE */
 	zassert_equal(test_obj.ctx.current, &filling_states[IDLE],
-		      "State did not transition back to IDLE"
+		      "State did not transition back to IDLE: "
 		      "Current state: %p",
 		      test_obj.ctx.current);
 }

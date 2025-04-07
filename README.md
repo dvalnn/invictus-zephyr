@@ -15,5 +15,5 @@ west build -t run
 
 run tests:
 ```bash
-twister -T invictus/tests/ -G
+python3 zephyr/scripts/twister -T invictus/tests/ -G
 ```
