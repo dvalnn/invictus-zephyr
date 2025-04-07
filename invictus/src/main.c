@@ -68,8 +68,6 @@ int main(void)
 
 	while (1) {
 		k_sleep(K_MSEC(1000)); // For now, looping every second is fine
-				       //
-		smf_run_state(SMF_CTX(&filling_sm_obj));
 
 		// Do modbus stuff here, later we will move this to a separate thread
 		//
@@ -83,6 +81,8 @@ int main(void)
 
 		LOG_HEXDUMP_DBG(filling_sm_obj.data.raw, sizeof(filling_sm_obj.data.raw),
 				"Raw holding registers");
+
+		smf_run_state(SMF_CTX(&filling_sm_obj));
 	}
 
 	return 0;
