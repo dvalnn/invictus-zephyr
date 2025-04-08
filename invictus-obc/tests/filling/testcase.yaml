@@ -1,6 +1,0 @@
-common:
-  tags: "invictus OBC"
-  integration_platforms:
-    - qemu_cortex_m0
-tests:
-  invictus.filling.state_machine: {}

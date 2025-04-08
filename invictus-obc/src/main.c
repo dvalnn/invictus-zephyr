@@ -2,6 +2,12 @@
 #include <zephyr/modbus/modbus.h>
 #include <zephyr/usb/usb_device.h>
 #include <zephyr/sys/util.h>
+#include <zephyr/drivers/spi.h>
+
+#ifdef CONFIG_ARCH_POSIX
+#include <zephyr/drivers/emul.h>
+#include <zephyr/drivers/spi_emul.h>
+#endif
 
 #include "filling_sm.h"
 
@@ -15,7 +21,7 @@ const static struct modbus_iface_param client_param = {
 	.serial =
 		{
 			// TODO: Double check how high the baud rate can be
-			.baud = 19200,
+			.baud = 115200,
 			// NOTE: In RTU mode, modbus uses CRC checks, so parity can be NONE
 			.parity = UART_CFG_PARITY_NONE,
 			.stop_bits_client = UART_CFG_STOP_BITS_1,
@@ -53,7 +59,7 @@ int main(void)
 		k_sleep(K_MSEC(100));
 	}
 
-	LOG_INF("Client connected on %s", dev->name);
+	LOG_INF("Slave connected on %s", dev->name);
 #endif
 
 	if (init_modbus_master()) {
@@ -69,8 +75,6 @@ int main(void)
 	while (1) {
 		k_sleep(K_MSEC(1000)); // For now, looping every second is fine
 
-		// Do modbus stuff here, later we will move this to a separate thread
-		//
 		if (modbus_read_holding_regs(client_iface, slave_addr, 0, filling_sm_obj.data.raw,
 					     ARRAY_SIZE(filling_sm_obj.data.raw)) < 0) {
 			LOG_ERR("Failed to read holding registers");
@@ -81,7 +85,6 @@ int main(void)
 
 		LOG_HEXDUMP_DBG(filling_sm_obj.data.raw, sizeof(filling_sm_obj.data.raw),
 				"Raw holding registers");
-
 		smf_run_state(SMF_CTX(&filling_sm_obj));
 	}
 
