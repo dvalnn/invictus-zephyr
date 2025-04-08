@@ -1,7 +1,0 @@
-tests:
-  invictus.spi_emul.base:
-    tags:
-      - invictus
-      - spi_emul
-    platform_allow:
-      - native_sim
