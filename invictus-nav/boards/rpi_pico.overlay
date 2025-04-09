@@ -1,0 +1,45 @@
+/ {
+    aliases {
+        led1 = &led1;
+    };
+
+    leds {
+        led1: led1 {
+            label = "Blue LED";
+            gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>;
+        };
+    };
+};
+
+&i2c0 {
+    status = "okay";
+
+    mpu: mpu9250@68 {
+        reg = <0x68>;
+        compatible = "invensense,mpu9250";
+        irq-gpios = <&gpio0 20 GPIO_ACTIVE_HIGH>;
+
+        gyro-sr-div = <0>; // maximum sample rate
+        gyro-dlpf = <250>; // low pass filter frequency in Hz
+        gyro-fs = <250>; // full scale range in degrees per second
+
+        accel-fs = <2>; // full scale range in g
+        accel-dlpf = "218.1"; // low pass filter frequency in Hz
+
+        friendly-name = "mpu9250";
+
+        vin-supply = <&vreg>; // pico 3.3V regulator
+    };
+};
+
+// Se all pinmux options: 
+&pinctrl {
+    i2c0_default: i2c0_default {
+        group1 {
+            // Change the selected I2C channel 0 pins to 20 and 21
+            pinmux = <I2C0_SDA_P16>, 
+                     <I2C0_SCL_P17>;
+        };
+    };
+};
+
