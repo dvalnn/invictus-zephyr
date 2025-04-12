@@ -1,0 +1,13 @@
+if (BOARD_INV2_OBC || BOARD_INV2_NAV || BOARD_INV2_TVCS)
+
+if I2C_DW
+
+config I2C_DW_CLOCK_SPEED
+	default 125
+
+endif # I2C_DW
+
+config USB_SELF_POWERED
+	default n
+
+endif # BOARD_INV2_OBC || BOARD_INV2_NAV || BOARD_INV2_TVCS

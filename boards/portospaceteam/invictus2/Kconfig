@@ -1,0 +1,8 @@
+config BOARD_INV2_OBC
+	select RP2_FLASH_W25Q080
+
+config BOARD_INV2_NAV
+    select RP2_FLASH_W25Q080
+
+config BOARD_INV2_TVCS
+    select RP2_FLASH_W25Q080

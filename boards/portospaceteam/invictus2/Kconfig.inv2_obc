@@ -1,0 +1,2 @@
+config BOARD_INV2_OBC
+    select SOC_RP2040
