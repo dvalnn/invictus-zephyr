@@ -1,7 +1,8 @@
 # ignore zephyr workspace stuff that is managed by west
+build
+
 /.west
 /bootloader
-/build
 /modules
 /tools
 /zephyr
