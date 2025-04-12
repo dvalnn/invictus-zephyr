@@ -1,2 +1,0 @@
-config BOARD_INV2_TVCS
-    select SOC_RP2040

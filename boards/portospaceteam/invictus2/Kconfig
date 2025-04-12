@@ -1,8 +1,14 @@
-config BOARD_INV2_OBC
-	select RP2_FLASH_W25Q080
-
 config BOARD_INV2_NAV
+    bool "invictus 2 navigation board"
+    select SOC_RP2040
+    select RP2_FLASH_W25Q080
+
+config BOARD_INV2_OBC
+    bool "invictus 2 on board computer"
+    select SOC_RP2040
     select RP2_FLASH_W25Q080
 
 config BOARD_INV2_TVCS
+    bool "invictus 2 temperature and valve control system"
+    select SOC_RP2040
     select RP2_FLASH_W25Q080

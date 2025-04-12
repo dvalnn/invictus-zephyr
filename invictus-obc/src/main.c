@@ -4,11 +4,6 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/drivers/spi.h>
 
-#ifdef CONFIG_ARCH_POSIX
-#include <zephyr/drivers/emul.h>
-#include <zephyr/drivers/spi_emul.h>
-#endif
-
 #include "filling_sm.h"
 
 LOG_MODULE_REGISTER(mbs_sample, LOG_LEVEL_INF);

@@ -1,18 +1,18 @@
-board:
-  - name: inv2_obc
-    full_name: Invictus2.0 On Board Computer
-    vendor: portospaceteam
-    socs:
-      - name: rp2040
+boards:
+- name: inv2_obc
+  full_name: Invictus2.0 On Board Computer
+  vendor: portospaceteam
+  socs:
+  - name: rp2040
 
-  - name: inv2_nav
-    full_name: Invictus2.0 Navigator
-    vendor: portospaceteam
-    socs:
-      - name: rp2040
+- name: inv2_nav
+  full_name: Invictus2.0 Navigator
+  vendor: portospaceteam
+  socs:
+  - name: rp2040
 
-  - name: inv2_tvcs
-    full_name: Invictus2.0 Thermal Valve Control System
-    vendor: portospaceteam
-    socs:
-      - name: rp2040
+- name: inv2_tvcs
+  full_name: Invictus2.0 Themperature and Valve Control System
+  vendor: portospaceteam
+  socs:
+  - name: rp2040

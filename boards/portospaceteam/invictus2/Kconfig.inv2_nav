@@ -1,2 +1,0 @@
-config BOARD_INV2_NAV
-    select SOC_RP2040
