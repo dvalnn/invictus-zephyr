@@ -67,7 +67,7 @@
 };
 
 &spi0 {
-	clock-frequency = <DT_FREQ_M(5)>;
+	clock-frequency = <DT_FREQ_M(8)>;
 	status = "okay";
 	pinctrl-0 = <&spi0_default>;
 	pinctrl-names = "default";

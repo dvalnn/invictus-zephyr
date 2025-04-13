@@ -12,5 +12,5 @@
 #include <zephyr/dt-bindings/i2c/i2c.h>
 #include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2040-pinctrl.h>
 
-#include "inv2_pinctrl_common.dtsi"
-#include "inv2_common.dtsi"
+#include "common/inv2_pinctrl_common.dtsi"
+#include "common/inv2_common.dtsi"
