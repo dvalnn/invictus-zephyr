@@ -12,4 +12,104 @@
 #include <zephyr/dt-bindings/i2c/i2c.h>
 #include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2040-pinctrl.h>
 
+#include "inv2_pinctrl_common.dtsi"
 #include "inv2_common.dtsi"
+
+/ {
+    nrf_radio_fem: nrf21540 {
+          compatible = "nordic,nrf21540-fem";
+          spi-if = <&nrf_fem_spi>;
+          rx-en-gpios = <&gpio0 14 GPIO_ACTIVE_HIGH>;
+          tx-en-gpios = <&gpio0 15 GPIO_ACTIVE_HIGH>;
+          pdn-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
+          mode-gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
+          /* Ant-sel is grounded. Remaining props left as default */
+    };
+
+    /* smt_radio: sx1280 { */
+    /*       compatible = "semtech,sx1280"; */
+    /*       spi-if = <&sx1280_spi>; */
+    /* }; */
+};
+
+&spi0 { 
+    status = "okay";
+    cs-gpios = <&gpio0 17 GPIO_ACTIVE_LOW>; // SD CS
+
+    sd_card_spi: sdhc@0{
+        compatible = "zephyr,sdhc-spi-slot";
+        reg = <0>;
+        status = "okay";
+        spi-max-frequency = <DT_FREQ_M(5)>;
+
+        mmc {
+            compatible = "zephyr,sdmmc-disk";
+            disk-name = "SD";
+            status = "okay";
+        };
+    };
+};
+
+&spi1 {
+	clock-frequency = <DT_FREQ_M(5)>;
+	status = "okay";
+	pinctrl-0 = <&spi1_obc>;
+	pinctrl-names = "default";
+
+    cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>, // NRF21540 CS
+               <&gpio0 13 GPIO_ACTIVE_LOW>; // SX1280 CS
+
+    nrf_fem_spi: nrf21540-spi@0{
+        compatible = "nordic,nrf21540-fem-spi";
+        reg = <0>;
+        spi-max-frequency = <DT_FREQ_M(5)>;
+    };
+
+    //TODO: Uncomment when the driver and binding are ready
+    /* sx1280_spi: sx1280-spi@1{ */
+    /*     compatible = "semtech,sx1280-spi"; */
+    /*     reg = <1>; */
+    /*     spi-max-frequency = <DT_FREQ_M(5)>; */
+    /* }; */
+};
+
+// RS483 Modbus RTU master
+&uart1 {
+	current-speed = <115200>;
+	status = "okay";
+	pinctrl-0 = <&uart_rs485>;
+	pinctrl-names = "default";
+
+    modbus0{
+        compatible = "zephyr,modbus";
+        status = "okay";
+        de-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+    };
+};
+
+&pinctrl{
+	uart_rs485: uart_rs485 {
+		group1 {
+			pinmux = <UART0_TX_P4>;
+		};
+		group2 {
+			pinmux = <UART0_RX_P5>;
+			input-enable;
+		};
+	};
+
+	spi1_obc: spi1_obc {
+		group1 {
+			pinmux = <SPI1_CSN_P9>,
+                     <SPI1_CSN_P13>,
+                     <SPI1_SCK_P10>,
+                     <SPI1_TX_P11>;
+		};
+		group2 {
+			pinmux = <SPI1_RX_P8>;
+			input-enable;
+		};
+	};
+};
+
+
