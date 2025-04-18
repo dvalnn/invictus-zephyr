@@ -16,3 +16,9 @@ boards:
   vendor: portospaceteam
   socs:
   - name: rp2040
+
+- name: inv2_pstat
+  full_name: Invictus2.0 Pocket Stat
+  vendor: portospaceteam
+  socs:
+  - name: rp2040

@@ -12,3 +12,8 @@ config BOARD_INV2_TVCS
     bool "invictus 2 temperature and valve control system"
     select SOC_RP2040
     select RP2_FLASH_W25Q080
+
+config BOARD_INV2_PSTAT
+    bool "invictus 2 pocket stat"
+    select SOC_RP2040
+    select RP2_FLASH_W25Q080
