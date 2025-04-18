@@ -83,7 +83,7 @@
 
 &spi1 {
     status = "okay";
-    cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>; // SX1280 CS
+    cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>; // bme280 CS pin
     spi-max-frequency = <DT_FREQ_M(8)>;
     pinctrl-names = "default";
     pinctrl-0 = <&spi1_pstat>;

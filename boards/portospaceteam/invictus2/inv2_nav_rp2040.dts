@@ -14,3 +14,28 @@
 
 #include "common/inv2_pinctrl_common.dtsi"
 #include "common/inv2_common.dtsi"
+
+&uart0 {
+    status = "okay";
+    gnss: gnss@0 {
+        compatible = "u-blox,m8";
+        reg = <0>;
+        status = "okay";
+
+        uart-baudrate = <115200>;
+    };
+};
+
+&spi1 {
+    status = "okay";
+    cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>; // bme CS pin
+    spi-max-frequency = <DT_FREQ_M(8)>;
+    pinctrl-names = "default";
+    pinctrl-0 = <&spi1_pstat>;
+
+    bosch_bme280: bme280@0 {
+        compatible = "bosch,bme280";
+        reg = <0>;
+        spi-max-frequency = <DT_FREQ_M(10)>;
+    };
+};
