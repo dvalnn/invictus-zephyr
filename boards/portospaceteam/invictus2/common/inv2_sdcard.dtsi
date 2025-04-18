@@ -1,0 +1,18 @@
+&spi0 {
+    status = "okay";
+    cs-gpios = <&gpio0 17 GPIO_ACTIVE_LOW>; // SD CS
+
+    sd_card_spi: sdhc@0{
+        compatible = "zephyr,sdhc-spi-slot";
+        reg = <0>;
+        status = "okay";
+
+        mmc {
+            compatible = "zephyr,sdmmc-disk";
+            disk-name = "SD";
+            status = "okay";
+        };
+
+        spi-max-frequency = <DT_FREQ_M(8)>;
+    };
+};

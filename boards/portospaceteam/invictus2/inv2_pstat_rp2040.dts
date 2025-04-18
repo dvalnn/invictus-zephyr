@@ -12,5 +12,113 @@
 #include <zephyr/dt-bindings/i2c/i2c.h>
 #include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2040-pinctrl.h>
 
-#include "inv2_pinctrl_common.dtsi"
-#include "inv2_common.dtsi"
+#include "common/inv2_pinctrl_common.dtsi"
+#include "common/inv2_common.dtsi"
+#include "common/inv2_sdcard.dtsi"
+
+/ {
+    aliases {
+        led0 = &led_green_0;
+    };
+
+    leds {
+        compatible= "gpio-leds";
+        status = "okay";
+
+        led_green_0: led0 {
+            label = "Green LED 0";
+            gpios = <&gpio0 15 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+        };
+    };
+};
+
+&uart0 {
+    // uart0 pins are being used for I2C1
+    status = "disabled";
+};
+
+&adc {
+    // adc0 is being used for interrupt
+    status = "disabled";
+};
+
+&i2c0{
+    status = "okay";
+    pinctrl-0 = <&i2c0_pstat>;
+    pinctrl-names = "default";
+
+    bosch_bmp581: bmp581@0x46 {
+        compatible = "bosh,bmp581";
+        reg = <0x46>;
+        status = "okay";
+
+        int-gpios = <&gpio0 21 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+    };
+
+    texas_hdc2080: hdc2080@0x41 {
+        compatible = "ti,hdc2080";
+        reg = <0x41>;
+        status = "okay";
+
+        int-gpios = <&gpio0 26 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+    };
+};
+
+&i2c1{
+    status = "okay";
+    pinctrl-0 = <&i2c1_pstat>;
+    pinctrl-names = "default";
+
+    st_lps22df: lps22df@0x5c {
+        compatible = "st,lps22df";
+        reg = <0x5c>;
+        status = "okay";
+
+        drdy-gpios = <&gpio0 0 GPIO_ACTIVE_HIGH>;
+        odr = <8>; // output data rate selection 0 (off) - 8 (200Hz)
+        lpf = <0>; // low pass filter for pressure data selection 0 (off) - 3 (ODR 9)
+        avg = <0>; // average filter for temperature data selection 0 (4 samples) - 7 (512 samples)
+    };
+};
+
+&spi1 {
+    status = "okay";
+    cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>; // SX1280 CS
+    spi-max-frequency = <DT_FREQ_M(8)>;
+    pinctrl-names = "default";
+    pinctrl-0 = <&spi1_pstat>;
+
+    bosch_bme280: bme280@0 {
+        compatible = "bosch,bme280";
+        reg = <0>;
+        spi-max-frequency = <DT_FREQ_M(10)>;
+    };
+};
+
+&pinctrl {
+	spi1_pstat: spi1_pstat {
+		group1 {
+			pinmux = <SPI1_CSN_P9>, <SPI1_SCK_P10>, <SPI1_TX_P11>;
+		};
+		group2 {
+			pinmux = <SPI1_RX_P8>;
+			input-enable;
+		};
+	};
+
+	i2c0_pstat: i2c0_pstat {
+		group1 {
+			pinmux = <I2C0_SDA_P24>, <I2C0_SCL_P25>;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	i2c1_pstat: i2c1_pstat {
+		group1 {
+			pinmux = <I2C1_SDA_P3>, <I2C1_SCL_P2>;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+};
