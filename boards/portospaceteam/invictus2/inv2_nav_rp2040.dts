@@ -15,27 +15,237 @@
 #include "common/inv2_pinctrl_common.dtsi"
 #include "common/inv2_common.dtsi"
 
+/ {
+    aliases {
+        led0 = &led_green_0;
+    };
+
+    // special node to handle simple bindings
+    zephyr,user {
+        // Buzzer
+        pwms = <&pwm 12 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+        // Droge and Parachute GPIOs
+        drogue-gpios = <&gpio0 18 GPIO_ACTIVE_HIGH>;
+        parachute-gpios = <&gpio0 19 GPIO_ACTIVE_HIGH>;
+    };
+
+    leds {
+        compatible = "gpio-leds";
+        status = "okay";
+
+        green_status: led0 {
+            label = "Green status LED";
+            gpios = <&gpio0 4 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+        };
+
+        red_status: led1 {
+            label = "Red status LED";
+            gpios = <&gpio0 5 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+        };
+    };
+};
+
+// For communication with inv2_obc
 &uart0 {
     status = "okay";
-    gnss: gnss@0 {
+    current-speed = <115200>;
+    pinctrl-0 = <&uart0_hw_flow_ctrl>;
+    pinctrl-names = "default";
+    hw-flow-control;
+};
+
+&uart1 {
+    status = "okay";
+	current-speed = <115200>;
+    pinctrl-0 = <&uart1_gnss>;
+    pinctrl-names = "default";
+
+    gnss: gnss {
         compatible = "u-blox,m8";
-        reg = <0>;
         status = "okay";
 
         uart-baudrate = <115200>;
+        // There is an interrupt on GPIO 27 for the GPS,
+        // but it is not used in this configuration.
+        // Maybe part of the uart hw flow control?
     };
+};
+
+&i2c0 {
+    status = "okay";
+    clock-frequency = <I2C_BITRATE_FAST>;
+    pinctrl-0 = <&i2c0_nav>;
+    pinctrl-names = "default";
+
+    st_lsm6ds0: lsm6ds0@0x6a {
+        compatible = "st,lsm6ds0";
+        reg = <0x6a>;
+        status = "okay";
+
+        irq-gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
+        friendly-name = "st lsm6ds0 inertial measurement unit";
+                            // power mode
+        accel-pm = <0>;     // 0: High power,
+                            // 1: Low power normal,
+                            // 2: ultra low power
+
+                            // range in g
+        accel-range = <16>;  // 0: +/- 2g,
+                            // 1: +/- 16g,
+                            // 2: +/- 4g,
+                            // 3: +/- 8g
+
+                            // output data rate
+        accel-odr = <0x5>;  // 0: off 
+                            // 1: 12.5Hz
+                            // 2: 26Hz
+                            // 3: 52Hz
+                            // 4: 104Hz
+                            // 5: 208Hz
+                            // 6: 417Hz
+                            // 7: 833Hz
+                            // 8: 1667Hz
+                            // 9: 3333Hz
+                            // A: 6667Hz
+
+                            // power mode
+        gyro-pm = <0>;      // 0: High power,
+                            // 1: normal mode
+
+                            // range in dps
+        gyro-range = <0>;   // 0: 250dps
+                            // 1: 125dps
+                            // 2: 500dps
+                            // 4: 1000dps
+                            // 6: 2000dps
+
+                            // output data rate
+        gyro-odr = <0x5>;   // 0: off
+                            // 1: 12.5Hz
+                            // 2: 26Hz
+                            // 3: 52Hz
+                            // 4: 104Hz
+                            // 5: 208Hz
+                            // 6: 417Hz
+                            // 7: 833Hz
+                            // 8: 1667Hz
+                            // 9: 3333Hz
+                            // A: 6667Hz
+
+        friendly-name = "st lsm6ds0 inertial measurement unit";
+    };
+};
+
+&i2c1 {
+    status = "okay";
+    clock-frequency = <I2C_BITRATE_FAST_PLUS>;
+    pinctrl-0 = <&i2c1_nav>;
+    pinctrl-names = "default";
+
+    st_lps22df: lps22df@0x5c {
+        compatible = "st,lps22df";
+        reg = <0x5c>;
+        status = "okay";
+
+        drdy-gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>;
+        odr = <8>; // output data rate selection 0 (off) - 8 (200Hz)
+        lpf = <0>; // low pass filter for pressure data selection 0 (off) - 3 (ODR 9)
+        avg = <0>; // average filter for temperature data selection 0 (4 samples) - 7 (512 samples)
+
+        friendly-name = "st lps22df pressure and temperature sensor";
+    };
+
+    bosh_bmp581: bmp581@0x46 {
+        compatible = "bosh,bmp581";
+        reg = <0x46>;
+        status = "okay";
+        int-gpios = <&gpio0 23 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+        friendly-name = "bosh bmp581 barometer";
+    };
+};
+
+&spi0{
+    status = "disabled";
 };
 
 &spi1 {
     status = "okay";
-    cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>; // bme CS pin
-    spi-max-frequency = <DT_FREQ_M(8)>;
+    clock-frequency = <DT_FREQ_M(10)>;
+    pinctrl-0 = <&spi1_nav>;
     pinctrl-names = "default";
-    pinctrl-0 = <&spi1_pstat>;
+    cs-gpios =  <&gpio0 9 GPIO_ACTIVE_LOW>,
+                <&gpio0 13 GPIO_ACTIVE_LOW>,
+                <&gpio0 29 GPIO_ACTIVE_LOW>;
 
     bosch_bme280: bme280@0 {
         compatible = "bosch,bme280";
         reg = <0>;
         spi-max-frequency = <DT_FREQ_M(10)>;
+        friendly-name = "bosh humidity sensor";
+    };
+
+    st_lis2mdl: lis2mdl@1 {
+        compatible = "st,lis2mdl";
+        reg = <1>;
+        spi-max-frequency = <DT_FREQ_M(10)>;
+        friendly-name = "st lis2mdl magnetometer";
+    };
+
+    bosh_bmi323: bmi323@2 {
+        compatible = "bosch,bmi323";
+        reg = <2>;
+        spi-max-frequency = <DT_FREQ_M(10)>;
+        // Double check these GPIO flags
+        int-gpios = <&gpio0 7 (GPIO_ATIVE_LOW | GPIO_PULL_UP)>;
+        friendly-name = "bosh bmi323 inertial measurement unit";
+    };
+};
+
+&pinctrl {
+    uart0_hw_flow_ctrl: uart0_hw_flow_ctrl {
+        group1 {
+            pinmux = <UART0_TX_P0>, <UART0_RTS_P3>;
+        };
+        group2 {
+            pinmux = <UART0_RX_P1>, <UART0_CTS_P2>;
+            input-enable;
+        };
+    };
+
+    uart1_gnss: uart1_gnss {
+        group1 {
+            pinmux = <UART1_TX_P24>;
+        };
+        group2 {
+            pinmux = <UART1_RX_P25>;
+            input-enable;
+        };
+    };
+
+    i2c0_nav: i2c0_nav {
+        group1 {
+            pinmux = <I2C0_SDA_P20>, <I2C0_SCL_P21>;
+            input-enable;
+            input-schmitt-enable;
+        };
+    };
+
+    i2c1_nav: i2c1_nav {
+        group1 {
+            pinmux = <I2C1_SDA_P14>, <I2C1_SCL_P15>;
+            input-enable;
+            input-schmitt-enable;
+        };
+    };
+
+    spi1_nav: spi1_nav {
+        group1 {
+			pinmux = <SPI1_CSN_P9>, <SPI1_CSN_P13>, <SPI1_CSN_P29>,
+                     <SPI1_SCK_P10>, <SPI1_TX_P11>;
+        };
+        group2 {
+            pinmux = <SPI1_RX_P8>;
+            input-enable;
+        };
     };
 };
