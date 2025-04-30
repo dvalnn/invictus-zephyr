@@ -51,17 +51,14 @@ static void idle_entry(void *o)
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
 	(void)s; // unused
 	LOG_DBG("Entered IDLE state");
-	// Do something
-	// ...
+	// Close all valves
+	s->valve_states = 0;
 }
 
 static void idle_run(void *o)
 {
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
 	LOG_DBG("Running IDLE state");
-
-	// Do something
-	// ...
 
 	enum cmd_idle cmd = CMD_IDLE(s->command);
 	if (!cmd) {
@@ -99,8 +96,6 @@ static void idle_exit(void *o)
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
 	(void)s;
 	LOG_DBG("Exiting IDLE state");
-	// Do something
-	// ...
 }
 
 static void abort_entry(void *o)
@@ -108,17 +103,18 @@ static void abort_entry(void *o)
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
 	(void)s; // unused
 	LOG_DBG("Entered ABORT state");
-	// Do something
-	// ...
+	// TODO: 
+	// Wait for X seconds
+	// Close all valves
+	s->valve_states = 0;
+	// Open abort and tank top valves
+	s->valve_states |= BIT(VALVE_ABORT) | BIT(VALVE_TANK_TOP);
 }
 
 static void abort_run(void *o)
 {
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
 	LOG_DBG("Running ABORT state");
-
-	// Do something
-	// ...
 
 	enum cmd_other cmd = CMD_OTHER(s->command);
 	if (!cmd) {
@@ -148,8 +144,6 @@ static void abort_exit(void *o)
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
 	(void)s; // unused
 	LOG_DBG("Exiting ABORT state");
-	// Do something
-	// ...
 }
 
 static void safe_pause_run(void *o)
@@ -183,6 +177,15 @@ static void safe_pause_run(void *o)
 	cmd = 0; // Clear command
 }
 
+static void safe_pause_idle_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+	LOG_DBG("Entered SAFE_PAUSE_IDLE state");
+	// Close all valves
+	s->valve_states = 0;
+}
+
 static void safe_pause_idle_run(void *o)
 {
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
@@ -205,13 +208,21 @@ static void safe_pause_idle_run(void *o)
 	}
 }
 
+static void safe_pause_vent_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+	LOG_DBG("Entered SAFE_PAUSE_VENT state");
+	// Close all valves
+	s->valve_states = 0;
+	// Open vent valve
+	s->valve_states |= BIT(VALVE_VENT);
+}
+
 static void safe_pause_vent_run(void *o)
 {
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
 	LOG_DBG("Running SAFE_PAUSE_VENT state");
-
-	// Do something
-	// ...
 
 	if (CMD_GLOBAL(s->command)) {
 		return; // Global command takes precedence, do not check conditions
@@ -232,6 +243,15 @@ static void filling_copv_run(void *o)
 	LOG_DBG("Running FILLING_COPV state");
 	// Do something
 	// ...
+}
+
+static void filling_copv_idle_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+	LOG_DBG("Entered FILLING_COPV_IDLE state");
+	// Close all valves
+	s->valve_states = 0;
 }
 
 static void filling_copv_idle_run(void *o)
@@ -255,6 +275,17 @@ static void filling_copv_idle_run(void *o)
 
 		smf_set_state(SMF_CTX(s), &filling_states[FILLING_COPV_FILL]);
 	}
+}
+
+static void filling_copv_fill_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+	LOG_DBG("Entered FILLING_COPV_FILL state");
+	// Close all valves
+	s->valve_states = 0;
+	// Open N fill valve
+	s->valve_states |= BIT(VALVE_N_FILL);
 }
 
 static void filling_copv_fill_run(void *o)
@@ -288,6 +319,15 @@ static void pre_pressurizing_run(void *o)
 	LOG_DBG("Running PRE_PRESSURIZING state");
 	// Do something
 	// ...
+}
+
+static void pre_pressurizing_idle_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+	LOG_DBG("Entered PRE_PRESSURIZING_IDLE state");
+	// Close all valves
+	s->valve_states = 0;
 }
 
 static void pre_pressurizing_idle_run(void *o)
@@ -325,6 +365,17 @@ static void pre_pressurizing_idle_run(void *o)
 	}
 }
 
+static void pre_pressurizing_fill_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+	LOG_DBG("Entered PRE_PRESSURIZING_FILL_N state");
+	// Close all valves
+	s->valve_states = 0;
+	// Open N fill valve
+	s->valve_states |= BIT(VALVE_TANK_TOP) | BIT(VALVE_N_FILL);
+}
+
 static void pre_pressurizing_fill_run(void *o)
 {
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
@@ -346,6 +397,17 @@ static void pre_pressurizing_fill_run(void *o)
 
 		smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_IDLE]);
 	}
+}
+
+static void pre_pressurizing_vent_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+	LOG_DBG("Entered PRE_PRESSURIZING_VENT state");
+	// Close all valves
+	s->valve_states = 0;
+	// Open vent valve
+	s->valve_states |= BIT(VALVE_VENT);
 }
 
 static void pre_pressurizing_vent_run(void *o)

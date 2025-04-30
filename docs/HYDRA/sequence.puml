@@ -1,0 +1,28 @@
+@startuml hydra_seq
+participant "R Comms Board" as R
+participant "Comms Task" as T1
+participant "Data Queue" as DQ
+participant "Command Queue" as CQ
+participant "Sensors/Valves Task" as T2
+participant "Sensors" as S
+participant "Valves" as V
+
+loop Continuously read sensors
+    T2 -> S: Read sensor data
+    S --> T2: Sensor data
+end
+
+alt Status Command
+R -> T1: Status Command
+T1 -> T2: Request sensor data
+T2 -> DQ: Enqueue requested data
+T1 -> DQ: Dequeue sensor data
+DQ --> T1: Sensor data
+T1 -> R: Status Ack Command (with data)
+else Valve Command
+R -> T1: Valve Command
+T1 -> R: Valve Ack Command
+T1 -> T2: Command to actuate valve
+T2 -> V: Actuate valve
+end
+@enduml

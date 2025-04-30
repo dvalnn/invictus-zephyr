@@ -74,6 +74,18 @@ enum filling_state {
 	POST_PRESSURIZING_FILL_N,
 };
 
+enum valves {
+	VALVE_N2O_FILL,
+	VALVE_N2O_PURGE,
+	VALVE_N_FILL,
+	VALVE_N_PURGE,
+	VALVE_TANK_TOP,
+	VALVE_MAIN,
+	VALVE_VENT,
+	VALVE_ABORT,
+	VALVE_COUNT,
+};
+
 /* User defined object */
 struct filling_sm_object {
 	/* This must be first */
@@ -91,6 +103,8 @@ struct filling_sm_object {
 		}; // anonymous struct
 		uint16_t raw[4];
 	} data;
+
+	uint8_t valve_states;
 
 	struct safe_pause_config {
 		uint16_t target_pre_tank_pressure;

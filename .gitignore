@@ -6,6 +6,7 @@ build
 /modules
 /tools
 /zephyr
+/.venv
 
 # other ignores
 .cache
