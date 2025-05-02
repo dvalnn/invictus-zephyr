@@ -17,8 +17,8 @@ boards:
   socs:
   - name: rp2040
 
-- name: inv2_pstat
-  full_name: Invictus2.0 Pocket Stat
+- name: inv2_psat
+  full_name: Invictus2.0 Pocket Sat
   vendor: portospaceteam
   socs:
   - name: rp2040

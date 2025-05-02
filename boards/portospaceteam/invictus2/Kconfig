@@ -13,7 +13,7 @@ config BOARD_INV2_TVCS
     select SOC_RP2040
     select RP2_FLASH_W25Q080
 
-config BOARD_INV2_PSTAT
-    bool "invictus 2 pocket stat"
+config BOARD_INV2_PSAT
+    bool "invictus 2 pocket sat"
     select SOC_RP2040
     select RP2_FLASH_W25Q080
