@@ -23,10 +23,10 @@
     // special node to handle simple bindings
     zephyr,user {
         // Buzzer
-        pwms = <&pwm 12 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+        pwms = <&pwm 0 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
         // Droge and Parachute GPIOs
-        drogue-gpios = <&gpio0 18 GPIO_ACTIVE_HIGH>;
-        parachute-gpios = <&gpio0 19 GPIO_ACTIVE_HIGH>;
+        drogue-gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;
+        parachute-gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
     };
 
     leds {
@@ -35,12 +35,12 @@
 
         green_status: led0 {
             label = "Green status LED";
-            gpios = <&gpio0 4 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            gpios = <&gpio0 26 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
         };
 
         red_status: led1 {
             label = "Red status LED";
-            gpios = <&gpio0 5 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            gpios = <&gpio0 27 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
         };
     };
 };
@@ -65,7 +65,7 @@
         status = "okay";
 
         uart-baudrate = <115200>;
-        // There is an interrupt on GPIO 27 for the GPS,
+        // There is an interrupt on GPIO 3 for the GPS,
         // but it is not used in this configuration.
         // Maybe part of the uart hw flow control?
     };
@@ -82,7 +82,7 @@
         reg = <0x6a>;
         status = "okay";
 
-        irq-gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
+        irq-gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>;
         friendly-name = "st lsm6ds0 inertial measurement unit";
                             // power mode
         accel-pm = <0>;     // 0: High power,
@@ -175,7 +175,7 @@
     pinctrl-names = "default";
     cs-gpios =  <&gpio0 9 GPIO_ACTIVE_LOW>,
                 <&gpio0 13 GPIO_ACTIVE_LOW>,
-                <&gpio0 29 GPIO_ACTIVE_LOW>;
+                <&gpio0 25 GPIO_ACTIVE_LOW>;
 
     bosch_bme280: bme280@0 {
         compatible = "bosch,bme280";
@@ -204,20 +204,20 @@
 &pinctrl {
     uart0_hw_flow_ctrl: uart0_hw_flow_ctrl {
         group1 {
-            pinmux = <UART0_TX_P0>, <UART0_RTS_P3>;
+            pinmux = <UART0_TX_P16>, <UART0_RTS_P19>;
         };
         group2 {
-            pinmux = <UART0_RX_P1>, <UART0_CTS_P2>;
+            pinmux = <UART0_RX_P17>, <UART0_CTS_P18>;
             input-enable;
         };
     };
 
     uart1_gnss: uart1_gnss {
         group1 {
-            pinmux = <UART1_TX_P24>;
+            pinmux = <UART1_TX_P4>;
         };
         group2 {
-            pinmux = <UART1_RX_P25>;
+            pinmux = <UART1_RX_P5>;
             input-enable;
         };
     };
@@ -240,7 +240,7 @@
 
     spi1_nav: spi1_nav {
         group1 {
-			pinmux = <SPI1_CSN_P9>, <SPI1_CSN_P13>, <SPI1_CSN_P29>,
+			pinmux = <SPI1_CSN_P9>, <SPI1_CSN_P13>, <SPI1_CSN_P25>,
                      <SPI1_SCK_P10>, <SPI1_TX_P11>;
         };
         group2 {
