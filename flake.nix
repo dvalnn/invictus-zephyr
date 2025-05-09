@@ -50,9 +50,9 @@
           python312Packages.pymodbus
         ];
 
-        shellHook = ''
-          export ZEPHYR_BASE=$(pwd)/zephyr
-        '';
+        # shellHook = ''
+        #   export ZEPHYR_BASE=$(pwd)/zephyr
+        # '';
       };
     };
 }
