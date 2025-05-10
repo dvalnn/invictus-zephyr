@@ -1,20 +1,21 @@
-# ignore zephyr workspace stuff that is managed by west
-build
+# editors
+.vscode
+*.swp
+*~
 
-/.west
-/bootloader
-/modules
-/tools
-/zephyr
+# python
+.venv
 
-# other ignores
+# build
+/build*
+/twister-out*
+
 .cache
+__pycache__/
+
+# docs
+/doc/_build*
 
 # direnv
+.envrc
 .direnv
-
-# compile commands
-compile_commands.json
-
-#test artifacts
-twister-out*
