@@ -1,0 +1,5 @@
+description: Semtech SX1280 LoRa radio module
+
+compatible: "semtech,lora-sx1280"
+
+include: semtech,lora-sx128x-common.yaml
