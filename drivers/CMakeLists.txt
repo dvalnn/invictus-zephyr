@@ -1,0 +1,1 @@
+add_subdirectory_ifdef(CONFIG_LORA_SX128X lora_sx128x)

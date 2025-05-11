@@ -1,0 +1,74 @@
+# LoRa Basics Modem drivers configuration options
+#
+# Copyright (c) 2024 Semtech Corporation - Félix Piédallu
+#
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig LORA_SX128X
+	bool "Drivers the sx128x Semtech LoRa radios [EXPERIMENTAL]"
+	select POLL
+	select EXPERIMENTAL
+	depends on !LORA
+	help
+	  Include drivers for the sx128x Semtech LoRa radios. This is an experimental implementation
+
+if LORA_SX128X
+
+module = LORA_SX128X
+module-str = lora_sx128x_driver
+source "subsys/logging/Kconfig.template.log_config"
+
+rsource "Kconfig.sx128x"
+
+config LORA_SX128X_INIT_PRIORITY
+  int "Init priority"
+  default 50
+
+
+config LORA_SX128X_EVENT_TRIGGER
+	bool
+
+choice
+	prompt "Event trigger mode"
+	default LORA_SX128X_EVENT_TRIGGER_GLOBAL_THREAD
+	help
+	  Specify the type of triggering to be used by the LORA_SX128X driver.
+
+config LORA_SX128X_EVENT_TRIGGER_NONE
+	bool "No trigger on event"
+
+config LORA_SX128X_EVENT_TRIGGER_GLOBAL_THREAD
+	bool "Use global thread"
+	depends on GPIO
+	select LORA_SX128X_EVENT_TRIGGER
+
+config LORA_SX128X_EVENT_TRIGGER_OWN_THREAD
+	bool "Use own thread"
+	depends on GPIO
+	select LORA_SX128X_EVENT_TRIGGER
+
+endchoice
+
+config LORA_SX128X_EVENT_TRIGGER_THREAD_PRIORITY
+	int "Thread priority"
+	depends on LORA_SX128X_EVENT_TRIGGER_OWN_THREAD
+	default 10
+	help
+	  Priority of thread used by the driver to handle interrupts.
+
+config LORA_SX128X_EVENT_TRIGGER_THREAD_STACK_SIZE
+	int "Thread stack size"
+	depends on LORA_SX128X_EVENT_TRIGGER_OWN_THREAD
+	default 1024
+	help
+	  Stack size of thread used by the driver to handle interrupts.
+
+config LORA_SX128X_HAL_WAIT_ON_BUSY_TIMEOUT_MSEC
+	int "Time to wait on BUSY pin in ms before aborting"
+	default 600000
+	help
+	  Busy pin wait time in milliseconds. As WiFi and GPS scanning can take
+	  seconds/minutes, the default is set to 10 minutes.
+
+
+endif # LORA_SX128X
