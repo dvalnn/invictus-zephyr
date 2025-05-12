@@ -105,10 +105,8 @@ static void abort_entry(void *o)
 	LOG_DBG("Entered ABORT state");
 	// TODO: 
 	// Wait for X seconds
-	// Close all valves
-	s->valve_states = 0;
 	// Open abort and tank top valves
-	s->valve_states |= BIT(VALVE_ABORT) | BIT(VALVE_TANK_TOP);
+	s->valve_states = 0 | BIT(VALVE_ABORT) | BIT(VALVE_TANK_TOP);
 }
 
 static void abort_run(void *o)
@@ -213,10 +211,8 @@ static void safe_pause_vent_entry(void *o)
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
 	(void)s; // unused
 	LOG_DBG("Entered SAFE_PAUSE_VENT state");
-	// Close all valves
-	s->valve_states = 0;
 	// Open vent valve
-	s->valve_states |= BIT(VALVE_VENT);
+	s->valve_states = 0 | BIT(VALVE_VENT);
 }
 
 static void safe_pause_vent_run(void *o)
@@ -282,10 +278,8 @@ static void filling_copv_fill_entry(void *o)
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
 	(void)s; // unused
 	LOG_DBG("Entered FILLING_COPV_FILL state");
-	// Close all valves
-	s->valve_states = 0;
 	// Open N fill valve
-	s->valve_states |= BIT(VALVE_N_FILL);
+	s->valve_states = 0 | BIT(VALVE_N_FILL);
 }
 
 static void filling_copv_fill_run(void *o)
@@ -370,10 +364,8 @@ static void pre_pressurizing_fill_entry(void *o)
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
 	(void)s; // unused
 	LOG_DBG("Entered PRE_PRESSURIZING_FILL_N state");
-	// Close all valves
-	s->valve_states = 0;
 	// Open N fill valve
-	s->valve_states |= BIT(VALVE_TANK_TOP) | BIT(VALVE_N_FILL);
+	s->valve_states = 0 | BIT(VALVE_TANK_TOP) | BIT(VALVE_N_FILL);
 }
 
 static void pre_pressurizing_fill_run(void *o)
@@ -404,10 +396,8 @@ static void pre_pressurizing_vent_entry(void *o)
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
 	(void)s; // unused
 	LOG_DBG("Entered PRE_PRESSURIZING_VENT state");
-	// Close all valves
-	s->valve_states = 0;
 	// Open vent valve
-	s->valve_states |= BIT(VALVE_VENT);
+	s->valve_states = 0 | BIT(VALVE_VENT);
 }
 
 static void pre_pressurizing_vent_run(void *o)
@@ -443,6 +433,15 @@ static void filling_n20_run(void *o)
 	// ...
 }
 
+static void filling_n20_idle_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+	LOG_DBG("Entered FILLING_N20_IDLE state");
+	// Close all valves
+	s->valve_states = 0;
+}
+
 static void filling_n20_idle_run(void *o)
 {
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
@@ -463,6 +462,15 @@ static void filling_n20_idle_run(void *o)
 
 		smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_FILL]);
 	}
+}
+
+static void filling_n20_fill_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+	LOG_DBG("Entered FILLING_N20_FILL state");
+	// Open N20 fill valve
+	s->valve_states = 0 | BIT(VALVE_N2O_FILL);
 }
 
 static void filling_n20_fill_run(void *o)
@@ -506,6 +514,15 @@ static void filling_n20_fill_run(void *o)
 	}
 }
 
+static void filling_n20_vent_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+	LOG_DBG("Entered FILLING_N20_VENT state");
+	// Open vent and N2O fill valves
+	s->valve_states = 0 | BIT(VALVE_N2O_FILL) | BIT(VALVE_VENT);
+}
+
 static void filling_n20_vent_run(void *o)
 {
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
@@ -546,6 +563,15 @@ static void post_pressurizing_run(void *o)
 	// ...
 }
 
+static void post_pressurizing_idle_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+	LOG_DBG("Entered POST_PRESSURIZING_IDLE state");
+	// Close all valves
+	s->valve_states = 0;
+}
+
 static void post_pressurizing_idle_run(void *o)
 {
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
@@ -581,6 +607,15 @@ static void post_pressurizing_idle_run(void *o)
 	}
 }
 
+static void post_pressurizing_fill_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+	LOG_DBG("Entered POST_PRESSURIZING_FILL_N state");
+	// Open N fill valve
+	s->valve_states = 0 | BIT(VALVE_N_FILL);
+}
+
 static void post_pressurizing_fill_run(void *o)
 {
 	struct filling_sm_object *s = (struct filling_sm_object *)o;
@@ -603,6 +638,15 @@ static void post_pressurizing_fill_run(void *o)
 
 		smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_IDLE]);
 	}
+}
+
+static void post_pressurizing_vent_entry(void *o)
+{
+	struct filling_sm_object *s = (struct filling_sm_object *)o;
+	(void)s; // unused
+	LOG_DBG("Entered POST_PRESSURIZING_VENT state");
+	// Open vent valve
+	s->valve_states = 0 | BIT(VALVE_VENT);
 }
 
 static void post_pressurizing_vent_run(void *o)
