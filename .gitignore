@@ -19,3 +19,11 @@ __pycache__/
 # direnv
 .envrc
 .direnv
+
+# zephyr
+zephyr/
+modules/
+tools/
+bootloader/
+.west
+kitware-archive.sh
