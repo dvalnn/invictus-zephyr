@@ -1,0 +1,15 @@
+@startuml lora_seq
+participant "LoRa RX Queue" as LRX
+participant "LoRa TX Queue" as LTX
+participant "LoRa Task" as LT
+participant "LoRa Module" as LoRa
+
+loop Lora RX/TX
+    LT -> LoRa: Read Incoming Data
+    LoRa --> LT
+    LT -> LRX: Enqueue Received Data
+    LT -> LTX: Dequeue TX Data
+    LTX --> LT
+    LT -> LoRa: Send Data
+end
+@enduml

@@ -3,12 +3,12 @@
 *.swp
 *~
 
-# python
-.venv
-
-# build
-/build*
-/twister-out*
+/.west
+/bootloader
+/modules
+/tools
+/zephyr
+/.venv
 
 .cache
 __pycache__/
