@@ -8,7 +8,7 @@ project(invictus_tests)
 target_sources(app PRIVATE test_filling_sm.c)
 
 # If your tests need to include files from the main source directory:
-target_include_directories(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../invictus-obc/include)
+target_include_directories(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../invictus2/obc/include)
 target_compile_definitions(app PRIVATE UNIT_TEST)
 
-target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../invictus-obc/src/filling_sm.c)
+target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../invictus2/obc/src/filling_sm.c)

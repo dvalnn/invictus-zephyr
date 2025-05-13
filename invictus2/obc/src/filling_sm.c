@@ -683,27 +683,27 @@ static const struct smf_state filling_states[] = {
     [MANUAL_OP] = SMF_CREATE_STATE(NULL, NULL, NULL, NULL, NULL), // TODO
 
     [SAFE_PAUSE]        = SMF_CREATE_STATE(NULL, safe_pause_run, NULL, &filling_states[ROOT], &filling_states[SAFE_PAUSE_IDLE]),
-    [SAFE_PAUSE_IDLE]   = SMF_CREATE_STATE(NULL, safe_pause_idle_run, NULL, &filling_states[SAFE_PAUSE], NULL),
-    [SAFE_PAUSE_VENT]   = SMF_CREATE_STATE(NULL, safe_pause_vent_run, NULL, &filling_states[SAFE_PAUSE], NULL),
+    [SAFE_PAUSE_IDLE]   = SMF_CREATE_STATE(safe_pause_idle_entry, safe_pause_idle_run, NULL, &filling_states[SAFE_PAUSE], NULL),
+    [SAFE_PAUSE_VENT]   = SMF_CREATE_STATE(safe_pause_vent_entry, safe_pause_vent_run, NULL, &filling_states[SAFE_PAUSE], NULL),
 
     [FILLING_COPV]      = SMF_CREATE_STATE(NULL, filling_copv_run, NULL, &filling_states[ROOT], &filling_states[FILLING_COPV_IDLE]),
-    [FILLING_COPV_IDLE] = SMF_CREATE_STATE(NULL, filling_copv_idle_run, NULL, &filling_states[FILLING_COPV], NULL),
-    [FILLING_COPV_FILL] = SMF_CREATE_STATE(NULL, filling_copv_fill_run, NULL, &filling_states[FILLING_COPV], NULL),
+    [FILLING_COPV_IDLE] = SMF_CREATE_STATE(filling_copv_idle_entry, filling_copv_idle_run, NULL, &filling_states[FILLING_COPV], NULL),
+    [FILLING_COPV_FILL] = SMF_CREATE_STATE(filling_copv_fill_entry, filling_copv_fill_run, NULL, &filling_states[FILLING_COPV], NULL),
 
     [PRE_PRESSURIZING]          = SMF_CREATE_STATE(NULL, pre_pressurizing_run, NULL, &filling_states[ROOT], &filling_states[PRE_PRESSURIZING_IDLE]),
-    [PRE_PRESSURIZING_IDLE]     = SMF_CREATE_STATE(NULL, pre_pressurizing_idle_run, NULL, &filling_states[PRE_PRESSURIZING], NULL),
-    [PRE_PRESSURIZING_VENT]     = SMF_CREATE_STATE(NULL, pre_pressurizing_vent_run, NULL, &filling_states[PRE_PRESSURIZING], NULL),
-    [PRE_PRESSURIZING_FILL_N]   = SMF_CREATE_STATE(NULL, pre_pressurizing_fill_run, NULL, &filling_states[PRE_PRESSURIZING], NULL),
+    [PRE_PRESSURIZING_IDLE]     = SMF_CREATE_STATE(pre_pressurizing_idle_entry, pre_pressurizing_idle_run, NULL, &filling_states[PRE_PRESSURIZING], NULL),
+    [PRE_PRESSURIZING_VENT]     = SMF_CREATE_STATE(pre_pressurizing_vent_entry, pre_pressurizing_vent_run, NULL, &filling_states[PRE_PRESSURIZING], NULL),
+    [PRE_PRESSURIZING_FILL_N]   = SMF_CREATE_STATE(pre_pressurizing_fill_entry, pre_pressurizing_fill_run, NULL, &filling_states[PRE_PRESSURIZING], NULL),
 
     [FILLING_N20]       = SMF_CREATE_STATE(NULL, filling_n20_run, NULL, &filling_states[ROOT], &filling_states[FILLING_N20_IDLE]),
-    [FILLING_N20_IDLE]  = SMF_CREATE_STATE(NULL, filling_n20_idle_run, NULL, &filling_states[FILLING_N20], NULL),
-    [FILLING_N20_FILL]  = SMF_CREATE_STATE(NULL, filling_n20_fill_run, NULL, &filling_states[FILLING_N20], NULL),
-    [FILLING_N20_VENT]  = SMF_CREATE_STATE(NULL, filling_n20_vent_run, NULL, &filling_states[FILLING_N20], NULL),
+    [FILLING_N20_IDLE]  = SMF_CREATE_STATE(filling_n20_idle_entry, filling_n20_idle_run, NULL, &filling_states[FILLING_N20], NULL),
+    [FILLING_N20_FILL]  = SMF_CREATE_STATE(filling_n20_fill_entry, filling_n20_fill_run, NULL, &filling_states[FILLING_N20], NULL),
+    [FILLING_N20_VENT]  = SMF_CREATE_STATE(filling_n20_vent_entry, filling_n20_vent_run, NULL, &filling_states[FILLING_N20], NULL),
 
     [POST_PRESSURIZING]         = SMF_CREATE_STATE(NULL, post_pressurizing_run, NULL, &filling_states[ROOT], &filling_states[POST_PRESSURIZING_IDLE]),
-    [POST_PRESSURIZING_IDLE]    = SMF_CREATE_STATE(NULL, post_pressurizing_idle_run, NULL, &filling_states[POST_PRESSURIZING], NULL),
-    [POST_PRESSURIZING_VENT]    = SMF_CREATE_STATE(NULL, post_pressurizing_vent_run, NULL, &filling_states[POST_PRESSURIZING], NULL),
-    [POST_PRESSURIZING_FILL_N]  = SMF_CREATE_STATE(NULL, post_pressurizing_fill_run, NULL, &filling_states[POST_PRESSURIZING], NULL),
+    [POST_PRESSURIZING_IDLE]    = SMF_CREATE_STATE(post_pressurizing_idle_entry, post_pressurizing_idle_run, NULL, &filling_states[POST_PRESSURIZING], NULL),
+    [POST_PRESSURIZING_VENT]    = SMF_CREATE_STATE(post_pressurizing_vent_entry, post_pressurizing_vent_run, NULL, &filling_states[POST_PRESSURIZING], NULL),
+    [POST_PRESSURIZING_FILL_N]  = SMF_CREATE_STATE(post_pressurizing_fill_entry, post_pressurizing_fill_run, NULL, &filling_states[POST_PRESSURIZING], NULL),
     // clang-format on
 };
 

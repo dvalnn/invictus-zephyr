@@ -4,6 +4,6 @@ tests:
       - "invictus"
       - "obc"
       - "filling"
-    allowed_platforms:
-      - native_sim/native/64
-
+    platform_allow:
+      - qemu_x86_64
+      - qemu_cortex_m0
