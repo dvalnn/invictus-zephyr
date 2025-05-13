@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "smf.h": "c",
-        "ztest.h": "c",
-        "ztest_test.h": "c"
-    }
-}
