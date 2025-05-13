@@ -1,11 +1,24 @@
-Build project:
+# Invictus2.0
+
+## Building and Running Invictus2 board firmware
+
+Build application:
 ```bash
-west build -p auto -b <board> invictus/
+west build -p auto -b <board> invictus2/<app>
 ```
 
-flash project:
+flash to board:
 ```bash
 west flash
+```
+
+Build for local simulation:
+```bash
+west build -p auto -b native_sim invictus2/<app>
+```
+or 
+```bash
+west build -p auto -b native_sim/native/64 invictus2/<app>
 ```
 
 run emulation/simulation:
@@ -15,5 +28,48 @@ west build -t run
 
 run tests:
 ```bash
-python3 zephyr/scripts/twister -T invictus/tests/ -G
+west twister -T test/ -G
 ```
+
+## Contributing
+
+### Environment setup
+
+1. Install Zephyr dependencies 
+   - Follow the instructions in the [Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html)
+2. Install west
+   - Follow the instructions in the [Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html)
+3. Initialize the Zephyr workspace from the manifest repository
+   ```bash
+   mkdir zephyrworkspace
+   cd zephyrworkspace
+   west init -m https://github.com/dvalnn/pst_zephyr_manifest
+   west update
+   ```
+4. Export the CMake package
+   ```bash
+   west zephyr-export
+   ```
+5. Install the required Python packages
+   ```bash
+   west packages pip --install
+   ```
+6. Install the SDK
+   ```bash
+   west sdk install
+   ```
+   or follow the instructions in the [Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/develop/toolchains/zephyr_sdk.html#toolchain-zephyr-sdk-install) to install the SDK manually.
+
+### Contributing
+
+1. Fork this repository
+
+2. Clone your fork to the zephyr workspace
+   ```bash
+   cd zephyrworkspace
+   git clone <your_fork_url>/invictus-zephyr
+   ```
+
+2. Create a new branch (`git checkout -b feature-branch`)
+
+3. Make your changes
