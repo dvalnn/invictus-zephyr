@@ -1,0 +1,129 @@
+@startuml filling_state_machine
+' State Machine
+[*] --> Idle : STOP_CMD
+[*] --> Abort : ABORT_CMD
+[*] --> SafePause : PAUSE_CMD
+
+state "SafePause" as SafePause #PaleGreen{
+    state "Idle" as SafeIdle #PaleGreen {
+        SafeIdle : All valves = Closed
+    }
+    state "Vent" as SafeVent #LightYellow {
+        SafeVent : Vent Valve = Open
+        SafeVent : All other valves = Closed
+    }
+    SafeIdle -> SafeVent : NP > Trigger
+    SafeVent -> SafeIdle : NP <= Target
+}
+SafePause --> Idle : RESUME_CMD
+
+Abort --> Idle : STOP_CMD / READY_CMD
+
+note as N1
+    NP - Nitrogen Tank Pressure
+    N2OP - Nitrous Oxide Pressure
+    N2OW - Nitrous Oxide Weight
+end note
+
+state Idle #PaleGreen {
+    Idle : All valves = Closed
+}
+
+state Abort #PaleGreen {
+    Abort : Wait for X seconds (~10) to allow for "regret"
+    Abort : Abort Valve = Open
+    Abort : Tank Top Valve = Open
+    Abort : All other valves = Closed
+}
+
+' stable
+state Safe #PaleGreen
+' dangerous
+state Dangerous #Pink
+' not ideal after some time, but not dangerous
+state "Not Ideal" as NotIdeal #LightYellow
+
+state "Filling N" as COPVFill #PaleGreen {
+    state "Idle" as COPVIdle #PaleGreen {
+        COPVIdle : All valves = Closed
+    }
+    state "FillCOPV" as FillCOPV #LightYellow {
+        FillCOPV : N Valve = Open
+        FillCOPV : All other valves = Closed
+    }
+    COPVFill : TargetNP = 200 bar
+    [*] --> COPVIdle
+    Idle --> COPVFill : FILL_COPV_CMD
+    COPVIdle --> FillCOPV : NP <= Target
+    FillCOPV --> COPVIdle : NP >= Target
+}
+
+state "PrePressurizing" as PreFill #PaleGreen {
+    state "Idle" as PrepIdle #PaleGreen {
+        PrepIdle : All valves = Closed
+    }
+    state "Vent" as PreVent #LightYellow {
+        PreVent : Vent Valve = Open
+        PreVent : All other valves = Closed
+    }
+    state "Fill N" as PreFillN #LightYellow {
+        PreFillN : Tank Top Valve = Open
+        PreFillN : N Valve = Open
+    }
+    PreFill : TriggerN20P = 7 bar
+    PreFill : TargetN2OP = 5 bar
+    [*] --> PrepIdle
+    Idle --> PreFill : FILL_N_CMD
+    PrepIdle --> PreFillN : N2OP < Target
+    PreFillN --> PrepIdle : N2OP >= Target
+    PrepIdle --> PreVent : N20P > Trigger
+    PreVent --> PrepIdle : N20P <= Target
+}
+
+state "Filling N2O" as MainFill #LightYellow{
+    state "Idle" as FillOxIdle #PaleGreen {
+        FillOxIdle : All valves = Closed
+    }
+    state "FillOx" as FillOx #Pink {
+        FillOx : N2O Valve = Open
+        FillOx : All other valves = Closed
+    }
+    state "VentFillOx" as VentFillOx #LightYellow {
+        VentFillOx : Vent Valve = Open
+        VentFillOx : N2O Valve = Open
+        VentFillOx : All other valves = Closed
+    }
+    MainFill : TriggerN2OP = 38 bar
+    MainFill : TargetN2OP = 35 bar
+    MainFill : TriggerTemp = 2 ºC
+    MainFill : TargetWeight = 7 kg
+    Idle --> MainFill : FILL_OX_CMD
+    FillOxIdle --> FillOx : N2OW < Target
+    FillOx --> FillOxIdle : N2OW >= Target
+    FillOx --> VentFillOx : N2OP > Trigger\nAND\nN2OT > TriggerTemp
+    VentFillOx --> FillOx : N2OP <= Target\n OR \nN2OT <= TriggerTemp
+}
+
+state "PostPressurizing" as PostFill #LightYellow {
+    state "Idle" as PostIdle #PaleGreen-Pink {
+        PostIdle : Safe if not too long (Pressurized N2O)
+        PostIdle : All valves = Closed
+    }
+    state "Vent" as PostVent #LightYellow {
+        PostVent : Vent Valve = Open
+        PostVent : All other valves = Closed
+    }
+    state "Fill N" as PostFillN #LightYellow {
+        PostFillN : Tank Top Valve = Open
+        PostFillN : All other valves = Closed
+    }
+    PostFill : TriggerN2OP = 55 bar ? might not be needed (regulator valve)
+    PostFill : TargetN2OP = 50 bar
+    [*] --> PostIdle
+    Idle --> PostFill : FILL_N_CMD
+    PostIdle --> PostFillN : N2OP < Target
+    PostFillN --> PostIdle : N2OP >= Target
+    PostIdle --> PostVent : NP > Trigger
+    PostVent --> PostIdle : NP <= Target
+}
+@enduml

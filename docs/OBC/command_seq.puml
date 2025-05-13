@@ -1,0 +1,20 @@
+@startuml command_seq
+participant "Mission Control" as MC
+participant "TVCS" as TVCS
+participant "OBC" as OBC
+participant "RS Task" as RS
+participant "State Machine" as SM
+
+group Command Received
+    MC -> SM: Command (LoRa)
+    SM -> SM: Process Command\n in State Machine
+    SM -> RS: Forward Command (Priority Queue)
+    RS -> TVCS: Forward Command (RS485)
+    group Read Command
+        TVCS --> RS: Return Data (RS485)
+        RS --> SM: Return Data (Priority Queue)
+    end
+    SM --> MC: Command Ack (LoRa)
+end
+
+@enduml

@@ -1,0 +1,27 @@
+@startuml Architecture
+
+rectangle "Mission Control" {
+    node "Radio Comms Board" as MC_RCOMMS
+    node "GUI" as MC_GUI
+    MC_RCOMMS -- MC_GUI : UART
+}
+
+interface "Full-Duplex RS485 Bus" as RS485_BUS
+
+rectangle "Rocket" {
+    node "Radio Comms Board" as R_RCOMMS
+    node "TVCS Board" as R_TVCS
+    node "OnBoard Computer" as R_OBC
+    R_RCOMMS -- RS485_BUS
+    R_TVCS -- RS485_BUS
+    R_OBC -- RS485_BUS
+}
+
+rectangle "Filling Station" {
+    node "TVCS Board" as FS_TVCS
+    FS_TVCS -- RS485_BUS
+}
+
+MC_RCOMMS -[#red] R_RCOMMS : Radio
+
+@enduml
