@@ -15,7 +15,6 @@ const static struct modbus_iface_param client_param = {
     .rx_timeout = 50000,
     .serial =
         {
-            // TODO: Double check how high the baud rate can be
             .baud = 115200,
             // NOTE: In RTU mode, modbus uses CRC checks, so parity can be NONE
             .parity = UART_CFG_PARITY_NONE,
