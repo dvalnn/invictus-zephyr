@@ -93,7 +93,7 @@
 	pinctrl-names = "default";
 
     modbus0{
-        compatible = "zephyr,modbus";
+        compatible = "zephyr,modbus-serial";
         status = "okay";
         de-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
     };
