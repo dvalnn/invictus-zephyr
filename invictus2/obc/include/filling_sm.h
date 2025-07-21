@@ -86,14 +86,41 @@ enum valves {
     VALVE_COUNT,
 };
 
+struct filling_sm_config {
+    struct safe_pause {
+        uint16_t target_pre_tank_pressure;
+        uint16_t trigger_pre_tank_pressure;
+    } safe_pause;
+
+    // State Machine Configuration
+    struct filling_copv {
+        uint16_t target_pre_tank_pressure;
+    } f_copv;
+
+    struct pre_pressurizing {
+        uint16_t target_main_pressure;
+        uint16_t trigger_main_pressure;
+    } pre_p;
+
+    struct filling_n20 {
+        uint16_t target_main_pressure;
+        uint16_t target_main_weight;
+        uint16_t trigger_main_pressure;
+        uint16_t trigger_main_temp;
+    } f_n20;
+
+    struct post_pressurizing {
+        uint16_t target_main_pressure;
+        uint16_t trigger_main_pressure;
+    } post_p;
+};
+
 /* User defined object */
 struct filling_sm_object {
     /* This must be first */
     struct smf_ctx ctx;
 
     cmd_t command;
-    int modbus_client_iface;
-
     union filling_data {
         struct {
             uint16_t pre_tank_pressure;
@@ -107,32 +134,7 @@ struct filling_sm_object {
     // TODO: Make this into an union
     uint8_t valve_states;
 
-    struct safe_pause_config {
-        uint16_t target_pre_tank_pressure;
-        uint16_t trigger_pre_tank_pressure;
-    } safe_pause_config;
-
-    // State Machine Configuration
-    struct filling_copv_config {
-        uint16_t target_pre_tank_pressure;
-    } f_copv_config;
-
-    struct pre_pressurizing_config {
-        uint16_t target_main_pressure;
-        uint16_t trigger_main_pressure;
-    } pre_p_config;
-
-    struct filling_n20_config {
-        uint16_t target_main_pressure;
-        uint16_t target_main_weight;
-        uint16_t trigger_main_pressure;
-        uint16_t trigger_main_temp;
-    } f_n20_config;
-
-    struct post_pressurizing_config {
-        uint16_t target_main_pressure;
-        uint16_t trigger_main_pressure;
-    } post_p_config;
+    struct filling_sm_config *config;
 };
 
 #ifdef UNIT_TEST
@@ -149,36 +151,30 @@ void filling_sm_init(struct filling_sm_object *initial_s_obj);
         LOG_INF("Main Tank T: %u", (fsm)->data.main_tank_temperature);                        \
     } while (0)
 
-#define DEFAULT_FSM_OBJECT(name, client_iface)                                                \
-    struct filling_sm_object name = {                                                         \
-        .command = 0,                                                                         \
-        .modbus_client_iface = client_iface,                                                  \
-        .data =                                                                               \
-            {                                                                                 \
-                .raw = {0},                                                                   \
-            },                                                                                \
-        .safe_pause_config =                                                                  \
+#define DEFAULT_FSM_CONFIG(name)                                                              \
+    struct filling_sm_config name = {                                                         \
+        .safe_pause =                                                                         \
             {                                                                                 \
                 .target_pre_tank_pressure = SAFE_PAUSE_TARGET_PRE_P,                          \
                 .trigger_pre_tank_pressure = SAFE_PAUSE_TRIGGER_PRE_P,                        \
             },                                                                                \
-        .f_copv_config =                                                                      \
+        .f_copv =                                                                             \
             {                                                                                 \
                 .target_pre_tank_pressure = FILLING_COPV_TARGET_PRE_P,                        \
             },                                                                                \
-        .pre_p_config =                                                                       \
+        .pre_p =                                                                              \
             {                                                                                 \
                 .target_main_pressure = PRE_PRESSURIZING_TARGET_MAIN_P,                       \
                 .trigger_main_pressure = PRE_PRESSURIZING_TRIGGER_MAIN_P,                     \
             },                                                                                \
-        .f_n20_config =                                                                       \
+        .f_n20 =                                                                              \
             {                                                                                 \
                 .target_main_pressure = FILLING_N20_TARGET_MAIN_P,                            \
                 .target_main_weight = FILLING_N20_TARGET_MAIN_W,                              \
                 .trigger_main_pressure = FILLING_N20_TRIGGER_MAIN_P,                          \
                 .trigger_main_temp = FILLING_N20_TRIGGER_MAIN_T,                              \
             },                                                                                \
-        .post_p_config =                                                                      \
+        .post_p =                                                                             \
             {                                                                                 \
                 .target_main_pressure = POST_PRESSURIZING_TARGET_MAIN_P,                      \
                 .trigger_main_pressure = POST_PRESSURIZING_TRIGGER_MAIN_P,                    \

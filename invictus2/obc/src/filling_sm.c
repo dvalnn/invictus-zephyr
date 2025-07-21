@@ -196,12 +196,12 @@ static void safe_pause_idle_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.pre_tank_pressure > s->safe_pause_config.trigger_pre_tank_pressure) {
+    if (s->data.pre_tank_pressure > s->config->safe_pause.trigger_pre_tank_pressure) {
         const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->safe_pause_config.trigger_pre_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->safe_pause.trigger_pre_tank_pressure);
         LOG_DBG("SAFE_PAUSE_IDLE: %s (%d) > %s (%d) -> SAFE_PAUSE_VENT", var_name,
                 s->data.pre_tank_pressure, cond_name,
-                s->safe_pause_config.trigger_pre_tank_pressure);
+                s->config->safe_pause.trigger_pre_tank_pressure);
         smf_set_state(SMF_CTX(s), &filling_states[SAFE_PAUSE_VENT]);
     }
 }
@@ -224,10 +224,10 @@ static void safe_pause_vent_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.pre_tank_pressure <= s->safe_pause_config.target_pre_tank_pressure) {
+    if (s->data.pre_tank_pressure <= s->config->safe_pause.target_pre_tank_pressure) {
         LOG_DBG("SAFE_PAUSE_VENT: data.pre_tank_pressure (%d) <= target_np (%d) -> "
                 "SAFE_PAUSE_IDLE",
-                s->data.pre_tank_pressure, s->safe_pause_config.target_pre_tank_pressure);
+                s->data.pre_tank_pressure, s->config->safe_pause.target_pre_tank_pressure);
         smf_set_state(SMF_CTX(s), &filling_states[SAFE_PAUSE_IDLE]);
     }
 }
@@ -262,12 +262,12 @@ static void filling_copv_idle_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.pre_tank_pressure <= s->f_copv_config.target_pre_tank_pressure) {
+    if (s->data.pre_tank_pressure <= s->config->f_copv.target_pre_tank_pressure) {
         const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->f_copv_config.target_pre_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->f_copv.target_pre_tank_pressure);
         LOG_DBG("FILLING_COPV_IDLE: %s (%d) <= %s (%d) -> FILLING_COPV_FILL", var_name,
                 s->data.pre_tank_pressure, cond_name,
-                s->f_copv_config.target_pre_tank_pressure);
+                s->config->f_copv.target_pre_tank_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[FILLING_COPV_FILL]);
     }
@@ -294,13 +294,13 @@ static void filling_copv_fill_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.pre_tank_pressure >= s->f_copv_config.target_pre_tank_pressure) {
+    if (s->data.pre_tank_pressure >= s->config->f_copv.target_pre_tank_pressure) {
         const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->f_copv_config.target_pre_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->f_copv.target_pre_tank_pressure);
 
         LOG_DBG("FILLING_COPV_FILL: %s (%d) >= %s (%d) -> FILLING_COPV_IDLE", var_name,
                 s->data.pre_tank_pressure, cond_name,
-                s->f_copv_config.target_pre_tank_pressure);
+                s->config->f_copv.target_pre_tank_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[FILLING_COPV_IDLE]);
     }
@@ -337,22 +337,22 @@ static void pre_pressurizing_idle_run(void *o)
     }
 
     // TODO: Double check this condition
-    if (s->data.pre_tank_pressure > s->pre_p_config.trigger_main_pressure) {
+    if (s->data.pre_tank_pressure > s->config->pre_p.trigger_main_pressure) {
         const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->pre_p_config.trigger_main_pressure);
+        const char *cond_name = STRINGIFY(s->config->pre_p.trigger_main_pressure);
         LOG_DBG("PRE_PRESSURIZING_IDLE: %s (%d) > %s (%d) -> PRE_PRESSURIZING_VENT", var_name,
-                s->data.pre_tank_pressure, cond_name, s->pre_p_config.trigger_main_pressure);
+                s->data.pre_tank_pressure, cond_name, s->config->pre_p.trigger_main_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_VENT]);
         return;
     }
 
-    if (s->data.main_tank_pressure < s->pre_p_config.target_main_pressure) {
+    if (s->data.main_tank_pressure < s->config->pre_p.target_main_pressure) {
         const char *var_name = STRINGIFY(s->data.main_tank_pressure);
-        const char *cond_name = STRINGIFY(s->pre_p_config.target_main_pressure);
+        const char *cond_name = STRINGIFY(s->config->pre_p.target_main_pressure);
         LOG_DBG("PRE_PRESSURIZING_IDLE: %s (%d) < %s (%d) ->  PRE_PRESSURIZING_FILL_N",
                 var_name, s->data.main_tank_pressure, cond_name,
-                s->pre_p_config.target_main_pressure);
+                s->config->pre_p.target_main_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_FILL_N]);
     }
@@ -379,12 +379,12 @@ static void pre_pressurizing_fill_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.main_tank_pressure >= s->pre_p_config.target_main_pressure) {
+    if (s->data.main_tank_pressure >= s->config->pre_p.target_main_pressure) {
         const char *var_name = STRINGIFY(s->data.main_tank_pressure);
-        const char *cond_name = STRINGIFY(s->pre_p_config.target_main_pressure);
+        const char *cond_name = STRINGIFY(s->config->pre_p.target_main_pressure);
         LOG_DBG("PRE_PRESSURIZING_FILL_N: %s (%d) >= %s (%d) -> PRE_PRESSURIZING_IDLE",
                 var_name, s->data.main_tank_pressure, cond_name,
-                s->pre_p_config.target_main_pressure);
+                s->config->pre_p.target_main_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_IDLE]);
     }
@@ -412,11 +412,11 @@ static void pre_pressurizing_vent_run(void *o)
     }
 
     // TODO: Double check this condition
-    if (s->data.pre_tank_pressure <= s->pre_p_config.target_main_pressure) {
+    if (s->data.pre_tank_pressure <= s->config->pre_p.target_main_pressure) {
         const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->pre_p_config.target_main_pressure);
+        const char *cond_name = STRINGIFY(s->config->pre_p.target_main_pressure);
         LOG_DBG("PRE_PRESSURIZING_VENT: %s (%d) <= %s (%d) -> PRE_PRESSURIZING_IDLE", var_name,
-                s->data.pre_tank_pressure, cond_name, s->pre_p_config.target_main_pressure);
+                s->data.pre_tank_pressure, cond_name, s->config->pre_p.target_main_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_IDLE]);
     }
@@ -452,11 +452,11 @@ static void filling_n20_idle_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.main_tank_weight < s->f_n20_config.target_main_weight) {
+    if (s->data.main_tank_weight < s->config->f_n20.target_main_weight) {
         const char *var_name = STRINGIFY(s->data.main_tank_weight);
-        const char *cond_name = STRINGIFY(s->f_n20_config.target_main_weight);
+        const char *cond_name = STRINGIFY(s->config->f_n20.target_main_weight);
         LOG_DBG("FILLING_N20_IDLE: %s (%d) < %s (%d) -> FILLING_N20_FILL", var_name,
-                s->data.main_tank_weight, cond_name, s->f_n20_config.target_main_weight);
+                s->data.main_tank_weight, cond_name, s->config->f_n20.target_main_weight);
 
         smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_FILL]);
     }
@@ -483,29 +483,29 @@ static void filling_n20_fill_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.main_tank_pressure >= s->f_n20_config.trigger_main_pressure &&
-        s->data.main_tank_temperature > s->f_n20_config.trigger_main_temp) {
+    if (s->data.main_tank_pressure >= s->config->f_n20.trigger_main_pressure &&
+        s->data.main_tank_temperature > s->config->f_n20.trigger_main_temp) {
         const char *var_name = STRINGIFY(s->data.main_tank_pressure);
-        const char *cond_name = STRINGIFY(s->f_n20_config.trigger_main_pressure);
+        const char *cond_name = STRINGIFY(s->config->f_n20.trigger_main_pressure);
 
         const char *var2_name = STRINGIFY(s->data.main_tank_temperature);
-        const char *cond2_name = STRINGIFY(s->f_n20_config.trigger_main_temp);
+        const char *cond2_name = STRINGIFY(s->config->f_n20.trigger_main_temp);
 
         LOG_DBG("FILLING_N20_FILL: %s (%d) >= %s (%d) && %s (%d) > %s (%d) ->  "
                 "FILLING_N20_VENT",
                 var_name, s->data.main_tank_pressure, cond_name,
-                s->f_n20_config.trigger_main_pressure, var2_name,
-                s->data.main_tank_temperature, cond2_name, s->f_n20_config.trigger_main_temp);
+                s->config->f_n20.trigger_main_pressure, var2_name,
+                s->data.main_tank_temperature, cond2_name, s->config->f_n20.trigger_main_temp);
 
         smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_VENT]);
         return;
     }
 
-    if (s->data.main_tank_weight >= s->f_n20_config.target_main_weight) {
+    if (s->data.main_tank_weight >= s->config->f_n20.target_main_weight) {
         const char *var_name = STRINGIFY(s->data.main_tank_weight);
-        const char *cond_name = STRINGIFY(s->f_n20_config.target_main_weight);
+        const char *cond_name = STRINGIFY(s->config->f_n20.target_main_weight);
         LOG_DBG("FILLING_N20_FILL: %s (%d) >= %s (%d) -> FILLING_N20_IDLE", var_name,
-                s->data.main_tank_weight, cond_name, s->f_n20_config.target_main_weight);
+                s->data.main_tank_weight, cond_name, s->config->f_n20.target_main_weight);
 
         smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_IDLE]);
     }
@@ -532,19 +532,19 @@ static void filling_n20_vent_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.main_tank_pressure <= s->f_n20_config.target_main_weight ||
-        s->data.main_tank_temperature <= s->f_n20_config.trigger_main_temp) {
+    if (s->data.main_tank_pressure <= s->config->f_n20.target_main_weight ||
+        s->data.main_tank_temperature <= s->config->f_n20.trigger_main_temp) {
         const char *var_name = STRINGIFY(s->data.main_tank_pressure);
-        const char *cond_name = STRINGIFY(s->f_n20_config.target_main_weight);
+        const char *cond_name = STRINGIFY(s->config->f_n20.target_main_weight);
 
         const char *var2_name = STRINGIFY(s->data.main_tank_temperature);
-        const char *cond2_name = STRINGIFY(s->f_n20_config.trigger_main_temp);
+        const char *cond2_name = STRINGIFY(s->config->f_n20.trigger_main_temp);
 
         LOG_DBG("FILLING_N20_VENT: %s (%d) <= %s (%d) || %s (%d) <= %s (%d) -> "
                 "FILLING_N20_IDLE",
                 var_name, s->data.main_tank_pressure, cond_name,
-                s->f_n20_config.target_main_weight, var2_name, s->data.main_tank_temperature,
-                cond2_name, s->f_n20_config.trigger_main_temp);
+                s->config->f_n20.target_main_weight, var2_name, s->data.main_tank_temperature,
+                cond2_name, s->config->f_n20.trigger_main_temp);
 
         smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_FILL]);
     }
@@ -580,24 +580,24 @@ static void post_pressurizing_idle_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.pre_tank_pressure > s->post_p_config.trigger_main_pressure) {
+    if (s->data.pre_tank_pressure > s->config->post_p.trigger_main_pressure) {
         const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->post_p_config.trigger_main_pressure);
+        const char *cond_name = STRINGIFY(s->config->post_p.trigger_main_pressure);
 
         LOG_DBG("POST_PRESSURIZING_IDLE: %s (%d) > %s (%d) -> POST_PRESSURIZING_VENT",
                 var_name, s->data.pre_tank_pressure, cond_name,
-                s->post_p_config.trigger_main_pressure);
+                s->config->post_p.trigger_main_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_VENT]);
         return;
     }
 
-    if (s->data.main_tank_pressure < s->post_p_config.target_main_pressure) {
+    if (s->data.main_tank_pressure < s->config->post_p.target_main_pressure) {
         const char *var_name = STRINGIFY(s->data.main_tank_pressure);
-        const char *cond_name = STRINGIFY(s->post_p_config.target_main_pressure);
+        const char *cond_name = STRINGIFY(s->config->post_p.target_main_pressure);
         LOG_DBG("POST_PRESSURIZING_IDLE: %s (%d) < %s (%d) -> POST_PRESSURIZING_FILL_N",
                 var_name, s->data.main_tank_pressure, cond_name,
-                s->post_p_config.target_main_pressure);
+                s->config->post_p.target_main_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_FILL_N]);
     }
@@ -624,13 +624,13 @@ static void post_pressurizing_fill_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.main_tank_pressure >= s->post_p_config.target_main_pressure) {
+    if (s->data.main_tank_pressure >= s->config->post_p.target_main_pressure) {
         const char *var_name = STRINGIFY(s->data.main_tank_pressure);
-        const char *cond_name = STRINGIFY(s->post_p_config.target_main_pressure);
+        const char *cond_name = STRINGIFY(s->config->post_p.target_main_pressure);
 
         LOG_DBG("POST_PRESSURIZING_FILL_N: %s (%d) >= %s (%d) -> POST_PRESSURIZING_IDLE",
                 var_name, s->data.main_tank_pressure, cond_name,
-                s->post_p_config.target_main_pressure);
+                s->config->post_p.target_main_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_IDLE]);
     }
@@ -657,13 +657,13 @@ static void post_pressurizing_vent_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.pre_tank_pressure <= s->post_p_config.target_main_pressure) {
+    if (s->data.pre_tank_pressure <= s->config->post_p.target_main_pressure) {
         const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->post_p_config.target_main_pressure);
+        const char *cond_name = STRINGIFY(s->config->post_p.target_main_pressure);
 
         LOG_DBG("POST_PRESSURIZING_VENT: %s (%d) <= %s (%d) -> POST_PRESSURIZING_IDLE",
                 var_name, s->data.pre_tank_pressure, cond_name,
-                s->post_p_config.target_main_pressure);
+                s->config->post_p.target_main_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_IDLE]);
     }
