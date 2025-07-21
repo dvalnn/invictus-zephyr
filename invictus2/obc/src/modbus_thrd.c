@@ -15,7 +15,7 @@ const static struct modbus_iface_param client_param = {
     .rx_timeout = 50000,
     .serial =
         {
-            .baud = 9600,
+            .baud = 115200,
             // NOTE: In RTU mode, modbus uses CRC checks, so parity can be NONE
             .parity = UART_CFG_PARITY_NONE,
             .stop_bits_client = UART_CFG_STOP_BITS_1,
@@ -40,7 +40,6 @@ static int init_modbus_master(void)
 void modbus_thread_entry(void *fsm_config, void *data_queues, void *can_start_sem)
 {
     ARG_UNUSED(data_queues);
-
     k_sem_take((struct k_sem *)can_start_sem, K_FOREVER);
 
     /* const struct modbus_data_queues *queues = data_queues; */

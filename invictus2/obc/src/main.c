@@ -1,9 +1,6 @@
 #include "zephyr/kernel.h"
 #include "zephyr/kernel/thread.h"
 #include "zephyr/logging/log.h"
-#include "zephyr/devicetree.h"
-#include "zephyr/usb/usb_device.h"
-#include "zephyr/drivers/uart.h"
 
 #include "filling_sm.h"
 #include "modbus_thrd.h"
@@ -58,32 +55,16 @@ K_THREAD_DEFINE(modbus_tid, THREAD_STACK_SIZE, modbus_thread_entry, &filling_sm_
                 &mb_queues, &modbus_start_sem, THREAD_PRIORITY_MEDIUM, 0, 0);
 extern const k_tid_t modbus_tid;
 
-#define CDC_ACM_UART_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_cdc_acm_uart)
-
 int main()
 {
-
-#if DT_NODE_EXISTS(CDC_ACM_UART_NODE)
-    {
-        const struct device *const dev = DEVICE_DT_GET(CDC_ACM_UART_NODE);
-        uint32_t dtr = 0;
-
-        if (!device_is_ready(dev) || usb_enable(NULL)) {
-            return 0;
-        }
-
-        while (!dtr) {
-            uart_line_ctrl_get(dev, UART_LINE_CTRL_DTR, &dtr);
-            k_sleep(K_MSEC(100));
-        }
-
-        LOG_INF("CDC ACM UART connected on %s", dev->name);
-    }
-#endif
-
     LOG_INF("Starting OBC application");
 
     k_sem_give(&modbus_start_sem);
-    k_thread_join(modbus_tid, K_FOREVER);
+
+    while (1) {
+        k_sleep(K_SECONDS(1));
+        LOG_INF("OBC main thread running");
+    }
+
     k_oops(); // Should never reach here
 }
