@@ -1,9 +1,9 @@
-#include "zephyr/kernel.h"
-#include "zephyr/kernel/thread.h"
-#include "zephyr/logging/log.h"
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 
 #include "filling_sm.h"
 #include "modbus_thrd.h"
+#include "zephyr/toolchain.h"
 
 // THREADS:
 // - Main thread: LoRa communication. (for now just pipe everything to stdout).
@@ -24,47 +24,180 @@
 
 LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 
-// Thread definitions
+// --- Thread Config ---
 #define THREAD_STACK_SIZE      2048
-// NOTE: lower values have higher priority
 #define THREAD_PRIORITY_LOW    K_PRIO_PREEMPT(10)
 #define THREAD_PRIORITY_MEDIUM K_PRIO_PREEMPT(5)
 #define THREAD_PRIORITY_HIGH   K_PRIO_PREEMPT(1)
 
-/* K_THREAD_STACK_DEFINE(lora_thread_stack, THREAD_STACK_SIZE); */
-/* K_THREAD_STACK_DEFINE(navigator_thread_stack, THREAD_STACK_SIZE); */
-/* K_THREAD_STACK_DEFINE(data_thread_stack, THREAD_STACK_SIZE); */
-
-/* static struct k_thread lora_thread_data; */
-/* static struct k_thread navigator_thread_data; */
-/* static struct k_thread data_thread_data; */
-
-K_SEM_DEFINE(modbus_start_sem, 0, 1);
-
+// --- Queues ---
 K_MSGQ_DEFINE(fsm_cmd_q, sizeof(cmd_t), 2, 1);
 K_MSGQ_DEFINE(modbus_sensor_data_q, sizeof(union filling_data), 2, 1);
-
-DEFAULT_FSM_CONFIG(filling_sm_config);
 
 static const struct modbus_data_queues mb_queues = {
     .fsm_cmd_q = &fsm_cmd_q,
     .sensor_data_q = &modbus_sensor_data_q,
 };
 
-K_THREAD_DEFINE(modbus_tid, THREAD_STACK_SIZE, modbus_thread_entry, &filling_sm_config,
-                &mb_queues, &modbus_start_sem, THREAD_PRIORITY_MEDIUM, 0, 0);
-extern const k_tid_t modbus_tid;
+// --- Filling FSM Config ---
+DEFAULT_FSM_CONFIG(filling_sm_config);
 
-int main()
+// --- Max Threads ---
+#define N_THREADS 4
+
+// --- Stacks ---
+K_THREAD_STACK_DEFINE(modbus_stack, THREAD_STACK_SIZE);
+K_THREAD_STACK_DEFINE(lora_stack, THREAD_STACK_SIZE);
+K_THREAD_STACK_DEFINE(navigator_stack, THREAD_STACK_SIZE);
+K_THREAD_STACK_DEFINE(data_stack, THREAD_STACK_SIZE);
+
+// --- Thread structures and tracking ---
+static struct k_thread thread_data[N_THREADS];
+
+static struct {
+    k_tid_t tid;
+    bool joined;
+    const char *name;
+} threads[N_THREADS] = {
+    {.tid = NULL, .joined = false, .name = "modbus"},
+    {.tid = NULL, .joined = false, .name = "lora"},
+    {.tid = NULL, .joined = false, .name = "navigator"},
+    {.tid = NULL, .joined = false, .name = "data"},
+};
+
+void lora_thread_entry(void *p1, void *p2, void *p3)
 {
-    LOG_INF("Starting OBC application");
+    ARG_UNUSED(p1);
+    ARG_UNUSED(p2);
+    ARG_UNUSED(p3);
 
-    k_sem_give(&modbus_start_sem);
+    LOG_INF("Lora thread running mock logic...");
+    k_sleep(K_SECONDS(2)); // Simulate work
+    LOG_INF("Lora thread exiting.");
+}
 
-    while (1) {
-        k_sleep(K_SECONDS(1));
-        LOG_INF("OBC main thread running");
+void navigator_thread_entry(void *p1, void *p2, void *p3)
+{
+    ARG_UNUSED(p1);
+    ARG_UNUSED(p2);
+    ARG_UNUSED(p3);
+
+    LOG_INF("Navigator thread running mock logic...");
+    k_sleep(K_SECONDS(3)); // Simulate work
+    LOG_INF("Navigator thread exiting.");
+}
+
+void data_thread_entry(void *p1, void *p2, void *p3)
+{
+    ARG_UNUSED(p1);
+    ARG_UNUSED(p2);
+    ARG_UNUSED(p3);
+
+    LOG_INF("Data thread running mock logic...");
+    k_sleep(K_SECONDS(4)); // Simulate work
+    LOG_INF("Data thread exiting.");
+}
+
+// --- Thread Spawning ---
+
+int setup_all_threads(void)
+{
+    LOG_INF("Setting up threads...");
+
+    // Initialize the modbus thread
+    if (modbus_thread_setup()) {
+        LOG_ERR("Modbus RTU master initialization failed");
+        return -1;
     }
+
+    return 0;
+}
+
+void spawn_all_threads(void)
+{
+    LOG_INF("Spawning threads dynamically...");
+
+    threads[0].tid =
+        k_thread_create(&thread_data[0], modbus_stack, THREAD_STACK_SIZE, modbus_thread_entry,
+                        (void *)&filling_sm_config, (void *)&mb_queues, NULL,
+                        THREAD_PRIORITY_MEDIUM, 0, K_NO_WAIT);
+
+    threads[1].tid =
+        k_thread_create(&thread_data[1], lora_stack, THREAD_STACK_SIZE, lora_thread_entry,
+                        NULL, NULL, NULL, THREAD_PRIORITY_LOW, 0, K_NO_WAIT);
+
+    threads[2].tid = k_thread_create(&thread_data[2], navigator_stack, THREAD_STACK_SIZE,
+                                     navigator_thread_entry, NULL, NULL, NULL,
+                                     THREAD_PRIORITY_LOW, 0, K_NO_WAIT);
+
+    threads[3].tid =
+        k_thread_create(&thread_data[3], data_stack, THREAD_STACK_SIZE, data_thread_entry,
+                        NULL, NULL, NULL, THREAD_PRIORITY_LOW, 0, K_NO_WAIT);
+
+    for (int i = 0; i < N_THREADS; i++) {
+        k_thread_name_set(threads[i].tid, threads[i].name);
+    }
+}
+
+// --- Thread Joining ---
+bool handle_join_thread(k_tid_t thread, const char *name)
+{
+    if (thread == NULL) {
+        LOG_WRN("Thread %s handle is NULL", name);
+        return true; // Treat as joined
+    }
+
+    switch (k_thread_join(thread, K_NO_WAIT)) {
+    case 0:
+        LOG_WRN("Thread %s joined", name);
+        return true;
+
+    case -EBUSY:
+        return false;
+
+    default:
+        LOG_ERR("Failed to join thread %s: %d", name, -errno);
+        return true; // Treat as a joined thread for simplicity
+    }
+}
+
+void join_all_threads(void)
+{
+    int remaining = N_THREADS;
+    while (remaining > 0) {
+        for (int i = 0; i < N_THREADS; i++) {
+            if (threads[i].joined) {
+                continue;
+            }
+
+            if (handle_join_thread(threads[i].tid, threads[i].name)) {
+                threads[i].joined = true;
+                remaining--;
+
+                // TODO: handle failure/degraded logic here
+            }
+        }
+
+        k_sleep(K_MSEC(100));
+    }
+
+    LOG_INF("All threads have exited.");
+}
+
+// --- Main ---
+int main(void)
+{
+    LOG_INF("Starting OBC main thread");
+
+    if (setup_all_threads()) {
+        LOG_ERR("Failed to setup threads");
+        return -1;
+    }
+
+    spawn_all_threads();
+
+    LOG_INF("Entering main join loop");
+    join_all_threads();
 
     k_oops(); // Should never reach here
 }

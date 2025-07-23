@@ -115,21 +115,23 @@ struct filling_sm_config {
     } post_p;
 };
 
+union filling_data {
+    struct {
+        uint16_t pre_tank_pressure;
+        uint16_t main_tank_pressure;
+        uint16_t main_tank_weight;
+        uint16_t main_tank_temperature;
+    }; // anonymous struct
+    uint16_t raw[4];
+};
+
 /* User defined object */
 struct filling_sm_object {
     /* This must be first */
     struct smf_ctx ctx;
 
     cmd_t command;
-    union filling_data {
-        struct {
-            uint16_t pre_tank_pressure;
-            uint16_t main_tank_pressure;
-            uint16_t main_tank_weight;
-            uint16_t main_tank_temperature;
-        }; // anonymous struct
-        uint16_t raw[4];
-    } data;
+    union filling_data data;
 
     // TODO: Make this into an union
     uint8_t valve_states;

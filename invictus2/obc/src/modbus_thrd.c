@@ -2,11 +2,12 @@
 #include "zephyr/logging/log.h"
 #include "zephyr/modbus/modbus.h"
 #include "zephyr/toolchain.h"
+#include "zephyr/usb/usb_device.h"
 
 #include "modbus_thrd.h"
 #include "filling_sm.h"
 
-LOG_MODULE_REGISTER(mbs_sample, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(modbus_thread, LOG_LEVEL_INF);
 
 static int client_iface;
 
@@ -24,8 +25,25 @@ const static struct modbus_iface_param client_param = {
 
 #define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
 
-static int init_modbus_master(void)
+int modbus_thread_setup(void)
 {
+
+#if DT_NODE_HAS_COMPAT(DT_PARENT(MODBUS_NODE), zephyr_cdc_acm_uart)
+    const struct device *const dev = DEVICE_DT_GET(DT_PARENT(MODBUS_NODE));
+    uint32_t dtr = 0;
+
+    if (!device_is_ready(dev) || usb_enable(NULL)) {
+        return 0;
+    }
+
+    while (!dtr) {
+        uart_line_ctrl_get(dev, UART_LINE_CTRL_DTR, &dtr);
+        k_sleep(K_MSEC(100));
+    }
+
+    LOG_INF("Master connected on %s", dev->name);
+#endif
+
     const char iface_name[] = {DEVICE_DT_NAME(MODBUS_NODE)};
     client_iface = modbus_iface_get_by_name(iface_name);
 
@@ -37,31 +55,29 @@ static int init_modbus_master(void)
     return modbus_init_client(client_iface, client_param);
 }
 
-void modbus_thread_entry(void *fsm_config, void *data_queues, void *can_start_sem)
+void modbus_thread_entry(void *fsm_config, void *data_queues, void *p3)
 {
-    ARG_UNUSED(data_queues);
-    k_sem_take((struct k_sem *)can_start_sem, K_FOREVER);
+    ARG_UNUSED(p3);
 
-    /* const struct modbus_data_queues *queues = data_queues; */
-    if (init_modbus_master()) {
-        LOG_ERR("Modbus RTU client initialization failed");
-        return;
-    }
+    const struct modbus_data_queues *queues = data_queues;
+    (void)queues; // unused for now
 
-    LOG_INF("Modbus thread started");
+    // TODO: make this configurable.
+    // TODO: specify which slave address has which hr addresses and valve coils
+    const int slave_addr = 0x01;
+
     struct filling_sm_object filling_sm_obj = {
         .command = 0,
         .data = {{0}},
+        // All valves closed initially.
+        // TODO: Making this an union/bitfield would be better.
         .valve_states = 0,
         .config = (struct filling_sm_config *)fsm_config,
     };
 
     filling_sm_init(&filling_sm_obj);
 
-    // TODO: make this configurable.
-    // TODO: specify which slave address has which hr addresses and valve coils
-    const int slave_addr = 0x01;
-
+    LOG_INF("Modbus thread started");
     while (1) {
         k_sleep(K_MSEC(1000)); // For now, looping every second is fine
 
@@ -72,7 +88,6 @@ void modbus_thread_entry(void *fsm_config, void *data_queues, void *can_start_se
         }
 
         LOG_FILLING_DATA(&filling_sm_obj);
-
         LOG_HEXDUMP_DBG(filling_sm_obj.data.raw, sizeof(filling_sm_obj.data.raw),
                         "Raw holding registers");
 

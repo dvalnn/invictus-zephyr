@@ -1,11 +1,6 @@
-&zephyr_udc0 {
-	cdc_acm_uart0: cdc_acm_uart0 {
-		compatible = "zephyr,cdc-acm-uart";
-        status = "okay";
-
-		modbus0 {
-			compatible = "zephyr,modbus-serial";
-			status = "okay";
-		};
-	};
+&uart0 {
+       modbus0  {
+                status = "okay";
+       };
+       status = "okay";
 };

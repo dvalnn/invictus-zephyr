@@ -30,7 +30,7 @@ def run_server():
 
     # Start the serial server.
     # Change port to your serial port (e.g., 'COM3' on Windows or '/dev/ttyUSB0' on Linux)
-    StartSerialServer(context=context, identity=identity, port='/dev/ttyACM0',
+    StartSerialServer(context=context, identity=identity, port='/dev/ttyACM1',
                         baudrate=115200, stopbits=1, bytesize=8, parity='N')
 
 # Run the Modbus RTU server in a separate thread so we can interactively change values.
