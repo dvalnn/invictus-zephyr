@@ -59,8 +59,9 @@ void modbus_thread_entry(void *fsm_config, void *data_queues, void *p3)
 {
     ARG_UNUSED(p3);
 
+    LOG_INF("Modbus thread started");
+
     const struct modbus_data_queues *queues = data_queues;
-    (void)queues; // unused for now
 
     // TODO: make this configurable.
     // TODO: specify which slave address has which hr addresses and valve coils
@@ -75,11 +76,17 @@ void modbus_thread_entry(void *fsm_config, void *data_queues, void *p3)
         .config = (struct filling_sm_config *)fsm_config,
     };
 
-    filling_sm_init(&filling_sm_obj);
+    k_timeout_t put_timeout = K_NO_WAIT;
+    k_timeout_t get_timeout = K_MSEC(10);
 
-    LOG_INF("Modbus thread started");
+    filling_sm_init(&filling_sm_obj);
+    // TODO: Double check loop logic.
+    // For now we do
+    //  - read sensor data -> put data -> get cmd -> run fsm -> write valve states
+    //  - maybe we could also interleave smf run more frequently
     while (1) {
-        k_sleep(K_MSEC(1000)); // For now, looping every second is fine
+        // TODO: improve loop sleep time calculation
+        k_sleep(K_MSEC(1000));
 
         if (modbus_read_holding_regs(client_iface, slave_addr, 0, filling_sm_obj.data.raw,
                                      ARRAY_SIZE(filling_sm_obj.data.raw)) < 0) {
@@ -87,10 +94,24 @@ void modbus_thread_entry(void *fsm_config, void *data_queues, void *p3)
             continue;
         }
 
+        // Put read sensor data into the message queue
+        // TODO: handle k_msgq_put() failure
+        k_msgq_put(queues->sensor_data_q, &filling_sm_obj.data, put_timeout);
+
+        // Check for commands in the message queue
+        // TODO: handle k_msgq_get() failure
+        cmd_t cmd = 0;
+        k_msgq_get(queues->fsm_cmd_q, &cmd, get_timeout);
+        filling_sm_obj.command = cmd;
+
+        smf_run_state(SMF_CTX(&filling_sm_obj));
+
+        if (modbus_write_coils(client_iface, slave_addr, 0, &filling_sm_obj.valve_states, 8)) {
+            LOG_ERR("Failed to write valve states");
+        }
+
         LOG_FILLING_DATA(&filling_sm_obj);
         LOG_HEXDUMP_DBG(filling_sm_obj.data.raw, sizeof(filling_sm_obj.data.raw),
                         "Raw holding registers");
-
-        smf_run_state(SMF_CTX(&filling_sm_obj));
     }
 }
