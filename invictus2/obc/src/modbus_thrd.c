@@ -1,7 +1,7 @@
 #include "zephyr/kernel.h"
+#include "zephyr/toolchain.h"
 #include "zephyr/logging/log.h"
 #include "zephyr/modbus/modbus.h"
-#include "zephyr/toolchain.h"
 #include "zephyr/usb/usb_device.h"
 
 #include "modbus_thrd.h"
@@ -110,7 +110,6 @@ void modbus_thread_entry(void *fsm_config, void *data_queues, void *p3)
             LOG_ERR("Failed to write valve states");
         }
 
-        LOG_FILLING_DATA(&filling_sm_obj);
         LOG_HEXDUMP_DBG(filling_sm_obj.data.raw, sizeof(filling_sm_obj.data.raw),
                         "Raw holding registers");
     }

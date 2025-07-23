@@ -1,9 +1,9 @@
-#include <zephyr/kernel.h>
-#include <zephyr/logging/log.h>
+#include "zephyr/kernel.h"
+#include "zephyr/logging/log.h"
+#include "zephyr/toolchain.h"
 
 #include "filling_sm.h"
 #include "modbus_thrd.h"
-#include "zephyr/toolchain.h"
 
 // THREADS:
 // - Main thread: LoRa communication. (for now just pipe everything to stdout).
@@ -32,11 +32,11 @@ LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 
 // --- Queues ---
 K_MSGQ_DEFINE(fsm_cmd_q, sizeof(cmd_t), 2, 1);
-K_MSGQ_DEFINE(modbus_sensor_data_q, sizeof(union filling_data), 2, 1);
+K_MSGQ_DEFINE(modbus_sensor_q, sizeof(union filling_data), 2, 1);
 
 static const struct modbus_data_queues mb_queues = {
     .fsm_cmd_q = &fsm_cmd_q,
-    .sensor_data_q = &modbus_sensor_data_q,
+    .sensor_data_q = &modbus_sensor_q,
 };
 
 // --- Filling FSM Config ---
@@ -87,15 +87,39 @@ void navigator_thread_entry(void *p1, void *p2, void *p3)
     LOG_INF("Navigator thread exiting.");
 }
 
-void data_thread_entry(void *p1, void *p2, void *p3)
+void data_thread_entry(void *modbus_msgq, void *p2, void *p3)
 {
-    ARG_UNUSED(p1);
     ARG_UNUSED(p2);
     ARG_UNUSED(p3);
 
-    LOG_INF("Data thread running mock logic...");
-    k_sleep(K_SECONDS(4)); // Simulate work
-    LOG_INF("Data thread exiting.");
+    struct k_msgq *mbus_q = modbus_msgq;
+    if (mbus_q == NULL) {
+        LOG_ERR("Modbus message queue is NULL");
+        return;
+    }
+
+    union filling_data modbus_data = {0};
+    union filling_data modbus_batch[512 / sizeof(modbus_data)] = {0};
+    int batch_size = 0;
+
+    while (1) {
+        const int ret = k_msgq_get(mbus_q, &modbus_data, K_FOREVER);
+        if (ret) {
+            LOG_ERR("Failed to get data from modbus message queue: %d", ret);
+            return;
+        }
+        modbus_batch[batch_size++] = modbus_data;
+
+        LOG_FILLING_DATA(modbus_data);
+        if (batch_size >= ARRAY_SIZE(modbus_batch)) {
+            // Simulate saving a batch of data to SD card
+            LOG_INF("Saving batch of %d modbus data entries to SD card", batch_size);
+            // Simulate saving data to SD card
+            // TODO: Implement actual SD card logic
+            k_sleep(K_MSEC(10)); // Simulate write delay
+            batch_size = 0;      // Reset batch size after saving
+        }
+    }
 }
 
 // --- Thread Spawning ---
@@ -132,7 +156,7 @@ void spawn_all_threads(void)
 
     threads[3].tid =
         k_thread_create(&thread_data[3], data_stack, THREAD_STACK_SIZE, data_thread_entry,
-                        NULL, NULL, NULL, THREAD_PRIORITY_LOW, 0, K_NO_WAIT);
+                        &modbus_sensor_q, NULL, NULL, THREAD_PRIORITY_LOW, 0, K_NO_WAIT);
 
     for (int i = 0; i < N_THREADS; i++) {
         k_thread_name_set(threads[i].tid, threads[i].name);

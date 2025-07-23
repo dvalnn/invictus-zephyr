@@ -145,12 +145,12 @@ extern const struct smf_state filling_states[];
 
 void filling_sm_init(struct filling_sm_object *initial_s_obj);
 
-#define LOG_FILLING_DATA(fsm)                                                                 \
+#define LOG_FILLING_DATA(fsm_data)                                                            \
     do {                                                                                      \
-        LOG_INF("Pressurizing Tank P: %u", (fsm)->data.pre_tank_pressure);                    \
-        LOG_INF("Main Tank P: %u", (fsm)->data.main_tank_pressure);                           \
-        LOG_INF("Main Tank W: %u", (fsm)->data.main_tank_weight);                             \
-        LOG_INF("Main Tank T: %u", (fsm)->data.main_tank_temperature);                        \
+        LOG_INF("Pressurizing Tank P: %u", (fsm_data).pre_tank_pressure);                     \
+        LOG_INF("Main Tank P: %u", (fsm_data).main_tank_pressure);                            \
+        LOG_INF("Main Tank W: %u", (fsm_data).main_tank_weight);                              \
+        LOG_INF("Main Tank T: %u", (fsm_data).main_tank_temperature);                         \
     } while (0)
 
 #define DEFAULT_FSM_CONFIG(name)                                                              \
