@@ -25,7 +25,7 @@ const static struct modbus_iface_param client_param = {
 
 #define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
 
-int modbus_thread_setup(void)
+bool modbus_thread_setup(void)
 {
 
 #if DT_NODE_HAS_COMPAT(DT_PARENT(MODBUS_NODE), zephyr_cdc_acm_uart)
@@ -33,7 +33,7 @@ int modbus_thread_setup(void)
     uint32_t dtr = 0;
 
     if (!device_is_ready(dev) || usb_enable(NULL)) {
-        return 0;
+        return false;
     }
 
     while (!dtr) {
@@ -49,10 +49,10 @@ int modbus_thread_setup(void)
 
     if (client_iface < 0) {
         LOG_ERR("Failed to get client_iface index for %s", iface_name);
-        return client_iface;
+        return false;
     }
 
-    return modbus_init_client(client_iface, client_param);
+    return modbus_init_client(client_iface, client_param) == 0;
 }
 
 void modbus_thread_entry(void *fsm_config, void *data_queues, void *p3)

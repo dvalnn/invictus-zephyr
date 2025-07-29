@@ -1,0 +1,10 @@
+mainmenu "OBC Application Options"
+
+config LORA_REDIRECT_UART
+    bool "Enable LoRa UART Shell"
+    default n
+    help
+      This option enables a specific UART shell for interacting with the LoRa module.
+      It is useful for debugging and direct control of the LoRa functions via a terminal.
+
+source "Kconfig.zephyr"

@@ -7,6 +7,11 @@ Build application:
 west build -p auto -b <board> invictus2/<app>
 ```
 
+merging additional overlay and Kconfig fragments:
+```bash
+west build -p auto -b <board> invictus2/<app> -DEXTRA_DTC_OVERLAY_FILE=<dtc_fragment>.overlay -DEXTRA_CONF_FILE=<kconfig_fragment>.conf
+```
+
 flash to board:
 ```bash
 west flash

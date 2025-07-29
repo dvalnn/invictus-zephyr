@@ -4,6 +4,7 @@
 
 #include "filling_sm.h"
 #include "modbus_thrd.h"
+#include "lora_thrd.h"
 
 // THREADS:
 // - Main thread: LoRa communication. (for now just pipe everything to stdout).
@@ -65,17 +66,6 @@ static struct {
     {.tid = NULL, .joined = false, .name = "data"},
 };
 
-void lora_thread_entry(void *p1, void *p2, void *p3)
-{
-    ARG_UNUSED(p1);
-    ARG_UNUSED(p2);
-    ARG_UNUSED(p3);
-
-    LOG_INF("Lora thread running mock logic...");
-    k_sleep(K_SECONDS(2)); // Simulate work
-    LOG_INF("Lora thread exiting.");
-}
-
 void navigator_thread_entry(void *p1, void *p2, void *p3)
 {
     ARG_UNUSED(p1);
@@ -124,17 +114,22 @@ void data_thread_entry(void *modbus_msgq, void *p2, void *p3)
 
 // --- Thread Spawning ---
 
-int setup_all_threads(void)
+bool setup_all_threads(void)
 {
     LOG_INF("Setting up threads...");
 
-    // Initialize the modbus thread
-    if (modbus_thread_setup()) {
-        LOG_ERR("Modbus RTU master initialization failed");
-        return -1;
+    if (!lora_thread_setup()) {
+        LOG_ERR("LoRa thread setup failed");
+        return false;
     }
 
-    return 0;
+    // Initialize the modbus thread
+    if (!modbus_thread_setup()) {
+        LOG_ERR("Modbus RTU master initialization failed");
+        return false;
+    }
+
+    return true;
 }
 
 void spawn_all_threads(void)
@@ -213,7 +208,7 @@ int main(void)
 {
     LOG_INF("Starting OBC main thread");
 
-    if (setup_all_threads()) {
+    if (!setup_all_threads()) {
         LOG_ERR("Failed to setup threads");
         return -1;
     }
