@@ -22,6 +22,8 @@
 // LOGGING:
 // - Log debugg information to the console and to a file on the SD card.
 // // - Use LOG_INF, LOG_ERR, LOG_DBG, etc. macros for logging.
+//
+// TODO: pivot from using message queues to zbus pub-sub architecture.
 
 LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 
@@ -38,6 +40,16 @@ K_MSGQ_DEFINE(modbus_sensor_q, sizeof(union filling_data), 2, 1);
 static const struct modbus_data_queues mb_queues = {
     .fsm_cmd_q = &fsm_cmd_q,
     .sensor_data_q = &modbus_sensor_q,
+};
+
+static const struct lora_cmd_queues lora_cmd_qs = {
+    .in_fsm_cmd_q = &fsm_cmd_q, // Queue for incoming FSM commands
+    .in_override_cmd_q = NULL,  // No override commands for now
+};
+
+static const struct lora_data_queues lora_data_qs = {
+    .sensor_data_q = &modbus_sensor_q, // Queue for sensor data (modbus)
+    .navigator_data_q = NULL,          // No navigator data queue for now
 };
 
 // --- Filling FSM Config ---
@@ -118,14 +130,14 @@ bool setup_all_threads(void)
 {
     LOG_INF("Setting up threads...");
 
-    if (!lora_thread_setup()) {
-        LOG_ERR("LoRa thread setup failed");
-        return false;
-    }
-
     // Initialize the modbus thread
     if (!modbus_thread_setup()) {
         LOG_ERR("Modbus RTU master initialization failed");
+        return false;
+    }
+
+    if (!lora_thread_setup()) {
+        LOG_ERR("LoRa thread setup failed");
         return false;
     }
 
@@ -141,9 +153,9 @@ void spawn_all_threads(void)
                         (void *)&filling_sm_config, (void *)&mb_queues, NULL,
                         THREAD_PRIORITY_MEDIUM, 0, K_NO_WAIT);
 
-    threads[1].tid =
-        k_thread_create(&thread_data[1], lora_stack, THREAD_STACK_SIZE, lora_thread_entry,
-                        NULL, NULL, NULL, THREAD_PRIORITY_LOW, 0, K_NO_WAIT);
+    threads[1].tid = k_thread_create(
+        &thread_data[1], lora_stack, THREAD_STACK_SIZE, lora_thread_entry,
+        (void *)&lora_cmd_qs, (void *)&lora_data_qs, NULL, THREAD_PRIORITY_LOW, 0, K_NO_WAIT);
 
     threads[2].tid = k_thread_create(&thread_data[2], navigator_stack, THREAD_STACK_SIZE,
                                      navigator_thread_entry, NULL, NULL, NULL,
