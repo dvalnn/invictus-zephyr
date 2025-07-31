@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import threading
-import time
 import sys
 import tty
 import termios
@@ -16,15 +15,106 @@ from rich.live import Live
 from rich.text import Text
 
 
+from pymodbus.server import StartSerialServer
+from pymodbus.datastore import (
+    ModbusSlaveContext,
+    ModbusServerContext,
+    ModbusSequentialDataBlock,
+)
+from pymodbus.device import ModbusDeviceIdentification
+
+
+# Filling State Machine Commands
+CMD_GLOBAL_START = 0x00000001
+CMD_IDLE_START = 0x00000100
+CMD_OTHER_START = 0x00010000
+
+cmd_map = {
+    "STOP": CMD_GLOBAL_START,
+    "ABORT": CMD_GLOBAL_START + 1,
+    "PAUSE": CMD_GLOBAL_START + 2,
+    "FILL_COPV": CMD_IDLE_START,
+    "PRE_PRESSURIZE": CMD_IDLE_START + 1,
+    "FILL_N20": CMD_IDLE_START + 2,
+    "POST_PRESSURIZE": CMD_IDLE_START + 3,
+    "READY": CMD_OTHER_START,
+    "RESUME": CMD_OTHER_START + 1,
+}
+
+
+# Modbus data store
+class ModbusSlaveSimulator:
+    def __init__(self, port: str, baudrate: int):
+        self.port = port
+        self.baudrate = baudrate
+        self.running = threading.Event()
+        self.thread: Optional[threading.Thread] = None
+        self.messages: list[str] = []
+        self.store = ModbusSlaveContext(
+            di=ModbusSequentialDataBlock(0, [0] * 100),
+            co=ModbusSequentialDataBlock(0, [False] * 100),
+            hr=ModbusSequentialDataBlock(0, [0] * 100),
+            ir=ModbusSequentialDataBlock(0, [0] * 100),
+        )
+        self.context = ModbusServerContext(slaves=self.store, single=True)
+
+    def start(self):
+        try:
+            self.running.set()
+            self.thread = threading.Thread(target=self._run_server, daemon=True)
+            self.thread.start()
+            self.messages.append(
+                f"Modbus RTU slave simulator started on {self.port} at {self.baudrate} baud."
+            )
+            return True
+        except Exception as e:
+            self.messages.append(f"Error starting Modbus server: {e}")
+            return False
+
+    def stop(self):
+        self.running.clear()
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout=1)
+
+    def handle_hr(self, index: int, value: int):
+        """Handle setting a holding register value."""
+        self.context[0].setValues(3, index, [value])
+        self.messages.append(f"Holding register {index} set to {value}")
+
+    def handle_coil(self, index: int, value: bool):
+        """Handle setting a coil value."""
+        self.context[0].setValues(1, index, [bool(value)])
+        self.messages.append(f"Coil {index} set to {bool(value)}")
+
+    def _run_server(self):
+        identity = ModbusDeviceIdentification()
+        identity.VendorName = "Pymodbus"
+        identity.ProductCode = "PM"
+        identity.VendorUrl = "http://github.com/riptideio/pymodbus/"
+        identity.ProductName = "Modbus RTU Slave Simulator"
+        identity.ModelName = "Modbus RTU Slave"
+        identity.MajorMinorRevision = "1.0"
+
+        StartSerialServer(
+            context=self.context,
+            identity=identity,
+            port=self.port,
+            baudrate=self.baudrate,
+            stopbits=1,
+            bytesize=8,
+            parity="N",
+        )
+
+
 class SimpleUARTListener:
-    def __init__(self, port: str, baudrate: int = 115200):
+    def __init__(self, port: str, baudrate: int):
         self.port = port
         self.baudrate = baudrate
         self.serial_connection: Optional[serial.Serial] = None
         self.running = threading.Event()
         self.thread: Optional[threading.Thread] = None
         self.messages: list[str] = []
-        self.max_messages = 50
+        self.max_messages = 100
 
     def start(self):
         try:
@@ -58,7 +148,7 @@ class SimpleUARTListener:
                         self.messages.append(f"[{timestamp}] {data}")
                         if len(self.messages) > self.max_messages:
                             self.messages.pop(0)
-                time.sleep(0.05)
+
             except Exception as e:
                 self.messages.append(f"UART Error: {e}")
                 break
@@ -74,9 +164,16 @@ class SimpleUARTListener:
 
 
 class RichTwoColumnApp:
-    def __init__(self, uart_port: str = "/dev/ttyACM0", baudrate: int = 115200):
+    def __init__(
+        self,
+        uart_port: str = "/dev/ttyACM0",
+        uart_baudrate: int = 115200,
+        modbus_port: str = "/dev/ttyACM1",
+        modbus_baudrate: int = 115200,
+    ):
         self.console = Console()
-        self.uart_listener = SimpleUARTListener(uart_port, baudrate)
+        self.uart_listener = SimpleUARTListener(uart_port, uart_baudrate)
+        self.modbus_simulator = ModbusSlaveSimulator(modbus_port, modbus_baudrate)
         self.command_log: list[str] = []
         self.max_log_entries = 50
         self.running = True
@@ -96,11 +193,43 @@ class RichTwoColumnApp:
         if len(self.command_log) > self.max_log_entries:
             self.command_log.pop(0)
 
+    def calc_panel_lines(self, panel_name):
+        # This assumes vertical split: [command_log, command_input]
+        term_height = self.console.size.height
+        left_ratios = self.layout["left"].children  # [command_log, command_input]
+        total_ratio = sum([c.ratio if c.ratio else 0 for c in left_ratios])
+
+        # For command_log
+        if panel_name == "command_log":
+            log_panel_ratio = self.layout["left"]["command_log"].ratio or 0
+            # Estimate lines: subtract ~4 lines for panel border & title, divvy by ratio
+            visible = int((term_height - 2) * (log_panel_ratio / total_ratio)) - 4
+            return max(visible, 20)
+        # For UART output (right panel)
+        if panel_name == "right":
+            right_ratio = self.layout["right"].ratio or 0  # default half
+            visible = int((term_height - 2) * (right_ratio / (total_ratio))) - 4
+            # self.log_command(f"visible: {visible}, max: {max(visible, 20)}")
+            return max(visible, 20)
+
+        return 20
+
     def update_display(self):
+
+        log_lines = self.calc_panel_lines("command_log")
+        uart_lines = self.calc_panel_lines("right")
+
         # Command log (left)
         command_text = Text()
-        for line in self.command_log[-20:]:
+
+        for line in self.modbus_simulator.messages:
+            self.log_command(line)
+
+        self.modbus_simulator.messages = []
+
+        for line in self.command_log[-log_lines:]:
             command_text.append(line + "\n")
+
         self.layout["command_log"].update(
             Panel(command_text, title="Command Shell & Logs", border_style="blue")
         )
@@ -114,11 +243,11 @@ class RichTwoColumnApp:
             )
         )
         # UART output (right)
-        uart_text = Text()
-        for line in self.uart_listener.messages[-20:]:
-            uart_text.append(line + "\n")
+        uart_text = Text(justify="full", no_wrap=True, overflow="fold", end="")
+        for line in self.uart_listener.messages[-uart_lines:]:
+            uart_text.append(line.strip() + "\n")
         self.layout["right"].update(
-            Panel(uart_text, title="UART Output", border_style="red")
+            Panel(uart_text, title="UART Output", border_style="red", padding=(1, 2))
         )
 
     def process_command(self, command: str):
@@ -132,7 +261,10 @@ class RichTwoColumnApp:
             help_lines = [
                 "Available commands:",
                 "  help - Show this help",
-                "  uart <message> - Send message to UART",
+                "  uart <message> - Send message to UART (verbatim)",
+                "  cmd <command> - Send filling state machine command.",
+                "  \t-> available commands: " + ", ".join(cmd_map.keys()),
+                "  modbus <hr|coil> <index> <value> - Set Modbus register/coil",
                 "  clear - Clear command log",
                 "  status - UART running/connected status",
                 "  quit/exit - Exit application",
@@ -148,6 +280,38 @@ class RichTwoColumnApp:
                     self.log_command("Failed to send UART command")
             else:
                 self.log_command("Usage: uart <message>")
+        elif cmd == "cmd":
+            if len(parts) > 1:
+                command_name = parts[1].upper()
+                if command_name in cmd_map:
+                    command_value = cmd_map[command_name]
+                    payload = f"normal 0x{command_value:08X}\n"
+                    if self.uart_listener.send(payload):
+                        self.log_command(
+                            f"Sent command: {command_name} ({payload.strip()})"
+                        )
+                    else:
+                        self.log_command("Failed to send command")
+                else:
+                    self.log_command(f"Unknown command: {command_name}")
+            else:
+                self.log_command("Usage: cmd <command>")
+
+        elif cmd == "modbus":
+            if len(parts) < 4:
+                self.log_command("Usage: modbus <hr|coil> <index> <value>")
+                return
+            modbus_type = parts[1].lower()
+            index = int(parts[2])
+            if modbus_type == "hr":
+                value = int(parts[3])
+                self.modbus_simulator.handle_hr(index, value)
+            elif modbus_type == "coil":
+                value = parts[3].lower() in ("1", "true", "yes")
+                self.modbus_simulator.handle_coil(index, value)
+            else:
+                self.log_command(f"Unknown Modbus type: {modbus_type}")
+
         elif cmd == "clear":
             self.command_log.clear()
             self.log_command("Command log cleared")
@@ -170,6 +334,12 @@ class RichTwoColumnApp:
             self.log_command("UART listener started")
         else:
             self.log_command("Failed to start UART listener")
+
+        if self.modbus_simulator.start():
+            self.log_command("Modbus simulator started")
+        else:
+            self.log_command("Failed to start Modbus simulator")
+
         self.log_command("Commands: help, uart <msg>, clear, status, quit")
         self.log_command("Application ready. Type 'help' for commands.")
 
