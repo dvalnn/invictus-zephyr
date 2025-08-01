@@ -11,8 +11,8 @@ boards:
   socs:
   - name: rp2040
 
-- name: inv2_tvcs
-  full_name: Invictus2.0 Themperature and Valve Control System
+- name: inv2_hydra
+  full_name: Invictus2.0 Hydraulic Regulation and Actuation
   vendor: portospaceteam
   socs:
   - name: rp2040
