@@ -12,6 +12,16 @@ merging additional overlay and Kconfig fragments:
 west build -p auto -b <board> invictus2/<app> -DEXTRA_DTC_OVERLAY_FILE=<dtc_fragment>.overlay -DEXTRA_CONF_FILE=<kconfig_fragment>.conf
 ```
 
+Building for the raspberry pi pico (`rpi_pico`) is adequate for testing purposes.
+Aditionally, definitions for the custom invictus boards exist, under the names:
+
+```
+inv2_obc
+inv2_nav
+inv2_hydra
+inv2_psat
+```
+
 flash to board:
 ```bash
 west flash
