@@ -8,8 +8,8 @@ config BOARD_INV2_OBC
     select SOC_RP2040
     select RP2_FLASH_W25Q080
 
-config BOARD_INV2_TVCS
-    bool "invictus 2 temperature and valve control system"
+config BOARD_INV2_HYDRA
+    bool "invictus 2 hydraulic regulation and actuation"
     select SOC_RP2040
     select RP2_FLASH_W25Q080
 
