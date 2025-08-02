@@ -64,7 +64,7 @@ int hydras_modbus_read(struct hydras *h, const int client_iface)
     // Read LF hydra
     const int lf_read =
         modbus_read_input_regs(client_iface, h->lf.slave_id, CONFIG_HYDRA_LF_INPUT_ADDR_START,
-                               (uint16_t *)&h->lf.sensors.raw, ARRAY_SIZE(h->lf.sensors.raw));
+                               h->lf.sensors.raw, ARRAY_SIZE(h->lf.sensors.raw));
 
     if (lf_read < 0) {
         LOG_ERR("Failed to read LF hydra: %d", lf_read);
