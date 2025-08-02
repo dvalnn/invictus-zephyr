@@ -16,7 +16,7 @@ config HYDRA_UF_INPUT_ADDR_START
 
 config HYDRA_LF_SLAVE_ID
     int "Modbus slave address for the Lower Feed HYDRA"
-    default 0
+    default 2
 
 config HYDRA_LF_INPUT_ADDR_START
     int "start address for the LF HYDRA input registers"
