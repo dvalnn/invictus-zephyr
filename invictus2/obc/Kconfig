@@ -8,7 +8,7 @@ config LORA_REDIRECT_UART
 
 config HYDRA_UF_SLAVE_ID
     int "Modbus slave address for the Upper Feed HYDRA"
-    default 0
+    default 1
 
 config HYDRA_UF_INPUT_ADDR_START
     int "start address for the UF HYDRA input registers"
