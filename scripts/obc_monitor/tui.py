@@ -1,3 +1,4 @@
+import re
 import sys
 import tty
 import termios
@@ -17,6 +18,8 @@ from .config import Config
 from .commands import CommandProcessor
 from .uart import UARTListener
 from .modbus import ModbusSlaveSimulator
+
+ansi_delete = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 
 
 class AppState(Enum):
@@ -139,14 +142,18 @@ class OBCMonitorTUI:
         # UART output panel
         uart_text = Text()
         for line in self.uart_listener.messages[-uart_lines:]:
-            if "TX:" in line:
-                uart_text.append(line + "\n")
-            elif "RX:" in line:
-                uart_text.append(line + "\n")
-            elif "Error" in line:
-                uart_text.append(line + "\n")
-            else:
-                uart_text.append(line + "\n")
+            line = ansi_delete.sub("", line)  # Remove ANSI escape codes
+            # split after "RX:" or "TX:" for color coding
+
+            style = "green" if "RX:" in line else "cyan" if "TX:" in line else "white"
+            parts = line.split("RX:", 1) if "RX:" in line else line.split("TX:", 1)
+            text_style = (
+                "yellow" if "<wrn>" in line else "red" if "<err>" in line else "white"
+            )
+            if len(parts) > 1:
+                prefix, content = parts[0], parts[1]
+                uart_text.append(prefix, style)
+                uart_text.append(content.strip() + "\n", style=text_style)
 
         self.layout["uart_output"].update(
             Panel(
