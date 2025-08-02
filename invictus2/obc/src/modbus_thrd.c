@@ -6,8 +6,9 @@
 
 #include "modbus_thrd.h"
 #include "filling_sm.h"
+#include "hydra.h"
 
-LOG_MODULE_REGISTER(modbus_thread, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(obc_modbus, LOG_LEVEL_DBG);
 
 static int client_iface;
 
@@ -55,7 +56,7 @@ bool modbus_thread_setup(void)
     return modbus_init_client(client_iface, client_param) == 0;
 }
 
-void modbus_thread_entry(void *fsm_config, void *data_queues, void *p3)
+void modbus_thread(void *fsm_config, void *data_queues, void *p3)
 {
     ARG_UNUSED(p3);
 
@@ -63,15 +64,12 @@ void modbus_thread_entry(void *fsm_config, void *data_queues, void *p3)
 
     const struct modbus_data_queues *queues = data_queues;
 
-    // TODO: make this configurable.
-    // TODO: specify which slave address has which hr addresses and valve coils
-    const int slave_addr = 0x01;
+    struct hydras hydras = {0};
+    hydras_init(&hydras);
 
     struct filling_sm_object filling_sm_obj = {
         .command = 0,
         .data = {{0}},
-        // All valves closed initially.
-        // TODO: Making this an union/bitfield would be better.
         .valve_states = 0,
         .config = (struct filling_sm_config *)fsm_config,
     };
@@ -88,11 +86,29 @@ void modbus_thread_entry(void *fsm_config, void *data_queues, void *p3)
         // TODO: improve loop sleep time calculation
         k_sleep(K_MSEC(1000));
 
-        if (modbus_read_holding_regs(client_iface, slave_addr, 0, filling_sm_obj.data.raw,
-                                     ARRAY_SIZE(filling_sm_obj.data.raw)) < 0) {
-            LOG_ERR("Failed to read holding registers");
-            continue;
+        // Read hydras data
+        const int hydra_read_result = hydras_modbus_read(&hydras, client_iface);
+        if (hydra_read_result < 0) {
+            LOG_ERR("Failed to read hydras data: %d", hydra_read_result);
+            continue; // Skip this iteration if reading fails
         }
+
+        LOG_DBG("UF Temperature %d", hydras.uf.temperature);
+        LOG_HEXDUMP_DBG(hydras.lf.sensors.raw, sizeof(hydras.lf.sensors.raw),
+                        "LF Sensors Raw Data");
+
+        // TODO: convert hydras data to filling_sm_obj.data
+        // TODO: Handle load cell data as well
+        //
+        // TODO: This is a temporary solution, proper conversion should be implemented
+        filling_sm_obj.data.pre_tank_pressure = hydras.lf.sensors.lf_pressure;
+        filling_sm_obj.data.main_tank_pressure = hydras.lf.sensors.cc_pressure;
+        filling_sm_obj.data.main_tank_temperature = hydras.uf.temperature;
+        filling_sm_obj.data.main_tank_weight = 0; // Placeholder;
+        LOG_WRN_ONCE(
+            "Using placeholder for main tank weight, implement proper load cell reading");
+        LOG_WRN_ONCE("Unused sensor data -> lf_temperature: %d",
+                     hydras.lf.sensors.lf_temperature);
 
         // Put read sensor data into the message queue
         // TODO: handle k_msgq_put() failure
@@ -106,11 +122,8 @@ void modbus_thread_entry(void *fsm_config, void *data_queues, void *p3)
 
         smf_run_state(SMF_CTX(&filling_sm_obj));
 
-        if (modbus_write_coils(client_iface, slave_addr, 0, &filling_sm_obj.valve_states, 8)) {
-            LOG_ERR("Failed to write valve states");
-        }
-
-        LOG_HEXDUMP_DBG(filling_sm_obj.data.raw, sizeof(filling_sm_obj.data.raw),
-                        "Raw holding registers");
+        // TODO: Convert filling_sm_obj.valve_states to HYDRA solenoid states
+        // We have 8 states in the valves enum, but each hydra has only 2 solenoids.
+        LOG_WRN_ONCE("FSM valve states must be mapped to hydra solenoids for actuation");
     }
 }
