@@ -9,6 +9,6 @@ struct modbus_data_queues {
 };
 
 bool modbus_thread_setup(void);
-void modbus_thread_entry(void *fsm_config, void *data_queues, void *can_start_sem);
+void modbus_thread_entry(void *fsm_config, void *data_queues, void *p3);
 
 #endif
