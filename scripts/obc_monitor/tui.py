@@ -72,7 +72,7 @@ class OBCMonitorTUI:
             Layout(name="status", size=4),
         )
         self.layout["right"].split_column(
-            Layout(name="uart_output", ratio=2), Layout(name="modbus_status", ratio=1)
+            Layout(name="uart_output", ratio=3), Layout(name="modbus_status", size=15)
         )
 
     def log_command(self, message: str):
@@ -91,8 +91,8 @@ class OBCMonitorTUI:
 
         # Calculate visible lines for each panel
         term_height = self.console.size.height
-        log_lines = max(int((term_height - 10) * 0.4), 10)
-        uart_lines = max(int((term_height - 8) * 0.6), 15)
+        log_lines = max(int((term_height) * 0.80), 10)
+        uart_lines = max(int(term_height * 0.65), 15)
 
         # Command log panel
         command_text = Text()
@@ -148,7 +148,13 @@ class OBCMonitorTUI:
             style = "green" if "RX:" in line else "cyan" if "TX:" in line else "white"
             parts = line.split("RX:", 1) if "RX:" in line else line.split("TX:", 1)
             text_style = (
-                "yellow" if "<wrn>" in line else "red" if "<err>" in line else "white"
+                "bold yellow"
+                if "<wrn>" in line
+                else (
+                    "bold red"
+                    if "<err>" in line
+                    else "bold white" if "<inf>" in line else "white"
+                )
             )
             if len(parts) > 1:
                 prefix, content = parts[0], parts[1]

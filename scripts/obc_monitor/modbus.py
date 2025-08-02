@@ -195,6 +195,12 @@ class ModbusSlaveSimulator:
 
         return info
 
+    def restart(self):
+        """Restart the Modbus server."""
+        self.stop()
+        self.start()
+        self.add_message("Modbus server restarted")
+
     def _run_server(self):
         """Run the Modbus server."""
         try:
