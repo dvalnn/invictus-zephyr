@@ -38,7 +38,7 @@ struct lf_hydra {
             uint16_t lf_temperature; // Lower feed temperature probe temperature in ºC
             uint16_t lf_pressure;    // Lower feed pressure in bar
             uint16_t cc_pressure;    // Combustion chamber pressure in bar
-        } data;
+        };
 
         uint16_t raw[3]; // Raw data representation of the sensors
     } sensors;

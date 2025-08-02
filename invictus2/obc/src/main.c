@@ -149,7 +149,7 @@ void spawn_all_threads(void)
     LOG_INF("Spawning threads dynamically...");
 
     threads[0].tid =
-        k_thread_create(&thread_data[0], modbus_stack, THREAD_STACK_SIZE, modbus_thread_entry,
+        k_thread_create(&thread_data[0], modbus_stack, THREAD_STACK_SIZE, modbus_thread,
                         (void *)&filling_sm_config, (void *)&mb_queues, NULL,
                         THREAD_PRIORITY_MEDIUM, 0, K_NO_WAIT);
 

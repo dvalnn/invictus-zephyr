@@ -1,7 +1,7 @@
 #ifndef _FILLING_SM_H_
 #define _FILLING_SM_H_
 
-#include <zephyr/smf.h>
+#include "zephyr/smf.h"
 
 #include "filling_sm_config.h"
 
