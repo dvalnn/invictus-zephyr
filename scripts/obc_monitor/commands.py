@@ -53,6 +53,9 @@ class CommandProcessor:
                     f"    Available: {', '.join(CMD_MAP.keys())}",
                     "  modbus <slave_id> <hr|coil|ir> <index> <value> - Set Modbus register/coil",
                     "    slave_id: 1 (UF Hydra) or 2 (LF Hydra)",
+                    "    hr = holding register, coil = coil, ir = input register",
+                    "    Example: modbus 1 hr 10 1234",
+                    "  modbus restart - Restart Modbus simulator",
                     "  status - Show connection status and statistics",
                     "  history - Show command history",
                     "  clear - Clear command log",
@@ -85,6 +88,11 @@ class CommandProcessor:
             else:
                 responses.append("Usage: cmd <command>")
         elif cmd == "modbus":
+            if len(parts) < 2 or parts[1].lower() == "restart":
+                self.modbus_simulator.restart()
+                responses.append("✓ Modbus simulator restarted")
+                return responses
+
             if len(parts) < 5:
                 responses.append(
                     "Usage: modbus <slave_id> <hr|coil|ir> <index> <value>"
