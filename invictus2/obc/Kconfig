@@ -2,15 +2,24 @@ mainmenu "OBC Application Options"
 
 config LORA_REDIRECT_UART
     bool "Enable LoRa UART Shell"
-    default n
     help
       This option enables a specific UART shell for interacting with the LoRa module.
       It is useful for debugging and direct control of the LoRa functions via a terminal.
 
 config HYDRA_UF_SLAVE_ID
     int "Modbus slave address for the Upper Feed HYDRA"
+    default 0
+
+config HYDRA_UF_INPUT_ADDR_START
+    int "start address for the UF HYDRA input registers"
+    default 0
 
 config HYDRA_LF_SLAVE_ID
     int "Modbus slave address for the Lower Feed HYDRA"
+    default 0
+
+config HYDRA_LF_INPUT_ADDR_START
+    int "start address for the LF HYDRA input registers"
+    default 0
 
 source "Kconfig.zephyr"
