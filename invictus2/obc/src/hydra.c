@@ -9,10 +9,9 @@ LOG_MODULE_REGISTER(hydra, LOG_LEVEL_INF);
 
 inline void hydras_init(struct hydras *h)
 {
-    BUILD_ASSERT((CONFIG_HYDRA_UF_SLAVE_ID != CONFIG_HYDRA_LF_SLAVE_ID),
-                 "UF and LF hydras must have different slave IDs.");
-    BUILD_ASSERT((CONFIG_HYDRA_UF_SLAVE_ID > 0) && (CONFIG_HYDRA_LF_SLAVE_ID > 0),
-                 "UF and LF hydras must have valid slave IDs greater than 0.");
+    BUILD_ASSERT((CONFIG_HYDRA_UF_SLAVE_ID > 0) && (CONFIG_HYDRA_LF_SLAVE_ID > 0) &&
+                     (CONFIG_HYDRA_UF_SLAVE_ID != CONFIG_HYDRA_LF_SLAVE_ID),
+                 "UF and LF hydras must have different, non-zero, slave IDs.");
 
     h->uf.slave_id = CONFIG_HYDRA_UF_SLAVE_ID;
     h->lf.slave_id = CONFIG_HYDRA_LF_SLAVE_ID;
