@@ -6,7 +6,7 @@ import termios
 import select
 import logging
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from enum import Enum
 import argparse
@@ -92,14 +92,30 @@ class ModbusSlaveSimulator:
         self.messages: list[str] = []
         self.connection_status = "Disconnected"
 
-        # Initialize data store with more realistic values
-        self.store = ModbusSlaveContext(
-            di=ModbusSequentialDataBlock(0, [0] * 100),
-            co=ModbusSequentialDataBlock(0, [False] * 100),
-            hr=ModbusSequentialDataBlock(0, [0] * 100),
-            ir=ModbusSequentialDataBlock(0, [0] * 100),
+        # Initialize UF Hydra (Slave ID 1)
+        self.uf_hydra_store = ModbusSlaveContext(
+            di=None,
+            co=ModbusSequentialDataBlock(0, [False] * 2),
+            hr=None,
+            ir=ModbusSequentialDataBlock(0, [0]),
         )
-        self.context = ModbusServerContext(slaves=self.store, single=True)
+
+        # Initialize LF Hydra (Slave ID 2)
+        self.lf_hydra_store = ModbusSlaveContext(
+            di=None,
+            co=ModbusSequentialDataBlock(0, [False] * 2),
+            hr=None,
+            ir=ModbusSequentialDataBlock(0, [0] * 3),
+        )
+
+        # Create context with multiple slaves
+        self.context = ModbusServerContext(
+            slaves={
+                1: self.uf_hydra_store,  # UF Hydra on address 1
+                2: self.lf_hydra_store,  # LF Hydra on address 2
+            },
+            single=False,
+        )
 
     def start(self) -> bool:
         """Start the Modbus server."""
@@ -130,29 +146,123 @@ class ModbusSlaveSimulator:
         timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
         self.messages.append(f"[{timestamp}] MODBUS: {message}")
 
-    def handle_hr(self, index: int, value: int):
-        """Handle setting a holding register value."""
+    def handle_hr(self, slave_id: int, index: int, value: int):
+        """Handle setting a holding register value for a specific slave."""
         try:
-            self.context[0].setValues(3, index, [value])
-            self.add_message(f"Holding register {index} set to {value}")
+            if slave_id in self.context:
+                slave_context = self.context[slave_id]
+                if slave_context.store["h"] is not None:  # Check if HR exists
+                    slave_context.setValues(3, index, [value])
+                    self.add_message(
+                        f"Slave {slave_id}: Holding register {index} set to {value}"
+                    )
+                else:
+                    self.add_message(
+                        f"Slave {slave_id}: No holding registers available"
+                    )
+            else:
+                self.add_message(f"Invalid slave ID: {slave_id}")
         except Exception as e:
-            self.add_message(f"Error setting HR {index}: {e}")
+            self.add_message(f"Error setting HR {index} on slave {slave_id}: {e}")
 
-    def handle_coil(self, index: int, value: bool):
-        """Handle setting a coil value."""
+    def handle_coil(self, slave_id: int, index: int, value: bool):
+        """Handle setting a coil value for a specific slave."""
         try:
-            self.context[0].setValues(1, index, [bool(value)])
-            self.add_message(f"Coil {index} set to {bool(value)}")
+            if slave_id in self.context:
+                slave_context = self.context[slave_id]
+                if slave_context.store["c"] is not None:  # Check if coils exist
+                    slave_context.setValues(1, index, [bool(value)])
+                    self.add_message(
+                        f"Slave {slave_id}: Coil {index} set to {bool(value)}"
+                    )
+                else:
+                    self.add_message(f"Slave {slave_id}: No coils available")
+            else:
+                self.add_message(f"Invalid slave ID: {slave_id}")
         except Exception as e:
-            self.add_message(f"Error setting coil {index}: {e}")
+            self.add_message(f"Error setting coil {index} on slave {slave_id}: {e}")
 
-    def get_register_values(self, start: int = 0, count: int = 10) -> Dict[int, int]:
-        """Get current holding register values for display."""
+    def handle_input_register(self, slave_id: int, index: int, value: int):
+        """Handle setting an input register value for a specific slave."""
         try:
-            values = self.context[0].getValues(3, start, count)
-            return {i + start: val for i, val in enumerate(values)}
+            if slave_id in self.context:
+                slave_context = self.context[slave_id]
+                if slave_context.store["i"] is not None:  # Check if IR exists
+                    slave_context.setValues(4, index, [value])
+                    self.add_message(
+                        f"Slave {slave_id}: Input register {index} set to {value}"
+                    )
+                else:
+                    self.add_message(f"Slave {slave_id}: No input registers available")
+            else:
+                self.add_message(f"Invalid slave ID: {slave_id}")
+        except Exception as e:
+            self.add_message(f"Error setting IR {index} on slave {slave_id}: {e}")
+
+    def get_register_values(
+        self, slave_id: int, start: int = 0, count: int = 10
+    ) -> Dict[str, Any]:
+        """Get current register values for display from a specific slave."""
+        try:
+            if slave_id in self.context:
+                slave_context = self.context[slave_id]
+                values = {}
+
+                # Try to get holding registers
+                try:
+                    if slave_context.store["h"] is not None:
+                        hr_values = slave_context.getValues(3, start, min(count, 10))
+                        for i, val in enumerate(hr_values):
+                            values[f"HR{start + i}"] = val
+                except Exception as e:
+                    self.add_message(f"Error reading HR: {e}")
+
+                # Try to get input registers
+                try:
+                    if slave_context.store["i"] is not None:
+                        ir_values = slave_context.getValues(4, start, min(count, 10))
+                        for i, val in enumerate(ir_values):
+                            values[f"IR{start + i}"] = val
+                except Exception as e:
+                    self.add_message(f"Error reading IR: {e}")
+
+                # Try to get coils
+                try:
+                    if slave_context.store["c"] is not None:
+                        coil_values = slave_context.getValues(1, start, min(count, 10))
+                        for i, val in enumerate(coil_values):
+                            values[f"C{start + i}"] = int(val)
+                except Exception as e:
+                    self.add_message(f"Error reading coils: {e}")
+
+                return values
+            return {}
         except Exception:
             return {}
+
+    def get_slave_info(self) -> Dict[int, Dict[str, Any]]:
+        """Get information about all configured slaves."""
+        info = {}
+        for slave_id in [1, 2]:  # UF and LF Hydra
+            if slave_id in self.context:
+                slave_context = self.context[slave_id]
+                slave_name = "UF Hydra" if slave_id == 1 else "LF Hydra"
+
+                info[slave_id] = {
+                    "name": slave_name,
+                    "coils": slave_context.store["c"] is not None,
+                    "discrete_inputs": slave_context.store["d"] is not None,
+                    "holding_registers": slave_context.store["h"] is not None,
+                    "input_registers": slave_context.store["i"] is not None,
+                }
+
+                # Get counts if available
+                if slave_context.store["c"] is not None:
+                    info[slave_id]["coil_count"] = len(slave_context.store["c"].values)
+                if slave_context.store["i"] is not None:
+                    info[slave_id]["ir_count"] = len(slave_context.store["i"].values)
+
+        return info
 
     def _run_server(self):
         """Run the Modbus server."""
@@ -291,7 +401,8 @@ class CommandProcessor:
                     "  uart <message> - Send message to UART",
                     "  cmd <command> - Send filling state machine command",
                     f"    Available: {', '.join(CMD_MAP.keys())}",
-                    "  modbus <hr|coil> <index> <value> - Set Modbus register/coil",
+                    "  modbus <slave_id> <hr|coil|ir> <index> <value> - Set Modbus register/coil",
+                    "    slave_id: 1 (UF Hydra) or 2 (LF Hydra)",
                     "  status - Show connection status and statistics",
                     "  history - Show command history",
                     "  clear - Clear command log",
@@ -324,24 +435,47 @@ class CommandProcessor:
             else:
                 responses.append("Usage: cmd <command>")
         elif cmd == "modbus":
-            if len(parts) < 4:
-                responses.append("Usage: modbus <hr|coil> <index> <value>")
+            if len(parts) < 5:
+                responses.append(
+                    "Usage: modbus <slave_id> <hr|coil|ir> <index> <value>"
+                )
+                responses.append("  slave_id: 1 (UF Hydra) or 2 (LF Hydra)")
+                responses.append(
+                    "  hr = holding register, coil = coil, ir = input register"
+                )
             else:
                 try:
-                    modbus_type = parts[1].lower()
-                    index = int(parts[2])
+                    slave_id = int(parts[1])
+                    modbus_type = parts[2].lower()
+                    index = int(parts[3])
+
                     if modbus_type == "hr":
-                        value = int(parts[3])
-                        self.modbus_simulator.handle_hr(index, value)
-                        responses.append(f"✓ Set holding register {index} = {value}")
+                        value = int(parts[4])
+                        self.modbus_simulator.handle_hr(slave_id, index, value)
+                        responses.append(
+                            f"✓ Set slave {slave_id} holding register {index} = {value}"
+                        )
                     elif modbus_type == "coil":
-                        value = parts[3].lower() in ("1", "true", "yes", "on")
-                        self.modbus_simulator.handle_coil(index, value)
-                        responses.append(f"✓ Set coil {index} = {value}")
+                        value = parts[4].lower() in ("1", "true", "yes", "on")
+                        self.modbus_simulator.handle_coil(slave_id, index, value)
+                        responses.append(
+                            f"✓ Set slave {slave_id} coil {index} = {value}"
+                        )
+                    elif modbus_type == "ir":
+                        value = int(parts[4])
+                        self.modbus_simulator.handle_input_register(
+                            slave_id, index, value
+                        )
+                        responses.append(
+                            f"✓ Set slave {slave_id} input register {index} = {value}"
+                        )
                     else:
                         responses.append(f"✗ Unknown Modbus type: {modbus_type}")
+                        responses.append("Valid types: hr, coil, ir")
                 except ValueError as e:
                     responses.append(f"✗ Invalid value: {e}")
+                except Exception as e:
+                    responses.append(f"✗ Error: {e}")
         elif cmd == "status":
             responses.extend(
                 [
@@ -507,17 +641,31 @@ class RichTerminalApp:
             )
         )
 
-        # Modbus status panel
-        register_table = Table("Register", "Value", title="Modbus Registers (0-9)")
-        register_table.add_column("Coil", style="cyan", no_wrap=True)
-        register_table.add_column("Value", style="white")
+        # Modbus status panel - show both slaves
+        modbus_table = Table("Slave", "Register", "Value", title="Modbus Status")
+        modbus_table.add_column("Slave", style="yellow", no_wrap=True)
+        modbus_table.add_column("Register", style="cyan", no_wrap=True)
+        modbus_table.add_column("Value", style="white")
 
-        registers = self.modbus_simulator.get_register_values(0, 10)
-        for addr, value in registers.items():
-            register_table.add_row(f"HR{addr}", str(value))
+        # Get slave info
+        slave_info = self.modbus_simulator.get_slave_info()
+
+        for slave_id in [1, 2]:
+            if slave_id in slave_info:
+                slave_name = slave_info[slave_id]["name"]
+                registers = self.modbus_simulator.get_register_values(slave_id, 0, 5)
+
+                if not registers:
+                    modbus_table.add_row(slave_name, "No data", "-")
+                else:
+                    first_row = True
+                    for reg_name, value in registers.items():
+                        display_name = slave_name if first_row else ""
+                        modbus_table.add_row(display_name, reg_name, str(value))
+                        first_row = False
 
         self.layout["modbus_status"].update(
-            Panel(register_table, title="Modbus Status", border_style="magenta")
+            Panel(modbus_table, title="Modbus Status", border_style="magenta")
         )
 
     def process_command(self, command: str):
