@@ -3,7 +3,6 @@
 
 #include "stdbool.h"
 #include "stdint.h"
-#include "zephyr/toolchain.h"
 
 struct uf_hydra {
     int slave_id;      // Slave ID for the hydra on the modbus bus
@@ -15,10 +14,10 @@ struct uf_hydra {
             bool vsv2_vent_solenoid;
         } solenoid_states;
 
-        uint16_t raw_states; // Raw state representation of the solenoids
+        uint16_t raw; // Raw state representation of the solenoids
     } solenoids;
 
-    uint16_t uf_temperature; // Upper feed temperature probe temperature in ºC
+    uint16_t temperature; // Upper feed temperature probe temperature in ºC
 };
 
 struct lf_hydra {
@@ -31,7 +30,7 @@ struct lf_hydra {
             bool vsl1_main_solenoid;
         } solenoid_states;
 
-        uint16_t raw_states; // Raw state representation of the solenoids
+        uint16_t raw; // Raw state representation of the solenoids
     } solenoids;
 
     union lf_sensors {
@@ -41,7 +40,7 @@ struct lf_hydra {
             uint16_t cc_pressure;    // Combustion chamber pressure in bar
         } data;
 
-        uint16_t raw_data[3]; // Raw data representation of the sensors
+        uint16_t raw[3]; // Raw data representation of the sensors
     } sensors;
 };
 
@@ -63,49 +62,24 @@ struct hydras {
  * @param h Pointer to the hydras structure to initialize.
  * @returns void.
  */
-inline void hydras_init(struct hydras *h)
-{
-#if defined(CONFIG_HYDRA_UF_SLAVE_ID) && defined(CONFIG_HYDRA_LF_SLAVE_ID)
-    BUILD_ASSERT(CONFIG_HYDRA_UF_SLAVE_ID != CONFIG_HYDRA_LF_SLAVE_ID,
-                 "UF and LF hydras must have different slave IDs.");
+void hydras_init(struct hydras *h);
 
-    h->uf.slave_id = CONFIG_HYDRA_UF_SLAVE_ID;
-    h->lf.slave_id = CONFIG_HYDRA_LF_SLAVE_ID;
-#else
-    BUILD_ASSERT(false, "UF and LF hydras must have slave IDs defined."
-                        "Use CONFIG_HYDRA_UF_SLAVE_ID and CONFIG_HYDRA_LF_SLAVE_ID"
-                        "Kconfig options in your prj.conf file value.");
-#endif
+/*
+ * Read data from the hydras using Modbus RTU.
+ * This function reads the input registers for the upper feed (UF) and lower feed (LF hydras)
+ * and updates their respective structures.
+ *
+ * @param h Pointer to the hydras structure to read data into.
+ * @param client_iface The Modbus client interface to use for communication.
+ *
+ * @returns 0 on success, negative error code on failure.
+ */
+int hydras_modbus_read(struct hydras *h, const int client_iface);
 
-    h->uf.is_connected = false;
-    h->lf.is_connected = false;
+bool hydras_connected(const struct hydras *h);
 
-    // Initialize solenoids to default states
-    h->uf.solenoids.raw_states = 0;
-    h->lf.solenoids.raw_states = 0;
+bool hydras_is_uf_connected(const struct hydras *h);
 
-    // Initialize sensors to default values
-    h->lf.sensors.raw_data[0] = 0; // lf_temperature
-    h->lf.sensors.raw_data[1] = 0; // lf_pressure
-    h->lf.sensors.raw_data[2] = 0; // cc_pressure
-
-    // Initialize temperatures
-    h->uf.uf_temperature = 0;
-}
-
-inline bool hydras_connected(const struct hydras *h)
-{
-    return h->uf.is_connected && h->lf.is_connected;
-}
-
-inline bool hydras_is_uf_connected(const struct hydras *h)
-{
-    return h->uf.is_connected;
-}
-
-inline bool hydras_is_lf_connected(const struct hydras *h)
-{
-    return h->lf.is_connected;
-}
+bool hydras_is_lf_connected(const struct hydras *h);
 
 #endif // HYDRA_H_
