@@ -41,6 +41,23 @@ struct rocket_event_msg {
     enum rocket_event event;
 };
 
+enum subsystem_id {
+    SUBSYSTEM_ID_NONE = 0,
+    SUBSYSTEM_ID_MODBUS,
+    SUBSYSTEM_ID_LORA,
+    SUBSYSTEM_ID_NAVIGATOR,
+    SUBSYSTEM_ID_DATA,
+    SUBSYSTEM_ID_FSM, // Filling State Machine
+
+    // Metadata
+    _SUBSYSTEM_ID_COUNT,
+};
+
+struct lora_cmd_msg {
+    enum subsystem_id subsystem; // Subsystem ID for the command
+    uint32_t command;
+};
+
 /* ----------------------------------------------------------- */
 
 bool modbus_coil_write_msg_validator(const void *msg, size_t msg_size);

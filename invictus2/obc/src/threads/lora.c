@@ -2,12 +2,16 @@
 
 #include "filling_sm.h"
 
+#include "zbus_messages.h"
 #include "zephyr/logging/log.h"
 #include "zephyr/toolchain.h"
 #include "zephyr/kernel.h"
 #include "zephyr/device.h"
+#include "zephyr/zbus/zbus.h"
 
 LOG_MODULE_REGISTER(lora_thread, LOG_LEVEL_DBG);
+
+ZBUS_CHAN_DECLARE(lora_cmd_chan);
 
 #if CONFIG_LORA_REDIRECT_UART
 
@@ -77,9 +81,10 @@ bool lora_uart_setup(void)
     return true;
 }
 
-void lora_uart_backend(struct lora_cmd_queues *cmd_qs, struct lora_data_queues *data_qs,
-                       void *p3)
+void lora_uart_backend(void *p1, void *p2, void *p3)
 {
+    ARG_UNUSED(p1);
+    ARG_UNUSED(p2);
     ARG_UNUSED(p3);
 
     char tx_buf[MSG_SIZE];
@@ -111,12 +116,19 @@ void lora_uart_backend(struct lora_cmd_queues *cmd_qs, struct lora_data_queues *
             continue;
         }
 
+        // TODO: refactor
         if (strcmp(command_type, "normal") == 0) {
             LOG_INF("Processing normal command: %d", command);
 
+            struct lora_cmd_msg cmd_msg = {
+                .subsystem = SUBSYSTEM_ID_FSM,
+                .command = command,
+            };
+
             // TODO: better timeout handling
-            if (k_msgq_put(cmd_qs->in_fsm_cmd_q, &command, K_NO_WAIT) != 0) {
-                LOG_ERR("Failed to put command %d into FSM command queue", command);
+            int ret = zbus_chan_pub(&lora_cmd_chan, &cmd_msg, K_NO_WAIT);
+            if (ret < 0) {
+                LOG_ERR("Failed to publish command to LORA channel: %d", ret);
             }
 
         } else {
