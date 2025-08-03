@@ -6,6 +6,9 @@
 #include "modbus_thrd.h"
 #include "lora_thrd.h"
 
+// FIXME: remove, it's just to make sure linker is working
+#include "invictus2/drivers/sx128x_hal.h"
+
 // THREADS:
 // - Main thread: LoRa communication. (for now just pipe everything to stdout).
 //   - Pre-Flight Mode: Switches between receive and transmit modes based
@@ -224,6 +227,8 @@ int main(void)
         LOG_ERR("Failed to setup threads");
         return -1;
     }
+    // FIXME: remove, it's just to make sure linker is working
+    sx128x_hal_wakeup(NULL);
 
     spawn_all_threads();
 
