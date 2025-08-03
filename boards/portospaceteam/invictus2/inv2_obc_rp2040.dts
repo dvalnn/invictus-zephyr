@@ -72,8 +72,8 @@
           reg = <1>;
           spi-max-frequency = <DT_FREQ_M(18)>;
 
-          busy-gpios = <&gpio0 11 GPIO_ACTIVE_HIGH>;
-          reset-gpios = <&gpio0 10 GPIO_ACTIVE_HIGH>;
+          busy-gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>;
+          reset-gpios = <&gpio0 10 GPIO_ACTIVE_HIGH>; // TODO check if still needed
     };
 };
 
