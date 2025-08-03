@@ -26,8 +26,6 @@ LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 // LOGGING:
 // - Log debugg information to the console and to a file on the SD card.
 // // - Use LOG_INF, LOG_ERR, LOG_DBG, etc. macros for logging.
-//
-// TODO: pivot from using message queues to zbus pub-sub architecture.
 
 // --- ZBUS Definitions ---
 
@@ -72,6 +70,15 @@ ZBUS_CHAN_DEFINE(rocket_event_chan,                        /* Channel Name */
                  NULL,                                     /* User Data*/
                  ZBUS_OBSERVERS_EMPTY,                     /* Observers */
                  ZBUS_MSG_INIT(.event = ROCKET_EVENT_NONE) /* Initial Value */
+);
+
+ZBUS_CHAN_DEFINE(lora_cmd_chan,        /* Channel Name */
+                 struct lora_cmd_msg,  /* Message Type */
+                 NULL,                 /* Validator Func */
+                 NULL,                 /* User Data*/
+                 ZBUS_OBSERVERS_EMPTY, /* Observers */
+                 ZBUS_MSG_INIT(.subsystem = SUBSYSTEM_ID_NONE,
+                               .command = 0) /* Initial Value */
 );
 
 ZBUS_SUBSCRIBER_DEFINE(modbus_coil_write_obs, 2);
