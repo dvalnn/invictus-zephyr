@@ -3,9 +3,9 @@
 #include "zephyr/toolchain.h"
 #include "zephyr/zbus/zbus.h"
 
+#include "threads/modbus.h"
+#include "threads/lora.h"
 #include "filling_sm.h"
-#include "modbus_thrd.h"
-#include "lora_thrd.h"
 #include "zbus_messages.h"
 
 LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);

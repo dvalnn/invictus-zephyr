@@ -1,3 +1,5 @@
+#include "threads/modbus.h"
+
 #include "zephyr/kernel.h"
 #include "zephyr/logging/log.h"
 #include "zephyr/modbus/modbus.h"
@@ -5,7 +7,6 @@
 #include "zephyr/zbus/zbus.h"
 
 #include "hydra.h"
-#include "modbus_thrd.h"
 #include "zbus_messages.h"
 
 LOG_MODULE_REGISTER(obc_modbus, LOG_LEVEL_DBG);

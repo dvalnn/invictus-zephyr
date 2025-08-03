@@ -1,5 +1,6 @@
+#include "threads/lora.h"
+
 #include "filling_sm.h"
-#include "lora_thrd.h"
 
 #include "zephyr/logging/log.h"
 #include "zephyr/toolchain.h"
