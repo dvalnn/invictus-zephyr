@@ -95,7 +95,7 @@
     modbus0{
         compatible = "zephyr,modbus-serial";
         status = "okay";
-        de-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+        de-gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;
     };
 };
 
@@ -112,10 +112,10 @@
 
 	uart_rs485: uart_rs485 {
 		group1 {
-			pinmux = <UART1_TX_P4>;
+			pinmux = <UART1_TX_P24>;
 		};
 		group2 {
-			pinmux = <UART1_RX_P5>;
+			pinmux = <UART1_RX_P25>;
 			input-enable;
 		};
 	};
