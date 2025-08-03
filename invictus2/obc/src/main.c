@@ -1,10 +1,14 @@
 #include "zephyr/kernel.h"
 #include "zephyr/logging/log.h"
 #include "zephyr/toolchain.h"
+#include "zephyr/zbus/zbus.h"
 
 #include "filling_sm.h"
 #include "modbus_thrd.h"
 #include "lora_thrd.h"
+#include "zbus_messages.h"
+
+LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 
 // THREADS:
 // - Main thread: LoRa communication. (for now just pipe everything to stdout).
@@ -25,35 +29,63 @@
 //
 // TODO: pivot from using message queues to zbus pub-sub architecture.
 
-LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
+// --- ZBUS Definitions ---
+
+ZBUS_CHAN_DEFINE(uf_hydra_chan,                  /* Channel Name */
+                 struct uf_hydra_msg,            /* Message Type */
+                 NULL,                           /* Validator Func */
+                 NULL,                           /* User Data*/
+                 ZBUS_OBSERVERS(uf_hydra_obs),   /* Observers */
+                 ZBUS_MSG_INIT(.temperature = 0) /* Initial Value */
+);
+
+ZBUS_CHAN_DEFINE(lf_hydra_chan,                /* Channel Name */
+                 struct lf_hydra_msg,          /* Message Type */
+                 NULL,                         /* Validator Func */
+                 NULL,                         /* User Data*/
+                 ZBUS_OBSERVERS(lf_hydra_obs), /* Observers */
+                 ZBUS_MSG_INIT(.lf_temperature = 0, .lf_pressure = 0, .cc_pressure = 0)
+                 /* Initial Value */
+);
+
+ZBUS_CHAN_DEFINE(fs_hydra_chan,        /* Channel Name */
+                 struct fs_hydra_msg,  /* Message Type */
+                 NULL,                 /* Validator Func */
+                 NULL,                 /* User Data*/
+                 ZBUS_OBSERVERS_EMPTY, /* Observers */
+                 ZBUS_MSG_INIT()       /* Initial Value */
+);
+
+ZBUS_CHAN_DEFINE(modbus_coil_write_chan,                /* Channel Name */
+                 struct modbus_write_coils_msg,         /* Message Type */
+                 modbus_coil_write_msg_validator,       /* Validator Func */
+                 NULL,                                  /* User Data*/
+                 ZBUS_OBSERVERS(modbus_coil_write_obs), /* Observers */
+                 ZBUS_MSG_INIT(.slave_id = 0, .start_addr = 0, .values = NULL,
+                               .num_coils = 0) /* Initial Value */
+
+);
+
+ZBUS_CHAN_DEFINE(rocket_event_chan,                        /* Channel Name */
+                 struct rocket_event_msg,                  /* Message Type */
+                 rocket_event_msg_validator,               /* Validator Func */
+                 NULL,                                     /* User Data*/
+                 ZBUS_OBSERVERS_EMPTY,                     /* Observers */
+                 ZBUS_MSG_INIT(.event = ROCKET_EVENT_NONE) /* Initial Value */
+);
+
+ZBUS_SUBSCRIBER_DEFINE(modbus_coil_write_obs, 2);
+ZBUS_SUBSCRIBER_DEFINE(uf_hydra_obs, 2);
+ZBUS_SUBSCRIBER_DEFINE(lf_hydra_obs, 2);
+
+// --- Filling FSM Config ---
+DEFAULT_FSM_CONFIG(filling_sm_config);
 
 // --- Thread Config ---
 #define THREAD_STACK_SIZE      2048
 #define THREAD_PRIORITY_LOW    K_PRIO_PREEMPT(10)
 #define THREAD_PRIORITY_MEDIUM K_PRIO_PREEMPT(5)
 #define THREAD_PRIORITY_HIGH   K_PRIO_PREEMPT(1)
-
-// --- Queues ---
-K_MSGQ_DEFINE(fsm_cmd_q, sizeof(cmd_t), 2, 1);
-K_MSGQ_DEFINE(modbus_sensor_q, sizeof(union filling_data), 2, 1);
-
-static const struct modbus_data_queues mb_queues = {
-    .fsm_cmd_q = &fsm_cmd_q,
-    .sensor_data_q = &modbus_sensor_q,
-};
-
-static const struct lora_cmd_queues lora_cmd_qs = {
-    .in_fsm_cmd_q = &fsm_cmd_q, // Queue for incoming FSM commands
-    .in_override_cmd_q = NULL,  // No override commands for now
-};
-
-static const struct lora_data_queues lora_data_qs = {
-    .sensor_data_q = &modbus_sensor_q, // Queue for sensor data (modbus)
-    .navigator_data_q = NULL,          // No navigator data queue for now
-};
-
-// --- Filling FSM Config ---
-DEFAULT_FSM_CONFIG(filling_sm_config);
 
 // --- Max Threads ---
 #define N_THREADS 4
@@ -89,37 +121,28 @@ void navigator_thread_entry(void *p1, void *p2, void *p3)
     LOG_INF("Navigator thread exiting.");
 }
 
-void data_thread_entry(void *modbus_msgq, void *p2, void *p3)
+void data_thread_entry(void *p1, void *p2, void *p3)
 {
-    ARG_UNUSED(p2);
-    ARG_UNUSED(p3);
 
-    struct k_msgq *mbus_q = modbus_msgq;
-    if (mbus_q == NULL) {
-        LOG_ERR("Modbus message queue is NULL");
-        return;
-    }
+    const k_timeout_t sub_timeout = K_MSEC(100);
+    struct uf_hydra_msg uf_msg = {0};
+    struct lf_hydra_msg lf_msg = {0};
 
-    union filling_data modbus_data = {0};
-    union filling_data modbus_batch[512 / sizeof(modbus_data)] = {0};
-    int batch_size = 0;
+    const struct zbus_channel *uf_chan;
+    const struct zbus_channel *lf_chan;
 
     while (1) {
-        const int ret = k_msgq_get(mbus_q, &modbus_data, K_FOREVER);
-        if (ret) {
-            LOG_ERR("Failed to get data from modbus message queue: %d", ret);
-            return;
+        zbus_sub_wait(&uf_hydra_obs, &uf_chan, sub_timeout);
+        if (uf_chan == &uf_hydra_chan) {
+            zbus_chan_read(&uf_hydra_chan, &uf_msg, K_NO_WAIT);
+            LOG_INF("UF Hydra: Temperature: %d", uf_msg.temperature);
         }
-        modbus_batch[batch_size++] = modbus_data;
 
-        LOG_FILLING_DATA(modbus_data);
-        if (batch_size >= ARRAY_SIZE(modbus_batch)) {
-            // Simulate saving a batch of data to SD card
-            LOG_INF("Saving batch of %d modbus data entries to SD card", batch_size);
-            // Simulate saving data to SD card
-            // TODO: Implement actual SD card logic
-            k_sleep(K_MSEC(10)); // Simulate write delay
-            batch_size = 0;      // Reset batch size after saving
+        zbus_sub_wait(&lf_hydra_obs, &lf_chan, sub_timeout);
+        if (lf_chan == &lf_hydra_chan) {
+            zbus_chan_read(&lf_hydra_chan, &lf_msg, K_NO_WAIT);
+            LOG_INF("LF Hydra: Temperature: %d, Pressure: %d, CC Pressure: %d",
+                    lf_msg.lf_temperature, lf_msg.lf_pressure, lf_msg.cc_pressure);
         }
     }
 }
@@ -149,23 +172,26 @@ void spawn_all_threads(void)
     LOG_INF("Spawning threads dynamically...");
 
     threads[0].tid =
-        k_thread_create(&thread_data[0], modbus_stack, THREAD_STACK_SIZE, modbus_thread,
-                        (void *)&filling_sm_config, (void *)&mb_queues, NULL,
-                        THREAD_PRIORITY_MEDIUM, 0, K_NO_WAIT);
+        k_thread_create(&thread_data[0], modbus_stack, THREAD_STACK_SIZE, modbus_thread, NULL,
+                        NULL, NULL, THREAD_PRIORITY_MEDIUM, 0, K_NO_WAIT);
 
-    threads[1].tid = k_thread_create(
-        &thread_data[1], lora_stack, THREAD_STACK_SIZE, lora_thread_entry,
-        (void *)&lora_cmd_qs, (void *)&lora_data_qs, NULL, THREAD_PRIORITY_LOW, 0, K_NO_WAIT);
+    /* threads[1].tid = k_thread_create( */
+    /*     &thread_data[1], lora_stack, THREAD_STACK_SIZE, lora_thread_entry, */
+    /*     (void *)&lora_cmd_qs, (void *)&lora_data_qs, NULL, THREAD_PRIORITY_LOW, 0, */
+    /* K_NO_WAIT); */
 
-    threads[2].tid = k_thread_create(&thread_data[2], navigator_stack, THREAD_STACK_SIZE,
-                                     navigator_thread_entry, NULL, NULL, NULL,
-                                     THREAD_PRIORITY_LOW, 0, K_NO_WAIT);
+    /* threads[2].tid = k_thread_create(&thread_data[2], navigator_stack, THREAD_STACK_SIZE, */
+    /*                                  navigator_thread_entry, NULL, NULL, NULL, */
+    /*                                  THREAD_PRIORITY_LOW, 0, K_NO_WAIT); */
 
     threads[3].tid =
         k_thread_create(&thread_data[3], data_stack, THREAD_STACK_SIZE, data_thread_entry,
-                        &modbus_sensor_q, NULL, NULL, THREAD_PRIORITY_LOW, 0, K_NO_WAIT);
+                        NULL, NULL, NULL, THREAD_PRIORITY_LOW, 0, K_NO_WAIT);
 
     for (int i = 0; i < N_THREADS; i++) {
+        if (threads[i].tid == NULL) {
+            continue;
+        }
         k_thread_name_set(threads[i].tid, threads[i].name);
     }
 }
