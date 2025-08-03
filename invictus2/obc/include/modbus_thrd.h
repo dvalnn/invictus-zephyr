@@ -1,14 +1,9 @@
 #ifndef _MODBUS_THRD_H_
 #define _MODBUS_THRD_H_
 
-#include "zephyr/kernel.h"
-
-struct modbus_data_queues {
-    struct k_msgq *fsm_cmd_q;
-    struct k_msgq *sensor_data_q;
-};
+#include "stdbool.h"
 
 bool modbus_thread_setup(void);
-void modbus_thread(void *fsm_config, void *data_queues, void *p3);
+void modbus_thread(void *p1, void *p2, void *p3);
 
 #endif
