@@ -9,6 +9,22 @@
 #include "services/modbus.h"
 #include "services/sd_storage.h"
 
+// FIXME: remove, it's just to make sure linker is working
+#include "invictus2/drivers/sx128x_hal.h"
+
+// THREADS:
+// - Main thread: LoRa communication. (for now just pipe everything to stdout).
+//   - Pre-Flight Mode: Switches between receive and transmit modes based
+//   periodically -- High priority thread.
+//   - Flight Model: passively sends data to the ground station. Should not
+//   block other threads, switch to low priority.
+// - Modbus thread: Reads holding registers from the slave devices and updates
+// the filling state machine. -- Medium priority thread.
+// - Navigator thread: Reads data from the navigator board via uart. -- Medium
+// priority thread.
+// - Data Thread: Saves sensor data and debug logs to the SD card. -- Low
+// priority thread.
+//
 LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 
 // LOGGING:
@@ -118,6 +134,8 @@ int main(void)
         LOG_ERR("Failed to setup services");
         return -1;
     }
+    // FIXME: remove, it's just to make sure linker is working
+    sx128x_hal_wakeup(NULL);
 
     modbus_service_start();
     lora_service_start();
