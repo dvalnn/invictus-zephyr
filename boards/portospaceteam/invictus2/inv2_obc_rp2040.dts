@@ -44,10 +44,10 @@
     nrf_radio_fem: nrf21540 {
           compatible = "nordic,nrf21540-fem";
           spi-if = <&nrf_fem_spi>;
-          rx-en-gpios = <&gpio0 14 GPIO_ACTIVE_HIGH>;
-          tx-en-gpios = <&gpio0 15 GPIO_ACTIVE_HIGH>;
-          pdn-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
-          mode-gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
+          rx-en-gpios = <&gpio0 15 GPIO_ACTIVE_HIGH>;
+          tx-en-gpios = <&gpio0 20 GPIO_ACTIVE_HIGH>;
+          pdn-gpios = <&gpio0 4 GPIO_ACTIVE_LOW>;
+          mode-gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
           /* ant-sel is grounded. Remaining props left as default */
     };
 };
@@ -72,8 +72,8 @@
           reg = <1>;
           spi-max-frequency = <DT_FREQ_M(18)>;
 
-          busy-gpios = <&gpio0 11 GPIO_ACTIVE_HIGH>;
-          reset-gpios = <&gpio0 10 GPIO_ACTIVE_HIGH>;
+          busy-gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>;
+          reset-gpios = <&gpio0 10 GPIO_ACTIVE_HIGH>; // TODO check if still needed
     };
 };
 
@@ -95,7 +95,7 @@
     modbus0{
         compatible = "zephyr,modbus-serial";
         status = "okay";
-        de-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+        de-gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;
     };
 };
 
@@ -112,10 +112,10 @@
 
 	uart_rs485: uart_rs485 {
 		group1 {
-			pinmux = <UART1_TX_P4>;
+			pinmux = <UART1_TX_P24>;
 		};
 		group2 {
-			pinmux = <UART1_RX_P5>;
+			pinmux = <UART1_RX_P25>;
 			input-enable;
 		};
 	};
