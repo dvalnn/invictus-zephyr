@@ -97,13 +97,13 @@ static void write_work_handler(struct k_work *work)
     }
 }
 
-static struct hydras hydras = {0};
+static struct rocket_hydras hydras = {0};
 
 static void sample_and_pub_work_handler(struct k_work *work)
 {
     k_work_schedule_for_queue(&modbus_worker_q, &sample_and_pub_work, K_MSEC(500));
 
-    const int hydra_read_result = hydras_modbus_read(&hydras, client_iface);
+    const int hydra_read_result = rocket_hydras_modbus_read(&hydras, client_iface);
     if (hydra_read_result < 0) {
         LOG_ERR("Failed to read hydras data: %d", hydra_read_result);
         return;
@@ -125,7 +125,7 @@ static void sample_and_pub_work_handler(struct k_work *work)
 
 void modbus_service_start(void)
 {
-    hydras_init(&hydras);
+    rocket_hydras_init(&hydras);
 
     k_work_queue_start(&modbus_worker_q, modbus_worker_stack,
                        K_THREAD_STACK_SIZEOF(modbus_worker_stack), MODBUS_WORKER_PRIO, NULL);

@@ -7,7 +7,7 @@
 
 LOG_MODULE_REGISTER(hydra, LOG_LEVEL_INF);
 
-inline void hydras_init(struct hydras *h)
+inline void rocket_hydras_init(struct rocket_hydras *h)
 {
     BUILD_ASSERT((CONFIG_HYDRA_UF_SLAVE_ID > 0) && (CONFIG_HYDRA_LF_SLAVE_ID > 0) &&
                      (CONFIG_HYDRA_UF_SLAVE_ID != CONFIG_HYDRA_LF_SLAVE_ID),
@@ -20,8 +20,11 @@ inline void hydras_init(struct hydras *h)
     h->lf.is_connected = false;
 
     // Initialize solenoids to default states
-    h->uf.solenoids.raw = 0;
-    h->lf.solenoids.raw = 0;
+    h->uf.solenoids.vsl2_valve = false;
+    h->uf.solenoids.vsv2_vent = false;
+
+    h->lf.solenoids.vsa1_abort = false;
+    h->lf.solenoids.vsl1_main = false;
 
     // Initialize sensors to default values
     h->lf.sensors.raw[0] = 0; // lf_temperature
@@ -32,22 +35,7 @@ inline void hydras_init(struct hydras *h)
     h->uf.temperature = 0;
 }
 
-inline bool hydras_connected(const struct hydras *h)
-{
-    return h->uf.is_connected && h->lf.is_connected;
-}
-
-inline bool hydras_is_uf_connected(const struct hydras *h)
-{
-    return h->uf.is_connected;
-}
-
-inline bool hydras_is_lf_connected(const struct hydras *h)
-{
-    return h->lf.is_connected;
-}
-
-int hydras_modbus_read(struct hydras *h, const int client_iface)
+int rocket_hydras_modbus_read(struct rocket_hydras *h, const int client_iface)
 {
     if (!h || client_iface < 0) {
         return -EINVAL;

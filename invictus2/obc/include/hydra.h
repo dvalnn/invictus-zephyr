@@ -5,16 +5,13 @@
 #include "stdint.h"
 
 struct uf_hydra {
-    int slave_id;      // Slave ID for the hydra on the modbus bus
+    int slave_id; // Slave ID for the hydra on the modbus bus
+    // TODO: Do something about this
     bool is_connected; // True if the hydra is connected
 
-    union uf_solenoids {
-        struct {
-            bool vsl2_valve_solenoid;
-            bool vsv2_vent_solenoid;
-        } solenoid_states;
-
-        uint16_t raw; // Raw state representation of the solenoids
+    struct uf_solenoids {
+        bool vsl2_valve;
+        bool vsv2_vent;
     } solenoids;
 
     uint16_t temperature; // Upper feed temperature probe temperature in ºC
@@ -22,15 +19,12 @@ struct uf_hydra {
 
 struct lf_hydra {
     int slave_id;
+    // TODO: Do something about this
     bool is_connected;
 
-    union lf_solenoids {
-        struct {
-            bool vsa1_abort_solenoid;
-            bool vsl1_main_solenoid;
-        } solenoid_states;
-
-        uint16_t raw; // Raw state representation of the solenoids
+    struct lf_solenoids {
+        bool vsa1_abort;
+        bool vsl1_main;
     } solenoids;
 
     union lf_sensors {
@@ -44,9 +38,34 @@ struct lf_hydra {
     } sensors;
 };
 
-struct hydras {
+struct rocket_hydras {
     struct uf_hydra uf;
     struct lf_hydra lf;
+};
+
+struct fs_hydra {
+    int slave_id;
+    bool is_connected;
+
+    // TODO: Check Names
+    struct fs_solenoids {
+        bool quick_dc_t1;
+        bool quick_dc_t2;
+        bool vent_t1;
+        bool vent_t2;
+        bool generic_valve_3;
+        bool generic_valve_4;
+    } solenoids;
+
+    union fs_sensors {
+        struct {
+            uint16_t temperature; // Filling station temperature in ºC
+            uint16_t pressure_1;  // Filling station pressure in bar
+            uint16_t pressure_2;  // Filling station pressure in bar
+        };
+
+        uint16_t raw[3]; // Raw data representation of the sensors
+    } sensors;
 };
 
 /*
@@ -62,7 +81,7 @@ struct hydras {
  * @param h Pointer to the hydras structure to initialize.
  * @returns void.
  */
-void hydras_init(struct hydras *h);
+void rocket_hydras_init(struct rocket_hydras *h);
 
 /*
  * Read data from the hydras using Modbus RTU.
@@ -74,12 +93,6 @@ void hydras_init(struct hydras *h);
  *
  * @returns 0 on success, negative error code on failure.
  */
-int hydras_modbus_read(struct hydras *h, const int client_iface);
-
-bool hydras_connected(const struct hydras *h);
-
-bool hydras_is_uf_connected(const struct hydras *h);
-
-bool hydras_is_lf_connected(const struct hydras *h);
+int rocket_hydras_modbus_read(struct rocket_hydras *h, const int client_iface);
 
 #endif // HYDRA_H_
