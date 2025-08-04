@@ -9,8 +9,7 @@
 LOG_MODULE_REGISTER(sd_storage, LOG_LEVEL_INF);
 
 // Channel declarations
-ZBUS_CHAN_DECLARE(uf_hydra_chan);
-ZBUS_CHAN_DECLARE(lf_hydra_chan);
+ZBUS_CHAN_DECLARE(uf_hydra_chan, lf_hydra_chan);
 
 static void uf_work_handler(struct k_work *work);
 static void lf_work_handler(struct k_work *work);
