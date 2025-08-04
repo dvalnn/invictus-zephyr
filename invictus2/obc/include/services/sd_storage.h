@@ -14,6 +14,6 @@
 
 /* extern struct k_work_queue_config sd_worker_config; */
 
-void start_sd_worker_q(void);
+void sd_service_start(void);
 
 #endif // SD_STORAGE_H_

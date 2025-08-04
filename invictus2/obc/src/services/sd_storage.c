@@ -61,7 +61,7 @@ static void lf_work_handler(struct k_work *work)
 }
 
 // Initialization code (call from `main()` or system init)
-void start_sd_worker_q(void)
+void sd_service_start(void)
 {
     k_work_queue_start(&sd_worker_q, sd_worker_stack, K_THREAD_STACK_SIZEOF(sd_worker_stack),
                        SD_WORKER_PRIO, NULL);
