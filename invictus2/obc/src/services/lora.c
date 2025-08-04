@@ -3,6 +3,7 @@
 #include "filling_sm.h"
 
 #include "zbus_messages.h"
+#include "zephyr/kernel/thread_stack.h"
 #include "zephyr/logging/log.h"
 #include "zephyr/toolchain.h"
 #include "zephyr/kernel.h"
@@ -81,12 +82,8 @@ bool lora_uart_setup(void)
     return true;
 }
 
-void lora_uart_backend(void *p1, void *p2, void *p3)
+void lora_uart_backend()
 {
-    ARG_UNUSED(p1);
-    ARG_UNUSED(p2);
-    ARG_UNUSED(p3);
-
     char tx_buf[MSG_SIZE];
 
     uart_irq_rx_enable(uart_dev);
@@ -141,12 +138,8 @@ void lora_uart_backend(void *p1, void *p2, void *p3)
 
 #else // NOT CONFIG_LORA_REDIRECT_UART
 
-void lora_backend(void *p1, void *p2, void *p3)
+void lora_backend(void)
 {
-    ARG_UNUSED(p1);
-    ARG_UNUSED(p2);
-    ARG_UNUSED(p3);
-
     // TODO
 
     LOG_INF("LoRa thread running mock logic...");
@@ -156,32 +149,40 @@ void lora_backend(void *p1, void *p2, void *p3)
 
 #endif // CONFIG_LORA_REDIRECT_UART
 
-bool lora_thread_setup(void)
+bool lora_service_setup(void)
 {
     LOG_INF("Setting up LoRa thread...");
 
 #if CONFIG_LORA_REDIRECT_UART
     return lora_uart_setup();
 #else
+    // TODO
     return true; // No setup needed for non-UART LoRa backend
 #endif // CONFIG_LORA_REDIRECT_UART
 }
 
-void lora_thread_entry(void *_cmd_qs, void *_data_qs, void *p3)
+void lora_thread_entry(void *p1, void *p2, void *p3)
 {
+    ARG_UNUSED(p1);
+    ARG_UNUSED(p2);
     ARG_UNUSED(p3);
 
-    struct lora_cmd_queues *cmd_qs = _cmd_qs;
-    struct lora_data_queues *data_qs = _data_qs;
-
-    if (cmd_qs == NULL || data_qs == NULL) {
-        LOG_ERR("Lora thread setup failed: command or data queues are NULL");
-        return;
-    }
-
 #if CONFIG_LORA_REDIRECT_UART
-    return lora_uart_backend(cmd_qs, data_qs, NULL);
+    return lora_uart_backend();
 #else
-    return lora_backend(cmd_qs, data_qs, NULL);
-#endif
+    return lora_backend();
+#endif // CONFIG_LORA_REDIRECT_UART
+}
+
+#define LORA_THREAD_PRIO 5               // TODO: make KConfig
+K_THREAD_STACK_DEFINE(lora_stack, 1024); // TODO: make KConfig
+static struct k_thread lora_thread;
+
+void lora_service_start(void)
+{
+    const k_tid_t tid =
+        k_thread_create(&lora_thread, lora_stack, K_THREAD_STACK_SIZEOF(lora_stack),
+                        lora_thread_entry, NULL, NULL, NULL, LORA_THREAD_PRIO, 0, K_NO_WAIT);
+
+    k_thread_name_set(tid, "lora");
 }

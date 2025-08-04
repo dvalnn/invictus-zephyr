@@ -5,6 +5,7 @@
 #include "filling_sm.h"
 #include "zbus_messages.h"
 
+#include "services/lora.h"
 #include "services/modbus.h"
 #include "services/sd_storage.h"
 
@@ -96,10 +97,10 @@ bool setup_services(void)
         return false;
     }
 
-    /* if (!lora_thread_setup()) { */
-    /*     LOG_ERR("LoRa thread setup failed"); */
-    /*     return false; */
-    /* } */
+    if (!lora_service_setup()) {
+        LOG_ERR("LoRa thread setup failed");
+        return false;
+    }
 
     return true;
 }
@@ -115,7 +116,8 @@ int main(void)
     }
 
     modbus_service_start();
-    start_sd_worker_q();
+    lora_service_start();
+    sd_service_start();
 
     LOG_INF("Work queues started. Sleeping main thread.");
     k_sleep(K_FOREVER);
