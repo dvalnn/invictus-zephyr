@@ -32,7 +32,10 @@ static void listener_cb(const struct zbus_channel *chan)
 ZBUS_LISTENER_DEFINE(modbus_listener, listener_cb);
 ZBUS_CHAN_ADD_OBS(modbus_coil_write_chan, modbus_listener, MODBUS_LISTENER_PRIO);
 
+#define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
+
 static int client_iface;
+
 const static struct modbus_iface_param client_param = {
     .mode = MODBUS_MODE_RTU,
     .rx_timeout = 50000,
@@ -45,11 +48,8 @@ const static struct modbus_iface_param client_param = {
         },
 };
 
-#define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
-
 bool modbus_service_setup(void)
 {
-
 #if DT_NODE_HAS_COMPAT(DT_PARENT(MODBUS_NODE), zephyr_cdc_acm_uart)
     const struct device *const dev = DEVICE_DT_GET(DT_PARENT(MODBUS_NODE));
     uint32_t dtr = 0;
@@ -101,17 +101,13 @@ static struct hydras hydras = {0};
 
 static void sample_and_pub_work_handler(struct k_work *work)
 {
-    k_work_schedule(&sample_and_pub_work, K_MSEC(500)); // schedule next run
+    k_work_schedule_for_queue(&modbus_worker_q, &sample_and_pub_work, K_MSEC(500));
 
     const int hydra_read_result = hydras_modbus_read(&hydras, client_iface);
     if (hydra_read_result < 0) {
         LOG_ERR("Failed to read hydras data: %d", hydra_read_result);
         return;
     }
-
-    LOG_DBG("UF Temperature %d", hydras.uf.temperature);
-    LOG_HEXDUMP_DBG(hydras.lf.sensors.raw, sizeof(hydras.lf.sensors.raw),
-                    "LF Sensors Raw Data");
 
     const struct uf_hydra_msg uf_msg = {
         .temperature = hydras.uf.temperature,
@@ -129,11 +125,10 @@ static void sample_and_pub_work_handler(struct k_work *work)
 
 void modbus_service_start(void)
 {
-
     hydras_init(&hydras);
 
     k_work_queue_start(&modbus_worker_q, modbus_worker_stack,
                        K_THREAD_STACK_SIZEOF(modbus_worker_stack), MODBUS_WORKER_PRIO, NULL);
 
-    k_work_schedule(&sample_and_pub_work, K_NO_WAIT);
+    k_work_schedule_for_queue(&modbus_worker_q, &sample_and_pub_work, K_NO_WAIT);
 }
