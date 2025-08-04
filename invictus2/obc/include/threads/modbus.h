@@ -1,5 +1,5 @@
-#ifndef _MODBUS_THRD_H_
-#define _MODBUS_THRD_H_
+#ifndef MODBUS_THRD_H_
+#define MODBUS_THRD_H_
 
 #include "stdbool.h"
 

@@ -3,10 +3,12 @@
 #include "zephyr/toolchain.h"
 #include "zephyr/zbus/zbus.h"
 
-#include "threads/modbus.h"
-#include "threads/lora.h"
 #include "filling_sm.h"
 #include "zbus_messages.h"
+
+#include "threads/lora.h"
+#include "threads/modbus.h"
+#include "services/sd_storage.h"
 
 LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 
@@ -95,13 +97,12 @@ DEFAULT_FSM_CONFIG(filling_sm_config);
 #define THREAD_PRIORITY_HIGH   K_PRIO_PREEMPT(1)
 
 // --- Max Threads ---
-#define N_THREADS 4
+#define N_THREADS 3
 
 // --- Stacks ---
 K_THREAD_STACK_DEFINE(modbus_stack, THREAD_STACK_SIZE);
 K_THREAD_STACK_DEFINE(lora_stack, THREAD_STACK_SIZE);
 K_THREAD_STACK_DEFINE(navigator_stack, THREAD_STACK_SIZE);
-K_THREAD_STACK_DEFINE(data_stack, THREAD_STACK_SIZE);
 
 // --- Thread structures and tracking ---
 static struct k_thread thread_data[N_THREADS];
@@ -114,7 +115,6 @@ static struct {
     {.tid = NULL, .joined = false, .name = "modbus"},
     {.tid = NULL, .joined = false, .name = "lora"},
     {.tid = NULL, .joined = false, .name = "navigator"},
-    {.tid = NULL, .joined = false, .name = "data"},
 };
 
 void navigator_thread_entry(void *p1, void *p2, void *p3)
@@ -126,32 +126,6 @@ void navigator_thread_entry(void *p1, void *p2, void *p3)
     LOG_INF("Navigator thread running mock logic...");
     k_sleep(K_SECONDS(3)); // Simulate work
     LOG_INF("Navigator thread exiting.");
-}
-
-void data_thread_entry(void *p1, void *p2, void *p3)
-{
-
-    const k_timeout_t sub_timeout = K_MSEC(100);
-    struct uf_hydra_msg uf_msg = {0};
-    struct lf_hydra_msg lf_msg = {0};
-
-    const struct zbus_channel *uf_chan;
-    const struct zbus_channel *lf_chan;
-
-    while (1) {
-        zbus_sub_wait(&uf_hydra_obs, &uf_chan, sub_timeout);
-        if (uf_chan == &uf_hydra_chan) {
-            zbus_chan_read(&uf_hydra_chan, &uf_msg, K_NO_WAIT);
-            LOG_INF("UF Hydra: Temperature: %d", uf_msg.temperature);
-        }
-
-        zbus_sub_wait(&lf_hydra_obs, &lf_chan, sub_timeout);
-        if (lf_chan == &lf_hydra_chan) {
-            zbus_chan_read(&lf_hydra_chan, &lf_msg, K_NO_WAIT);
-            LOG_INF("LF Hydra: Temperature: %d, Pressure: %d, CC Pressure: %d",
-                    lf_msg.lf_temperature, lf_msg.lf_pressure, lf_msg.cc_pressure);
-        }
-    }
 }
 
 // --- Thread Spawning ---
@@ -190,10 +164,6 @@ void spawn_all_threads(void)
     /* threads[2].tid = k_thread_create(&thread_data[2], navigator_stack, THREAD_STACK_SIZE, */
     /*                                  navigator_thread_entry, NULL, NULL, NULL, */
     /*                                  THREAD_PRIORITY_LOW, 0, K_NO_WAIT); */
-
-    threads[3].tid =
-        k_thread_create(&thread_data[3], data_stack, THREAD_STACK_SIZE, data_thread_entry,
-                        NULL, NULL, NULL, THREAD_PRIORITY_LOW, 0, K_NO_WAIT);
 
     for (int i = 0; i < N_THREADS; i++) {
         if (threads[i].tid == NULL) {
@@ -259,6 +229,7 @@ int main(void)
     }
 
     spawn_all_threads();
+    start_sd_worker_q();
 
     LOG_INF("Entering main join loop");
     join_all_threads();
