@@ -3,7 +3,7 @@
 
 #include "stdint.h"
 #include "stdbool.h"
-#include "zephyr/kernel.h"
+#include "stddef.h"
 
 struct uf_hydra_msg {     // upper feed hydra
     uint16_t temperature; // Upper feed temperature probe temperature in ºC
