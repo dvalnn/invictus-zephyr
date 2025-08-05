@@ -57,6 +57,7 @@ struct fs_hydra {
         bool generic_valve_4;
     } solenoids;
 
+    // TODO: Double check available sensors
     union fs_sensors {
         struct {
             uint16_t temperature; // Filling station temperature in ºC

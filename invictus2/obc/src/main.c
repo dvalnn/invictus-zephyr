@@ -11,19 +11,6 @@
 
 LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 
-// THREADS:
-// - Main thread: LoRa communication. (for now just pipe everything to stdout).
-//   - Pre-Flight Mode: Switches between receive and transmit modes based
-//   periodically -- High priority thread.
-//   - Flight Model: passively sends data to the ground station. Should not
-//   block other threads, switch to low priority.
-// - Modbus thread: Reads holding registers from the slave devices and updates
-// the filling state machine. -- Medium priority thread.
-// - Navigator thread: Reads data from the navigator board via uart. -- Medium
-// priority thread.
-// - Data Thread: Saves sensor data and debug logs to the SD card. -- Low
-// priority thread.
-//
 // LOGGING:
 // - Log debugg information to the console and to a file on the SD card.
 // // - Use LOG_INF, LOG_ERR, LOG_DBG, etc. macros for logging.
@@ -55,11 +42,11 @@ ZBUS_CHAN_DEFINE(fs_hydra_chan,        /* Channel Name */
                  ZBUS_MSG_INIT()       /* Initial Value */
 );
 
-ZBUS_CHAN_DEFINE(modbus_coil_write_chan,          /* Channel Name */
-                 struct modbus_write_coils_msg,   /* Message Type */
-                 modbus_coil_write_msg_validator, /* Validator Func */
-                 NULL,                            /* User Data*/
-                 ZBUS_OBSERVERS_EMPTY,            /* Observers */
+ZBUS_CHAN_DEFINE(modbus_write_coils_chan,          /* Channel Name */
+                 struct modbus_write_coils_msg,    /* Message Type */
+                 modbus_write_coils_msg_validator, /* Validator Func */
+                 NULL,                             /* User Data*/
+                 ZBUS_OBSERVERS_EMPTY,             /* Observers */
                  ZBUS_MSG_INIT(.slave_id = 0, .start_addr = 0, .values = NULL,
                                .num_coils = 0) /* Initial Value */
 

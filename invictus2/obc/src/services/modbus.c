@@ -12,25 +12,26 @@
 LOG_MODULE_REGISTER(obc_modbus, LOG_LEVEL_DBG);
 
 static void write_work_handler(struct k_work *work);
-static void sample_and_pub_work_handler(struct k_work *work);
+static void rocket_hydra_sample_work_handler(struct k_work *work);
 
 static K_WORK_DEFINE(write_work, write_work_handler);
-static K_WORK_DELAYABLE_DEFINE(sample_and_pub_work, sample_and_pub_work_handler);
+static K_WORK_DELAYABLE_DEFINE(rocket_hydra_sample_work, rocket_hydra_sample_work_handler);
 
-K_THREAD_STACK_DEFINE(modbus_worker_stack, 1024); // TODO: Make this KConfig
-static struct k_work_q modbus_worker_q;
+K_THREAD_STACK_DEFINE(modbus_work_q_stack, CONFIG_MODBUS_WORK_Q_STACK);
+static struct k_work_q modbus_work_q;
 
-ZBUS_CHAN_DECLARE(modbus_coil_write_chan, uf_hydra_chan, lf_hydra_chan);
+ZBUS_CHAN_DECLARE(uf_hydra_chan, lf_hydra_chan);
+ZBUS_CHAN_DECLARE(modbus_write_coils_chan);
 
 static void listener_cb(const struct zbus_channel *chan)
 {
-    if (chan == &modbus_coil_write_chan) {
-        k_work_submit_to_queue(&modbus_worker_q, &write_work);
+    if (chan == &modbus_write_coils_chan) {
+        k_work_submit_to_queue(&modbus_work_q, &write_work);
     }
 }
 
 ZBUS_LISTENER_DEFINE(modbus_listener, listener_cb);
-ZBUS_CHAN_ADD_OBS(modbus_coil_write_chan, modbus_listener, MODBUS_LISTENER_PRIO);
+ZBUS_CHAN_ADD_OBS(modbus_write_coils_chan, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
 
 #define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
 
@@ -81,7 +82,7 @@ static void write_work_handler(struct k_work *work)
 {
     static struct modbus_write_coils_msg msg;
 
-    if (zbus_chan_read(&modbus_coil_write_chan, &msg, K_NO_WAIT) != 0) {
+    if (zbus_chan_read(&modbus_write_coils_chan, &msg, K_NO_WAIT) != 0) {
         LOG_WRN("Chan read failed or empty");
         return;
     }
@@ -99,9 +100,10 @@ static void write_work_handler(struct k_work *work)
 
 static struct rocket_hydras hydras = {0};
 
-static void sample_and_pub_work_handler(struct k_work *work)
+static void rocket_hydra_sample_work_handler(struct k_work *work)
 {
-    k_work_schedule_for_queue(&modbus_worker_q, &sample_and_pub_work, K_MSEC(500));
+    k_work_schedule_for_queue(&modbus_work_q, &rocket_hydra_sample_work,
+                              K_MSEC(CONFIG_MODBUS_ROCKET_HYDRA_SAMPLE_INTERVAL));
 
     const int hydra_read_result = rocket_hydras_modbus_read(&hydras, client_iface);
     if (hydra_read_result < 0) {
@@ -119,6 +121,7 @@ static void sample_and_pub_work_handler(struct k_work *work)
         .cc_pressure = hydras.lf.sensors.cc_pressure,
     };
 
+    // TODO: log pub errors if any
     zbus_chan_pub(&uf_hydra_chan, &uf_msg, K_NO_WAIT);
     zbus_chan_pub(&lf_hydra_chan, &lf_msg, K_NO_WAIT);
 }
@@ -127,8 +130,9 @@ void modbus_service_start(void)
 {
     rocket_hydras_init(&hydras);
 
-    k_work_queue_start(&modbus_worker_q, modbus_worker_stack,
-                       K_THREAD_STACK_SIZEOF(modbus_worker_stack), MODBUS_WORKER_PRIO, NULL);
+    k_work_queue_start(&modbus_work_q, modbus_work_q_stack,
+                       K_THREAD_STACK_SIZEOF(modbus_work_q_stack), CONFIG_MODBUS_WORK_Q_PRIO,
+                       NULL);
 
-    k_work_schedule_for_queue(&modbus_worker_q, &sample_and_pub_work, K_NO_WAIT);
+    k_work_schedule_for_queue(&modbus_work_q, &rocket_hydra_sample_work, K_NO_WAIT);
 }

@@ -1,7 +1,7 @@
 #include "zbus_messages.h"
 #include "zephyr/toolchain.h"
 
-bool modbus_coil_write_msg_validator(const void *msg, size_t msg_size)
+bool modbus_write_coils_msg_validator(const void *msg, size_t msg_size)
 {
     ARG_UNUSED(msg_size);
 

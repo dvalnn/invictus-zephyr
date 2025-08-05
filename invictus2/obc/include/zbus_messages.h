@@ -60,7 +60,7 @@ struct lora_cmd_msg {
 
 /* ----------------------------------------------------------- */
 
-bool modbus_coil_write_msg_validator(const void *msg, size_t msg_size);
+bool modbus_write_coils_msg_validator(const void *msg, size_t msg_size);
 bool rocket_event_msg_validator(const void *msg, size_t msg_size);
 
 #endif // ZBUS_H_
