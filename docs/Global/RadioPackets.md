@@ -74,7 +74,7 @@ payload: NULL
 
 #### MANUAL\_ENABLE 
 desc: allow for manual commands to be executed
-payload: NULL
+payload: True / False or NULL and act as a Toggle (?)
 
 #### MANUAL\_EXEC 
 desc: execute manual command
@@ -82,4 +82,4 @@ payload: // REVIEW @alex
 
 #### ACK 
 desc: acknowledge command
-payload: NULL
+payload: // REVIEW @alex
