@@ -105,11 +105,11 @@ static void rocket_hydra_sample_work_handler(struct k_work *work)
     k_work_schedule_for_queue(&modbus_work_q, &rocket_hydra_sample_work,
                               K_MSEC(CONFIG_MODBUS_ROCKET_HYDRA_SAMPLE_INTERVAL));
 
-    const int hydra_read_result = rocket_hydras_modbus_read(&hydras, client_iface);
-    if (hydra_read_result < 0) {
-        LOG_ERR("Failed to read hydras data: %d", hydra_read_result);
-        return;
-    }
+    struct hydra_sensor_read_desc batch[] = {
+        UF_HYDRA_SENSOR_READ(&hydras.uf, NULL),
+        LF_HYDRA_SENSOR_READ(&hydras.lf, NULL),
+    };
+    hydras_sensor_read(client_iface, batch, ARRAY_SIZE(batch));
 
     const struct uf_hydra_msg uf_msg = {
         .temperature = hydras.uf.temperature,

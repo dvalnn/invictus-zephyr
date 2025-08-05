@@ -14,12 +14,20 @@ config HYDRA_UF_INPUT_ADDR_START
     int "start address for the UF HYDRA input registers"
     default 0
 
+config HYDRA_UF_COILS_ADDR_START
+    int "start address for the UF HYDRA coil registers"
+    default 0
+
 config HYDRA_LF_SLAVE_ID
     int "Modbus slave address for the Lower Feed HYDRA"
     default 2
 
 config HYDRA_LF_INPUT_ADDR_START
     int "start address for the LF HYDRA input registers"
+    default 0
+
+config HYDRA_LF_COILS_ADDR_START
+    int "start address for the UF HYDRA coil registers"
     default 0
 
 config MODBUS_ZBUS_LISTENER_PRIO
