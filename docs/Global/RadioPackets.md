@@ -73,14 +73,21 @@ Payload: None
 Desc: Allow / Don't allow for manual commands to be executed  
 Payload: True / False
 
+<<<<<<< HEAD
 **MANUAL_EXEC**  
 Desc: Execute manual command  
 Payload: The ID + parameters of the manual command to execute, see [list of manual commands]
+=======
+#### MANUAL\_ENABLE 
+desc: allow for manual commands to be executed
+payload: True / False or NULL and act as a Toggle (?)
+>>>>>>> f18ae795ebabd69a07d6d79af27535dcb5a029b8
 
 **STATUS_REP**  
 Desc: Send full system info  
 Payload: Full system info in the structure shown [here](#status-rep-payload)
 
+<<<<<<< HEAD
 **ACK**  
 Desc: Acknowledge command  
 Payload: The ID of the command received + errors during execution <!-- REVIEW -->
@@ -206,3 +213,8 @@ Note: ACKs work like normal command acknowledges.
 
 ### Ack Errors 
 *?*
+=======
+#### ACK 
+desc: acknowledge command
+payload: // REVIEW @alex
+>>>>>>> f18ae795ebabd69a07d6d79af27535dcb5a029b8
