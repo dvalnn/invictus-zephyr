@@ -105,25 +105,23 @@ static void rocket_hydra_sample_work_handler(struct k_work *work)
     k_work_schedule_for_queue(&modbus_work_q, &rocket_hydra_sample_work,
                               K_MSEC(CONFIG_MODBUS_ROCKET_HYDRA_SAMPLE_INTERVAL));
 
-    struct hydra_sensor_read_desc batch[] = {
-        UF_HYDRA_SENSOR_READ(&hydras.uf, NULL),
-        LF_HYDRA_SENSOR_READ(&hydras.lf, NULL),
-    };
-    hydras_sensor_read(client_iface, batch, ARRAY_SIZE(batch));
+    rocket_hydras_sensor_read(client_iface, &hydras);
 
-    const struct uf_hydra_msg uf_msg = {
-        .temperature = hydras.uf.temperature,
-    };
+    if (hydras.uf.meta.is_connected) {
+        zbus_chan_pub(&uf_hydra_chan,
+                      &(const struct uf_hydra_msg){.temperature = hydras.uf.temperature},
+                      K_NO_WAIT);
+    }
 
-    const struct lf_hydra_msg lf_msg = {
-        .lf_temperature = hydras.lf.sensors.lf_temperature,
-        .lf_pressure = hydras.lf.sensors.lf_pressure,
-        .cc_pressure = hydras.lf.sensors.cc_pressure,
-    };
-
-    // TODO: log pub errors if any
-    zbus_chan_pub(&uf_hydra_chan, &uf_msg, K_NO_WAIT);
-    zbus_chan_pub(&lf_hydra_chan, &lf_msg, K_NO_WAIT);
+    if (hydras.lf.meta.is_connected) {
+        zbus_chan_pub(&lf_hydra_chan,
+                      &(const struct lf_hydra_msg){
+                          .lf_temperature = hydras.lf.sensors.lf_temperature,
+                          .lf_pressure = hydras.lf.sensors.lf_pressure,
+                          .cc_pressure = hydras.lf.sensors.cc_pressure,
+                      },
+                      K_NO_WAIT);
+    }
 }
 
 void modbus_service_start(void)

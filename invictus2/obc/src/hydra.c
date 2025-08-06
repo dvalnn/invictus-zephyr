@@ -1,5 +1,6 @@
 #include "hydra.h"
 
+#include "zephyr/kernel.h"
 #include "zephyr/modbus/modbus.h"
 #include "zephyr/logging/log.h"
 
@@ -18,38 +19,53 @@ inline void rocket_hydras_init(struct rocket_hydras *h)
 
     memset(h, 0, sizeof(struct rocket_hydras)); // REVIEW: if *h is always statically
                                                 // allocated, this is not needed
-    h->uf.slave_id = CONFIG_HYDRA_UF_SLAVE_ID;
-    h->lf.slave_id = CONFIG_HYDRA_LF_SLAVE_ID;
+    h->uf.meta.slave_id = CONFIG_HYDRA_UF_SLAVE_ID;
+    h->uf.meta.ir_start = CONFIG_HYDRA_UF_INPUT_ADDR_START;
+
+    h->lf.meta.slave_id = CONFIG_HYDRA_LF_SLAVE_ID;
+    h->lf.meta.ir_start = CONFIG_HYDRA_LF_INPUT_ADDR_START;
 }
 
-void hydras_sensor_read(const int client_iface, struct hydra_sensor_read_desc *const batch,
-                        const uint8_t n_reads)
+static inline void check_connection(const int rc, struct hydra_metadata *meta,
+                                    const char *const label)
 {
-    if (!batch || n_reads == 0 || client_iface < 0) {
-        LOG_ERR("Invalid parameters for sensor read.");
+    if (!meta || !label) {
+        LOG_ERR("Invalid parameters for connection check.");
         return;
     }
 
-    for (uint8_t i = 0; i < n_reads; i++) {
-        struct hydra_sensor_read_desc *read = &batch[i];
-        const int ret = modbus_read_input_regs(client_iface, read->slave_id, read->start_addr,
-                                               read->dest, read->len);
-        if (ret < 0) {
-            LOG_ERR("Failed to read [%s]: %d", read->label, ret);
-            if (read->on_error) {
-                read->on_error(read->label, ret);
-            }
-        }
+    if (rc < 0 && !meta->is_connected) {
+        return; // Already disconnected, no need to log again
+    }
+
+    if (rc < 0 && meta->is_connected) {
+        LOG_ERR("Failed to read [%s]: %d. Flagging disconnect.", label, rc);
+        meta->is_connected = false;
+    } else if (rc >= 0 && !meta->is_connected) {
+        LOG_INF("Reconnected to [%s].", label);
+        meta->is_connected = true;
     }
 }
 
-static inline int modbus_read_coils_u8(const char *const label, const int client_iface,
-                                       const uint8_t slave_id, const uint16_t addr,
-                                       uint8_t *const dest, const uint16_t len)
+void rocket_hydras_sensor_read(const int client_iface, struct rocket_hydras *const h)
 {
-    int rc = modbus_read_coils(client_iface, slave_id, addr, dest, len);
-    if (rc < 0) {
-        LOG_ERR("Read coils failed [%s]: %d", label, rc);
+    if (!h || client_iface < 0) {
+        LOG_ERR("Invalid parameters for hydra sensor read.");
+        return;
     }
-    return rc;
+
+    // Read upper feed hydra sensors
+    int uf_rc = modbus_read_input_regs(client_iface, h->uf.meta.slave_id, h->uf.meta.ir_start,
+                                       &h->uf.temperature, 1);
+    int lf_rc = modbus_read_input_regs(client_iface, h->lf.meta.slave_id, h->lf.meta.ir_start,
+                                       (uint16_t *const)&h->lf.sensors.raw,
+                                       ARRAY_SIZE(h->lf.sensors.raw));
+
+    check_connection(uf_rc, &h->uf.meta, "UF hydra sensors");
+    check_connection(lf_rc, &h->lf.meta, "LF hydra sensors");
+}
+
+void rocket_hydras_coils_read(const int client_iface, struct rocket_hydras *const h)
+{
+    k_oops(); // FIXME: implement this function
 }

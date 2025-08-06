@@ -1,7 +1,6 @@
 #ifndef HYDRA_H_
 #define HYDRA_H_
 
-#include "stdbool.h"
 #include "stdint.h"
 
 // NOTE: Solenoids are represented as modbus coils.
@@ -10,10 +9,15 @@
 
 // TODO: implement is_connected functionality in the codebase.
 
+struct hydra_metadata {
+    uint16_t ir_start;    // Start address for input registers
+    uint8_t slave_id;     // Modbus slave ID
+    uint8_t is_connected; // Connection status
+};
+
 // Upper Feed (UF) Hydraulic Regulation and Actuation (HYDRA) board structure
 struct uf_hydra {
-    uint8_t slave_id;
-    bool is_connected;
+    struct hydra_metadata meta;
 
     union uf_solenoids {
         // REVIEW: change these names once there is a better naming convention
@@ -29,12 +33,10 @@ struct uf_hydra {
     //  In that case, this may need to be changed to an union with a struct
     uint16_t temperature;
 };
-#define N_COILS_UF 2
 
 // Lower Feed (UF) Hydraulic Regulation and Actuation (HYDRA) board structure
 struct lf_hydra {
-    uint8_t slave_id;
-    bool is_connected;
+    struct hydra_metadata meta;
 
     union lf_solenoids {
         // REVIEW: change these names once there is a better naming convention
@@ -55,7 +57,6 @@ struct lf_hydra {
         uint16_t raw[3];
     } sensors;
 };
-#define N_COILS_LF 2
 
 // Rocket Hydras structure containing upper and lower feed hydras
 struct rocket_hydras {
@@ -65,8 +66,7 @@ struct rocket_hydras {
 
 // Filling station hydra structure
 struct fs_hydra {
-    uint8_t slave_id;
-    bool is_connected;
+    struct hydra_metadata meta;
 
     union fs_solenoids {
         struct {
@@ -95,7 +95,6 @@ struct fs_hydra {
         uint16_t raw[5];
     } sensors;
 };
-#define N_COILS_FS 6
 
 /*
  * Initialize the hydras structure with default values.
@@ -112,36 +111,22 @@ struct fs_hydra {
  */
 void rocket_hydras_init(struct rocket_hydras *h);
 
-struct hydra_sensor_read_desc {
-    const char *const label;
-    const uint8_t slave_id;
-    const uint16_t start_addr;
-    uint16_t *const dest;
-    const uint16_t len;
-    void (*on_error)(const char *const label, const int ret);
-};
+/**
+ * Read the sensors from the hydras.
+ * This function reads the input registers for the upper feed and lower feed hydras
+ * and updates their respective sensor values.
+ *
+ * @param client_iface The Modbus client interface to use for reading.
+ * @param h Pointer to the hydras structure containing the hydras to read.
+ * @returns void.
+ *
+ * @note This function flags the connection status of each hydra based on the read result.
+ *       If the read is successful, it sets the `is_connected` flag to true.
+ *       If the read fails, it sets the `is_connected` flag to false and logs a warning.
+ */
+void rocket_hydras_sensor_read(const int client_iface, struct rocket_hydras *const h);
 
-void hydras_sensor_read(const int client_iface, struct hydra_sensor_read_desc *const batch,
-                        const uint8_t n_reads);
-
-#define HYDRA_SENSOR_READ_DECL(label_str, slave, addr, buf, length, on_err)                   \
-    (struct hydra_sensor_read_desc)                                                           \
-    {                                                                                         \
-        .label = label_str, .slave_id = slave, .start_addr = addr, .dest = buf,               \
-        .len = length, .on_error = on_err                                                     \
-    }
-
-#define UF_HYDRA_SENSOR_READ(h, on_error)                                                     \
-    HYDRA_SENSOR_READ_DECL("UF temperature", ((struct uf_hydra *)h)->slave_id,                \
-                           CONFIG_HYDRA_UF_INPUT_ADDR_START,                                  \
-                           &((struct uf_hydra *)h)->temperature, 1, on_error)
-
-#define LF_HYDRA_SENSOR_READ(h, on_error)                                                     \
-    HYDRA_SENSOR_READ_DECL("LF sensors", ((struct lf_hydra *)h)->slave_id,                    \
-                           CONFIG_HYDRA_LF_INPUT_ADDR_START,                                  \
-                           (uint16_t *const)((struct lf_hydra *)h)->sensors.raw,              \
-                           ARRAY_SIZE(((struct lf_hydra *)h)->sensors.raw), on_error)
-
-#define HYDRA_SENSOR_READ_BATCH_SIZE(batch) (sizeof(batch) / sizeof(batch[0]))
+// TODO: implement this function
+void rocket_hydras_coils_read(const int client_iface, struct rocket_hydras *const h);
 
 #endif // HYDRA_H_
