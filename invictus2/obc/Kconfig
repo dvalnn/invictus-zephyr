@@ -14,6 +14,10 @@ config HYDRA_UF_INPUT_ADDR_START
     int "start address for the UF HYDRA input registers"
     default 0
 
+config HYDRA_UF_COILS_ADDR_START
+    int "start address for the UF HYDRA coil registers"
+    default 0
+
 config HYDRA_LF_SLAVE_ID
     int "Modbus slave address for the Lower Feed HYDRA"
     default 2
@@ -21,5 +25,27 @@ config HYDRA_LF_SLAVE_ID
 config HYDRA_LF_INPUT_ADDR_START
     int "start address for the LF HYDRA input registers"
     default 0
+
+config HYDRA_LF_COILS_ADDR_START
+    int "start address for the LF HYDRA coil registers"
+    default 0
+
+config MODBUS_ZBUS_LISTENER_PRIO
+    int "zbus priority assigned to the modbus listener callback"
+    default 5
+
+config MODBUS_ROCKET_HYDRA_SAMPLE_INTERVAL
+    int "sample interval for the rocket hydras, in ms"
+    default 500
+
+config MODBUS_WORK_Q_PRIO
+    int "priority for the modbus work queue thread"
+    default 5
+
+config MODBUS_WORK_Q_STACK
+    int "stack size for the modbus work q, in bytes"
+    default 1024
+
+
 
 source "Kconfig.zephyr"
