@@ -27,7 +27,7 @@ config HYDRA_LF_INPUT_ADDR_START
     default 0
 
 config HYDRA_LF_COILS_ADDR_START
-    int "start address for the UF HYDRA coil registers"
+    int "start address for the LF HYDRA coil registers"
     default 0
 
 config MODBUS_ZBUS_LISTENER_PRIO
