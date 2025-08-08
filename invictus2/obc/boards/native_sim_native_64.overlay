@@ -1,0 +1,6 @@
+&uart0 {
+       modbus0  {
+                status = "okay";
+       };
+       status = "okay";
+};
