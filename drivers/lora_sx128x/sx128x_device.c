@@ -15,7 +15,7 @@ LOG_MODULE_REGISTER(sx128x_device, CONFIG_LORA_SX128X_LOG_LEVEL);
 
 #define RETURN_ON_ERROR(status)          \
   if (status != SX128X_STATUS_OK) {      \
-      return init_status;                \
+      return status;                     \
   }
 
 static int sx128x_init(const struct device *dev)
