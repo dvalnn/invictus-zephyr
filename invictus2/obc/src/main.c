@@ -101,6 +101,8 @@ int main(void)
         LOG_ERR("Failed to setup services");
         return -1;
     }
+    // FIXME: remove, it's just to make sure linker is working
+    sx128x_hal_wakeup(NULL);
 
     modbus_service_start();
     lora_service_start();
