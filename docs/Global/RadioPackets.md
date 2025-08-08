@@ -16,73 +16,73 @@ The current packet structure is as follows:
 ## Normal Mode Commands
 Commands used to operate the rocket under normal circumstances
 
-- STATUS_REQ 
-- STATUS_REP 
-- ABORT 
-- READY 
-- ARM 
-- FIRE 
-- LAUNCH_OVERRIDE 
-- FILL_EXEC 
-- FILL_STOP 
-- FILL_RESUME 
-- MANUAL_ENABLE 
-- MANUAL_EXEC 
-- ACK 
+- STATUS_REQ
+- STATUS_REP
+- ABORT
+- READY
+- ARM
+- FIRE
+- LAUNCH_OVERRIDE
+- FILL_EXEC
+- FILL_STOP
+- FILL_RESUME
+- MANUAL_ENABLE
+- MANUAL_EXEC
+- ACK
 
 ## Command Descriptions
 
-**STATUS_REQ**  
-Desc: Request full system info  
+**STATUS_REQ**
+Desc: Request full system info
 Payload: None
 
-**ABORT**  
-Desc: Enter abort state, discard all oxidizer (abort valve), close remaining valves  
+**ABORT**
+Desc: Enter abort state, discard all oxidizer (abort valve), close remaining valves
 Payload: None
 
-**READY**  
-Desc: Go to ready state, means system is ready for launch  
+**READY**
+Desc: Go to ready state, means system is ready for launch
 Payload: None
 
-**ARM**  
-Desc: Enter armed state, ready to fire ignition pyro  
+**ARM**
+Desc: Enter armed state, ready to fire ignition pyro
 Payload: None
 
-**FIRE**  
-Desc: Trigger ignition pyro, can be sent only if physical arm key is turned and the physical fire button is pressed.  
+**FIRE**
+Desc: Trigger ignition pyro, can be sent only if physical arm key is turned and the physical fire button is pressed.
 Payload: None
 
-**LAUNCH_OVERRIDE**  
-Desc: Force main/launch valve open  
+**LAUNCH_OVERRIDE**
+Desc: Force main/launch valve open
 Payload: None
 
-**FILL_EXEC**  
-Desc: Execute filling command  
-Payload: The ID of the filling program to execute, see [filling programs](#fill-exec-payload)  
+**FILL_EXEC**
+Desc: Execute filling command
+Payload: The ID of the filling program to execute, see [filling programs](#fill-exec-payload)
 + (Optional) The parameters of the program, explained [here](#custom-parameters)
 
-**FILL_STOP**  
+**FILL_STOP**
 Desc: Stop current filling state, go to Idle/Safe Idle <br> <!-- REVIEW -->
 Payload: None
 
-**FILL_RESUME**  
-Desc: Resume last active filling state (not idles/abort) 
+**FILL_RESUME**
+Desc: Resume last active filling state (not idles/abort)
 Payload: None
 
-**MANUAL_TOGGLE**  
-Desc: Allow / Don't allow for manual commands to be executed  
+**MANUAL_TOGGLE**
+Desc: Allow / Don't allow for manual commands to be executed
 Payload: True / False
 
-**MANUAL_EXEC**  
-Desc: Execute manual command  
+**MANUAL_EXEC**
+Desc: Execute manual command
 Payload: The ID + parameters of the manual command to execute, see [list of manual commands]
 
-**STATUS_REP**  
-Desc: Send full system info  
+**STATUS_REP**
+Desc: Send full system info
 Payload: Full system info in the structure shown [here](#status-rep-payload)
 
-**ACK**  
-Desc: Acknowledge command  
+**ACK**
+Desc: Acknowledge command
 Payload: The ID of the command received + errors during execution <!-- REVIEW -->
 
 ## Payloads
@@ -105,7 +105,7 @@ Payload: The ID of the command received + errors during execution <!-- REVIEW --
         - 2 filling station QR
     - E-matches: `bool` (1 bit each)
         - ignition
-        - drogue
+        - drogue chute
         - main chute
     - *Total: 13 bits (in 2 bytes)*
 - **Load Cell**
@@ -144,37 +144,37 @@ Payload: The ID of the command received + errors during execution <!-- REVIEW --
 
 The Fill Exec Payload specifies which filling program to execute and its parameters. The available filling programs, based on the filling state machine, are:
 
-- **FILL_COPV**  
+- **FILL_COPV**
     Desc: Fill the COPV tank with Nitrogen
-    Parameters:  
+    Parameters:
     - TargetCOPVP (COPV Pressure): default 200 bar
 
-- **FILL_N_PRE**  
-    Desc: Pre-pressurize the main tank with Nitrogen  
-    Parameters:  
-    - TargetTankP (Main Tank Pressure): default 5 bar  
+- **FILL_N_PRE**
+    Desc: Pre-pressurize the main tank with Nitrogen
+    Parameters:
+    - TargetTankP (Main Tank Pressure): default 5 bar
     - TriggerTankP (Max Main Tank Pressure): default 7 bar
 
-- **FILL_N2O**  
+- **FILL_N2O**
     Desc: Fill the main tank with Nitrous Oxide
-    Parameters:  
-    - TargetTankP (Main Tank Pressure): default 35 bar  
-    - TriggerTankP (Max Main Tank Pressure): default 38 bar  
-    - TargetWeight (Nitrous Oxide Weight): default 7 kg  
+    Parameters:
+    - TargetTankP (Main Tank Pressure): default 35 bar
+    - TriggerTankP (Max Main Tank Pressure): default 38 bar
+    - TargetWeight (Nitrous Oxide Weight): default 7 kg
     - TriggerTemp (Min Main Tank Temperature): default 2 ºC
 
-- **FILL_N_POST**  
-    Desc: Post-pressurize the main tank with Nitrogen  
-    Parameters:  
-    - TargetTankP (Main Tank Pressure): default 50 bar  
+- **FILL_N_POST**
+    Desc: Post-pressurize the main tank with Nitrogen
+    Parameters:
+    - TargetTankP (Main Tank Pressure): default 50 bar
     - TriggerTankP (Max Main Tank Pressure): default 55 bar (optional)
 
 ### Manual Commands
-**SD_LOG_START**  
+**SD_LOG_START**
 Desc: Start logging data to SD card
 Payload: None
 
-**SD_LOG_STOP**  
+**SD_LOG_STOP**
 Desc: Stop logging data to SD card
 Payload: None
 
@@ -182,27 +182,27 @@ Payload: None
 Desc: Request/Send SD card info
 Payload: None (Ground Station), SD info (Rocket)
 
-**VALVE_STATE**  
-Desc: Set the state (open/close) of a specific valve  
+**VALVE_STATE**
+Desc: Set the state (open/close) of a specific valve
 Payload: Valve ID + desired state
 
-**VALVE_MS**  
-Desc: Open a specific valve for a given duration in milliseconds  
+**VALVE_MS**
+Desc: Open a specific valve for a given duration in milliseconds
 Payload: Valve ID + duration (ms)
 
-**LOADCELL_TARE**  
-Desc: Tare the load cell sensor  
+**LOADCELL_TARE**
+Desc: Tare the load cell sensor
 Payload: Load cell ID
 
-**TANK_TARE**  
-Desc: Tare the tank sensor  
+**TANK_TARE**
+Desc: Tare the tank sensor
 Payload: Tank ID
 
-**ACK**  
-Desc: Acknowledge manual command  
+**ACK**
+Desc: Acknowledge manual command
 Payload: Manual command ID + errors during execution
 
 Note: ACKs work like normal command acknowledges.
 
-### Ack Errors 
+### Ack Errors
 *?*
