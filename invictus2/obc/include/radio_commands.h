@@ -1,6 +1,7 @@
 #ifndef RADIO_COMMANDS_H_
 #define RADIO_COMMANDS_H_
 
+#include "zephyr/toolchain.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -9,36 +10,15 @@
 extern "C" {
 #endif
 
-// -----------------------------------------------------------------------------
-// Command IDs
-// -----------------------------------------------------------------------------
-
-enum radio_command_e {
-    RCMD_NONE = 0,
-
-    RCMD_STATUS_REQ = 1,
-    RCMD_STATUS_REP,
-    RCMD_ABORT,
-    RCMD_READY,
-    RCMD_ARM,
-    RCMD_FIRE,
-    RCMD_LAUNCH_OVERRIDE,
-    RCMD_FILL_EXEC,
-    RCMD_FILL_STOP,
-    RCMD_FILL_RESUME,
-    RCMD_MANUAL_TOGGLE,
-    RCMD_MANUAL_EXEC,
-    RCMD_ACK,
-
-    RCMD_MAX
-};
+// REVIEW: make this KConfig param?
+#define SUPPORTED_PACKET_VERSION 1
 
 // -----------------------------------------------------------------------------
 // Packet header (4 bytes)
 // -----------------------------------------------------------------------------
 
 // Always 1 byte fields, packed for on-the-wire transmission.
-struct radio_cmd_header_s {
+struct cmd_header_s {
     uint8_t packet_version;
     uint8_t sender_id;
     uint8_t target_id;
@@ -46,27 +26,19 @@ struct radio_cmd_header_s {
 } __attribute__((packed));
 
 // -----------------------------------------------------------------------------
-// Global sizes
+// Generic Command Structure
 // -----------------------------------------------------------------------------
 
-#define MAX_LORA_PACKET_BYTES       256u
-#define RADIO_CMD_HEADER_BYTES      ((uint8_t)sizeof(struct radio_cmd_header_s))
-#define RADIO_CMD_MAX_PAYLOAD_BYTES (MAX_LORA_PACKET_BYTES - RADIO_CMD_HEADER_BYTES)
+#define RADIO_CMD_SIZE          256u
+#define RADIO_CMD_HEADER_BYTES  ((uint8_t)sizeof(struct cmd_header_s))
+#define RADIO_CMD_PAYLOAD_BYTES (RADIO_CMD_SIZE - RADIO_CMD_HEADER_BYTES)
 
-// Generic payload container
-// (variable length -- actual used length must be tracked by surrounding code)
-struct radio_cmd_payload_s {
-    uint8_t raw[RADIO_CMD_MAX_PAYLOAD_BYTES];
+// NOTE: Generic commands structure, cast to a specific command type to access payloads.
+struct radio_generic_cmd_s {
+    struct cmd_header_s header;
+    uint8_t _reserved[RADIO_CMD_PAYLOAD_BYTES];
 } __attribute__((packed));
 
-// Top-level packet (header + payload bytes).
-// NOTE: payload length is managed separately by application logic.
-struct radio_cmd_s {
-    struct radio_cmd_header_s hdr;
-    struct radio_cmd_payload_s payload;
-} __attribute__((packed));
-
-// -----------------------------------------------------------------------------
 // STATUS_REP payload layout
 // -----------------------------------------------------------------------------
 // NOTE: Ensure all 16 and 32 bit values align to 2 and 4 bytes boundaries respectively
@@ -179,8 +151,7 @@ struct status_rep_s {                     // byte block | 2 byte block | 4 byte 
 
 // Compute size at compile time for a sanity check
 #define STATUS_REP_SIZE sizeof(struct status_rep_s)
-_Static_assert(STATUS_REP_SIZE <= RADIO_CMD_MAX_PAYLOAD_BYTES,
-               "status_rep_s too large for payload");
+BUILD_ASSERT(STATUS_REP_SIZE <= RADIO_CMD_PAYLOAD_BYTES, "status_rep_s too large for payload");
 
 // -----------------------------------------------------------------------------
 // Fill Exec payloads
@@ -210,11 +181,8 @@ struct fill_n2o_extra_s {
 
 // Fill exec generic envelope
 struct fill_exec_s {
-    uint8_t program_id; // values from enum fill_program_e
-    // variable parameters follow;
-    // application MUST encode parameters sequentially according to selected program.
-    // Maximum total payload must still fit.
-    uint8_t params[];
+    uint8_t program_id;                          // values from enum fill_program_e
+    uint8_t params[RADIO_CMD_PAYLOAD_BYTES - 1]; // 1 byte for program_id, rest for params
 } __attribute__((packed));
 
 #define FILL_COPV_PARAM_BYTES     (sizeof(struct fill_copv_params_s))
@@ -253,7 +221,7 @@ struct manual_tare_s {
 // same logic as struct fill_exec_s
 struct manual_exec_s {
     uint8_t manual_cmd_id;
-    uint8_t params[];
+    uint8_t params[RADIO_CMD_PAYLOAD_BYTES - 1];
 } __attribute__((packed));
 
 // -----------------------------------------------------------------------------
@@ -265,28 +233,115 @@ struct manual_exec_s {
 struct ack_s {
     uint8_t ack_cmd_id;  // radio_command_t that is acknowledged
     uint8_t status_code; // 0 = OK, non-zero = error
-    // optional error payload may follow (params[]), e.g., error details or manual cmd id
-    uint8_t params[];
+    uint8_t params[RADIO_CMD_PAYLOAD_BYTES - 2];
 } __attribute__((packed));
 
 // -----------------------------------------------------------------------------
-// Serialization/Utility helpers (declarations)
+// Command IDs
+// -----------------------------------------------------------------------------
+enum radio_command_e {
+    RCMD_NONE = 0,
+
+    // No Payload Commands
+    RCMD_STATUS_REQ = 1,
+    RCMD_ABORT,
+    RCMD_READY,
+    RCMD_ARM,
+    RCMD_FIRE,
+    RCMD_LAUNCH_OVERRIDE,
+    RCMD_FILL_STOP,
+    RCMD_FILL_RESUME,
+    RCMD_MANUAL_TOGGLE,
+
+    // Payload Commands
+    RCMD_STATUS_REP,
+    RCMD_FILL_EXEC,
+    RCMD_MANUAL_EXEC,
+    RCMD_ACK,
+
+    RCMD_MAX
+};
+
+// -----------------------------------------------------------------------------
+// Individual Command Definitions
+// -----------------------------------------------------------------------------
+// NOTE: These definitions should be safe to cast to and from the generic
+//       radio_generic_cmd_s structure as they all have the same header structure
+//       and align to the same size.
+//
+//       Prefer to use these definitions across the codebase to ensure type
+//       safety and consistency.
+//
+//       the generic contained should only be used to pack and unpack commands
+//       into wire format for transmission over the radio.
 // -----------------------------------------------------------------------------
 
-// Note: implementations should handle endianness.
+#define _PAD_SIZE(partial_s) (RADIO_CMD_PAYLOAD_BYTES - sizeof(partial_s))
 
-// Pack a status_rep_s into a provided buffer. Returns number of bytes written or negative on
-// error (e.g., buffer too small).
-int pack_status_rep(const struct status_rep_s *const src, uint8_t *const out_buf,
-                    const size_t out_buf_size);
+#define _COMMAND_NAME(name) cmd_##name##_s
 
-// Pack an ack packet into a provided buffer
-int pack_ack(const struct ack_s *const src, uint8_t *const out_buf, const size_t out_buf_size);
+// Command with no payload data (all reserved)
+#define MAKE_CMD(name)                                                                        \
+    struct _COMMAND_NAME(name) {                                                              \
+        struct cmd_header_s hdr;                                                              \
+        uint8_t _reserved[RADIO_CMD_PAYLOAD_BYTES];                                           \
+    } __attribute__((packed))
 
-int unpack_fill_exec(const struct fill_exec_s *const src, const size_t src_len,
-                     uint8_t *const out_buf, const size_t out_buf_size);
-int unpack_manual_exec(const struct manual_exec_s *const src, const size_t src_len,
-                       uint8_t *const out_buf, const size_t out_buf_size);
+// Command with defined payload data
+#define MAKE_CMD_WITH_PAYLOAD(name, partial_s)                                                \
+    struct _COMMAND_NAME(name) {                                                              \
+        struct cmd_header_s hdr;                                                              \
+        partial_s payload;                                                                    \
+        uint8_t _reserved[_PAD_SIZE(partial_s)];                                              \
+    } __attribute__((packed));
+
+MAKE_CMD(status_req);
+MAKE_CMD(abort);
+MAKE_CMD(ready);
+MAKE_CMD(arm);
+MAKE_CMD(fire);
+MAKE_CMD(launch_override);
+MAKE_CMD(fill_stop);
+MAKE_CMD(fill_resume);
+MAKE_CMD(manual_toggle);
+
+MAKE_CMD_WITH_PAYLOAD(ack, struct ack_s);
+MAKE_CMD_WITH_PAYLOAD(fill_exec, struct fill_exec_s);
+MAKE_CMD_WITH_PAYLOAD(status_rep, struct status_rep_s);
+MAKE_CMD_WITH_PAYLOAD(manual_exec, struct manual_exec_s);
+
+BUILD_ASSERT(sizeof(struct cmd_status_req_s) == RADIO_CMD_SIZE,
+             "cmd_status_req_s size mismatch");
+BUILD_ASSERT(sizeof(struct cmd_abort_s) == RADIO_CMD_SIZE, "cmd_abort_s size mismatch");
+BUILD_ASSERT(sizeof(struct cmd_ready_s) == RADIO_CMD_SIZE, "cmd_ready_s size mismatch");
+BUILD_ASSERT(sizeof(struct cmd_arm_s) == RADIO_CMD_SIZE, "cmd_arm_s size mismatch");
+BUILD_ASSERT(sizeof(struct cmd_fire_s) == RADIO_CMD_SIZE, "cmd_fire_s size mismatch");
+BUILD_ASSERT(sizeof(struct cmd_launch_override_s) == RADIO_CMD_SIZE,
+             "cmd_launch_override_s size mismatch");
+BUILD_ASSERT(sizeof(struct cmd_fill_stop_s) == RADIO_CMD_SIZE,
+             "cmd_fill_stop_s size mismatch");
+BUILD_ASSERT(sizeof(struct cmd_fill_resume_s) == RADIO_CMD_SIZE,
+             "cmd_fill_resume_s size mismatch");
+BUILD_ASSERT(sizeof(struct cmd_ack_s) == RADIO_CMD_SIZE, "cmd_ack_s size mismatch");
+BUILD_ASSERT(sizeof(struct cmd_fill_exec_s) == RADIO_CMD_SIZE,
+             "cmd_fill_exec_s size mismatch");
+BUILD_ASSERT(sizeof(struct cmd_status_rep_s) == RADIO_CMD_SIZE,
+             "cmd_status_rep_s size mismatch");
+
+#undef _COMMAND_NAME
+#undef _PAD_SIZE
+#undef MAKE_CMD_WITH_PAYLOAD
+#undef MAKE_CMD
+
+// -----------------------------------------------------------------------------
+// Serialization helpers (declarations)
+// -----------------------------------------------------------------------------
+
+int radio_cmd_pack(const struct radio_generic_cmd_s *const cmd, uint8_t *const out_buf,
+                   const size_t out_buf_size);
+
+int radio_cmd_unpack(const uint8_t *const in_buf, const size_t in_buf_size,
+                     struct radio_generic_cmd_s *const cmd);
 
 #ifdef __cplusplus
 }
