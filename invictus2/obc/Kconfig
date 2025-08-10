@@ -30,13 +30,41 @@ config HYDRA_LF_COILS_ADDR_START
     int "start address for the LF HYDRA coil registers"
     default 0
 
-config MODBUS_ZBUS_LISTENER_PRIO
-    int "zbus priority assigned to the modbus listener callback"
-    default 5
-
 config MODBUS_ROCKET_HYDRA_SAMPLE_INTERVAL
     int "sample interval for the rocket hydras, in ms"
     default 500
+
+config LIFT_R_SLAVE_ID
+    int "Modbus slave address for the Rocket LIFT"
+    default 4 // Left 3 free for fs hydra 
+
+config LIFT_R_INPUT_ADDR_START
+    int "start address for the Rocket LIFT input registers"
+    default 0
+
+config LIFT_R_COILS_ADDR_START
+    int "start address for the Rocket LIFT coil registers"
+    default 0
+
+config LIFT_FS_SLAVE_ID
+    int "Modbus slave address for the Filling Station LIFT"
+    default 5
+
+config LIFT_FS_INPUT_ADDR_START
+    int "start address for the Filling Station LIFT input registers"
+    default 0
+
+config LIFT_FS_COILS_ADDR_START
+    int "start address for the Filling Station LIFT coil registers"
+    default 0
+
+config MODBUS_LIFT_SAMPLE_INTERVAL
+    int "sample interval for the lifts, in ms"
+    default 500
+
+config MODBUS_ZBUS_LISTENER_PRIO
+    int "zbus priority assigned to the modbus listener callback"
+    default 5
 
 config MODBUS_WORK_Q_PRIO
     int "priority for the modbus work queue thread"

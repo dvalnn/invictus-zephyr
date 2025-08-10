@@ -19,6 +19,17 @@ struct fs_hydra_msg { // filling station hydra
     // TODO: Add filling station hydra message structure
 };
 
+struct r_lift_msg {
+    uint16_t thrust_loadcell1; // Thrust loadcell 1 value
+    uint16_t thrust_loadcell2; // Thrust loadcell 2 value
+    uint16_t thrust_loadcell3; // Thrust loadcell 3 value
+    uint8_t main_ematch;       // Main e-match state (0 or 1)
+};
+
+struct fs_lift_msg {
+    uint16_t n2o_loadcell;     // N2O loadcell value
+};
+
 struct modbus_write_coils_msg {
     const uint16_t slave_id;
     const uint16_t start_addr; // Coil address to write to
