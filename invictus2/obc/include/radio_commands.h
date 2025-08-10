@@ -281,7 +281,8 @@ enum radio_command_e {
     struct _COMMAND_NAME(name) {                                                              \
         struct cmd_header_s hdr;                                                              \
         uint8_t _reserved[RADIO_CMD_PAYLOAD_BYTES];                                           \
-    }
+    };                                                                                        \
+    _ASSERT_CMD_SIZE(name)
 
 // Command with defined payload data
 #define MAKE_CMD_WITH_PAYLOAD(name, partial_s)                                                \
