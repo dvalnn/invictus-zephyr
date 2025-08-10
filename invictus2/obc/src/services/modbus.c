@@ -14,13 +14,11 @@ LOG_MODULE_REGISTER(obc_modbus, LOG_LEVEL_DBG);
 
 static void write_work_handler(struct k_work *work);
 static void rocket_hydra_sample_work_handler(struct k_work *work);
-static void rocket_lift_sample_work_handler(struct k_work *work);
-static void fs_lift_sample_work_handler(struct k_work *work);
+static void lift_sample_work_handler(struct k_work *work);
 
 static K_WORK_DEFINE(write_work, write_work_handler);
 static K_WORK_DELAYABLE_DEFINE(rocket_hydra_sample_work, rocket_hydra_sample_work_handler);
-static K_WORK_DELAYABLE_DEFINE(rocket_lift_sample_work, rocket_lift_sample_work_handler);
-static K_WORK_DELAYABLE_DEFINE(fs_lift_sample_work, fs_lift_sample_work_handler);
+static K_WORK_DELAYABLE_DEFINE(lift_sample_work, lift_sample_work_handler);
 
 K_THREAD_STACK_DEFINE(modbus_work_q_stack, CONFIG_MODBUS_WORK_Q_STACK);
 static struct k_work_q modbus_work_q;
@@ -39,6 +37,10 @@ ZBUS_LISTENER_DEFINE(modbus_listener, listener_cb);
 ZBUS_CHAN_ADD_OBS(modbus_write_coils_chan, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
 
 #define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
+
+static struct rocket_hydras hydras = {0};
+static struct rocket_lift r_lift = {0};
+static struct fs_lift fs_lift = {0};
 
 static int client_iface;
 
@@ -103,8 +105,6 @@ static void write_work_handler(struct k_work *work)
     }
 }
 
-static struct rocket_hydras hydras = {0};
-
 static void rocket_hydra_sample_work_handler(struct k_work *work)
 {
     k_work_schedule_for_queue(&modbus_work_q, &rocket_hydra_sample_work,
@@ -129,12 +129,9 @@ static void rocket_hydra_sample_work_handler(struct k_work *work)
     }
 }
 
-static struct r_lift r_lift = {0};
-static struct fs_lift fs_lift = {0};
-
-static void rocket_lift_sample_work_handler(struct k_work *work)
+static void lift_sample_work_handler(struct k_work *work)
 {
-    k_work_schedule_for_queue(&modbus_work_q, &rocket_lift_sample_work,
+    k_work_schedule_for_queue(&modbus_work_q, &lift_sample_work,
                               K_MSEC(CONFIG_MODBUS_LIFT_SAMPLE_INTERVAL));
 
     rocket_lift_sensor_read(client_iface, &r_lift);
@@ -148,12 +145,11 @@ static void rocket_lift_sample_work_handler(struct k_work *work)
                       },
                       K_NO_WAIT);
     }
-}
 
-static void fs_lift_sample_work_handler(struct k_work *work)
-{
-    k_work_schedule_for_queue(&modbus_work_q, &fs_lift_sample_work,
-                              K_MSEC(CONFIG_MODBUS_LIFT_SAMPLE_INTERVAL));
+    // TODO: early return if rocket has launched
+    /* if (0 /\* rocket_state == launched *\/) { */
+    /*     return; */
+    /* } */
 
     fs_lift_sensor_read(client_iface, &fs_lift);
     if (fs_lift.meta.is_connected) {
@@ -166,14 +162,37 @@ static void fs_lift_sample_work_handler(struct k_work *work)
 void modbus_service_start(void)
 {
     rocket_hydras_init(&hydras);
-    rocket_lift_init(&r_lift);
-    fs_lift_init(&fs_lift);
+    lift_init(&r_lift, &fs_lift);
 
     k_work_queue_start(&modbus_work_q, modbus_work_q_stack,
                        K_THREAD_STACK_SIZEOF(modbus_work_q_stack), CONFIG_MODBUS_WORK_Q_PRIO,
                        NULL);
 
     k_work_schedule_for_queue(&modbus_work_q, &rocket_hydra_sample_work, K_NO_WAIT);
-    k_work_schedule_for_queue(&modbus_work_q, &rocket_lift_sample_work, K_NO_WAIT);
-    k_work_schedule_for_queue(&modbus_work_q, &fs_lift_sample_work, K_NO_WAIT);
+    k_work_schedule_for_queue(&modbus_work_q, &lift_sample_work, K_NO_WAIT);
+}
+
+// -------------------------------------------------------------------------------------------
+// Modbus Helpers
+// -------------------------------------------------------------------------------------------
+inline void modbus_slave_check_connection(const int read_result,
+                                          struct modbus_slave_metadata *const meta,
+                                          const char *const label)
+{
+    if (!meta || !label) {
+        LOG_ERR("Invalid parameters for connection check.");
+        return;
+    }
+
+    if (read_result < 0 && !meta->is_connected) {
+        return; // Already disconnected, no need to log again
+    }
+
+    if (read_result < 0 && meta->is_connected) {
+        LOG_ERR("Failed to read [%s]: %d. Flagging disconnect.", label, read_result);
+        meta->is_connected = false;
+    } else if (read_result >= 0 && !meta->is_connected) {
+        LOG_INF("Reconnected to [%s].", label);
+        meta->is_connected = true;
+    }
 }

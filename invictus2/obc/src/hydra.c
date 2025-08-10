@@ -1,5 +1,6 @@
 #include "hydra.h"
 
+#include "services/modbus.h"
 #include "zephyr/kernel.h"
 #include "zephyr/modbus/modbus.h"
 #include "zephyr/logging/log.h"
@@ -26,27 +27,6 @@ inline void rocket_hydras_init(struct rocket_hydras *h)
     h->lf.meta.ir_start = CONFIG_HYDRA_LF_INPUT_ADDR_START;
 }
 
-static inline void check_connection(const int rc, struct hydra_metadata *meta,
-                                    const char *const label)
-{
-    if (!meta || !label) {
-        LOG_ERR("Invalid parameters for connection check.");
-        return;
-    }
-
-    if (rc < 0 && !meta->is_connected) {
-        return; // Already disconnected, no need to log again
-    }
-
-    if (rc < 0 && meta->is_connected) {
-        LOG_ERR("Failed to read [%s]: %d. Flagging disconnect.", label, rc);
-        meta->is_connected = false;
-    } else if (rc >= 0 && !meta->is_connected) {
-        LOG_INF("Reconnected to [%s].", label);
-        meta->is_connected = true;
-    }
-}
-
 void rocket_hydras_sensor_read(const int client_iface, struct rocket_hydras *const h)
 {
     if (!h || client_iface < 0) {
@@ -61,8 +41,8 @@ void rocket_hydras_sensor_read(const int client_iface, struct rocket_hydras *con
                                        (uint16_t *const)&h->lf.sensors.raw,
                                        ARRAY_SIZE(h->lf.sensors.raw));
 
-    check_connection(uf_rc, &h->uf.meta, "UF hydra sensors");
-    check_connection(lf_rc, &h->lf.meta, "LF hydra sensors");
+    modbus_slave_check_connection(uf_rc, &h->uf.meta, "UF hydra sensors");
+    modbus_slave_check_connection(lf_rc, &h->lf.meta, "LF hydra sensors");
 }
 
 void rocket_hydras_coils_read(const int client_iface, struct rocket_hydras *const h)

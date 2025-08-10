@@ -1,23 +1,17 @@
 #ifndef HYDRA_H_
 #define HYDRA_H_
 
-#include "stdint.h"
+#include "services/modbus.h"
+
+#include <stdint.h>
 
 // NOTE: Solenoids are represented as modbus coils.
 // Sensors are represented as modbus input registers.
 // Temperatures in ºC. Pressures in Bar.
 
-// TODO: implement is_connected functionality in the codebase.
-
-struct hydra_metadata {
-    uint16_t ir_start;    // Start address for input registers
-    uint8_t slave_id;     // Modbus slave ID
-    uint8_t is_connected; // Connection status
-};
-
 // Upper Feed (UF) Hydraulic Regulation and Actuation (HYDRA) board structure
 struct uf_hydra {
-    struct hydra_metadata meta;
+    struct modbus_slave_metadata meta;
 
     union uf_solenoids {
         // REVIEW: change these names once there is a better naming convention
@@ -36,7 +30,7 @@ struct uf_hydra {
 
 // Lower Feed (UF) Hydraulic Regulation and Actuation (HYDRA) board structure
 struct lf_hydra {
-    struct hydra_metadata meta;
+    struct modbus_slave_metadata meta;
 
     union lf_solenoids {
         // REVIEW: change these names once there is a better naming convention
@@ -66,7 +60,7 @@ struct rocket_hydras {
 
 // Filling station hydra structure
 struct fs_hydra {
-    struct hydra_metadata meta;
+    struct modbus_slave_metadata meta;
 
     union fs_solenoids {
         struct {

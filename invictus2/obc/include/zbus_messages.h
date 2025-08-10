@@ -1,6 +1,10 @@
 #ifndef ZBUS_H_
 #define ZBUS_H_
 
+// REVIEW: Thinking about deprecating this entire file in favor of a more
+// organic approach to ZBUS messages, where each module defines its own messages
+// and validators, and the ZBUS channel is defined in the module's source file.
+
 #include "stdint.h"
 #include "stdbool.h"
 #include "stddef.h"
@@ -20,16 +24,17 @@ struct fs_hydra_msg { // filling station hydra
 };
 
 struct r_lift_msg {
-    uint16_t loadcell1; // loadcell 1 value
-    uint16_t loadcell2; // loadcell 2 value
-    uint16_t loadcell3; // loadcell 3 value
-    uint8_t main_ematch;       // Main e-match state (0 or 1)
+    uint16_t loadcell1;  // loadcell 1 value
+    uint16_t loadcell2;  // loadcell 2 value
+    uint16_t loadcell3;  // loadcell 3 value
+    uint8_t main_ematch; // Main e-match state (0 or 1)
 };
 
 struct fs_lift_msg {
-    uint16_t n2o_loadcell;     // N2O loadcell value
+    uint16_t n2o_loadcell; // N2O loadcell value
 };
 
+// REVIEW: thiking about deprecating this in favor of some extra helper functions
 struct modbus_write_coils_msg {
     const uint16_t slave_id;
     const uint16_t start_addr; // Coil address to write to

@@ -1,32 +1,23 @@
 #ifndef LIFT_H_
 #define LIFT_H_
 
-#include "stdint.h"
+#include "services/modbus.h"
+
+#include <stdint.h>
 
 // NOTE: E-Matches are represented as modbus coils.
 // Load Cells are represented as modbus input registers.
 // TODO: decide if weights should be signed, unsigned, or float.
 
-// TODO: implement is_connected functionality in the codebase.
-
-struct lift_metadata {
-    uint16_t ir_start;    // Start address for input registers
-    uint8_t slave_id;     // Modbus slave ID
-    uint8_t is_connected; // Connection status
-};
-
 // Filling Station (FS) Loadcell and Ignition Firing Terminal (LIFT) board structure
 struct fs_lift {
-    struct lift_metadata meta;
-
-    // Note: the board has 3 loadcell amps and 1 e-match driver to accomodate for the rocket board needs.
-    // The fs board only uses 1 loadcell.
+    struct modbus_slave_metadata meta;
     uint16_t n2o_loadcell;
 };
 
 // Rocket (R) Loadcell and Ignition Firing Terminal (LIFT) board structure
-struct r_lift {
-    struct lift_metadata meta;
+struct rocket_lift {
+    struct modbus_slave_metadata meta;
 
     union r_loadcells {
         struct {
@@ -37,15 +28,13 @@ struct r_lift {
         uint16_t raw[3];
     } loadcells;
 
-    // Feels weird to have the union with only one bit,
-    // but it is consistent with the hydras and other lift structs.
     union r_ematches {
         struct {
             uint8_t main_ematch: 1;
             uint8_t _reserved: 7;
         };
         uint8_t raw;
-    } ematches; 
+    } ematches;
 };
 
 /*
@@ -61,7 +50,7 @@ struct r_lift {
  * @param h Pointer to the lift structure to initialize.
  * @returns void.
  */
-void rocket_lift_init(struct rocket_lift *h);
+void lift_init(struct rocket_lift *r, struct fs_lift *l);
 
 /**
  * Read the sensors from the lift.
