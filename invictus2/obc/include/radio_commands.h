@@ -6,15 +6,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // REVIEW: make this KConfig param?
 #define SUPPORTED_PACKET_VERSION 1
 
 // -----------------------------------------------------------------------------
-// Packet header (4 bytes)
+// Packet header
 // -----------------------------------------------------------------------------
 
 // Always 1 byte fields, packed for on-the-wire transmission.
@@ -23,7 +19,7 @@ struct cmd_header_s {
     uint8_t sender_id;
     uint8_t target_id;
     uint8_t command_id; // use values from enum radio_command_e
-} __attribute__((packed));
+};
 
 // -----------------------------------------------------------------------------
 // Generic Command Structure
@@ -37,12 +33,11 @@ struct cmd_header_s {
 struct radio_generic_cmd_s {
     struct cmd_header_s header;
     uint8_t _reserved[RADIO_CMD_PAYLOAD_BYTES];
-} __attribute__((packed));
+};
 
+// -----------------------------------------------------------------------------
 // STATUS_REP payload layout
 // -----------------------------------------------------------------------------
-// NOTE: Ensure all 16 and 32 bit values align to 2 and 4 bytes boundaries respectively
-// REVIEW: double check alignment
 
 // Actuators bitfield definition (13 bits -> store in 2 bytes)
 union actuators_bits_u { // FIXME: correct actuator names
@@ -72,7 +67,7 @@ union actuators_bits_u { // FIXME: correct actuator names
         uint16_t reserved: 3;
     };
     uint16_t raw;
-} __attribute__((packed));
+};
 
 struct navigator_sensors_s {
     uint32_t gps_latitude_u32;  // reinterpret-casted float bits
@@ -95,7 +90,7 @@ struct navigator_sensors_s {
     int16_t kalman_alt;
     int16_t kalman_max_alt;
     int16_t kalman_quat[4];
-} __attribute__((packed));
+};
 
 union thermocouples_u { // FIXME: correct thermo names
     struct {
@@ -109,7 +104,7 @@ union thermocouples_u { // FIXME: correct thermo names
         int16_t thermo8;
     };
     int16_t raw[8];
-} __attribute__((packed));
+};
 
 union pressures_u { // FIXME: correct pressure names
     struct {
@@ -121,7 +116,7 @@ union pressures_u { // FIXME: correct pressure names
         uint16_t pressure6;
     };
     uint16_t raw[6];
-} __attribute__((packed));
+};
 
 union loadcell_weights_u { // FIXME: correct loadcell names
     struct {
@@ -131,12 +126,14 @@ union loadcell_weights_u { // FIXME: correct loadcell names
         uint16_t loadcell4;
     };
     uint16_t raw[4];
-} __attribute__((packed));
+};
 
-// NOTE: Instead of using __attribute__((packet)) and memcpy, an alternative might be
-//       to manually serialize/deserialized packets bit by bit, at the cost of some speed.
+// NOTE: Alignment was manually checked. It might be usable cross-platform even without
+//       compiler-specific attributes, as long as the fields are defined in the same order
+//       and sizes are consistent across platforms.
 //
-// REVIEW: field alignments
+//       For our use case, however, both the sender and receiver are the same platform
+//       and compiler, so we can safely use memcpy to serialize and deserialize.
 //
 // NOTE:                                                 byte alignments
 struct status_rep_s {                     // byte block | 2 byte block | 4 byte block |
@@ -147,11 +144,7 @@ struct status_rep_s {                     // byte block | 2 byte block | 4 byte 
     union actuators_bits_u actuators;     //     32     |       16     |     8.00     |
     union loadcell_weights_u loadcells;   //     40     |       20     |     10.0     |
     struct navigator_sensors_s navigator; //     92     |       46     |     23.0     |
-} __attribute__((packed));
-
-// Compute size at compile time for a sanity check
-#define STATUS_REP_SIZE sizeof(struct status_rep_s)
-BUILD_ASSERT(STATUS_REP_SIZE <= RADIO_CMD_PAYLOAD_BYTES, "status_rep_s too large for payload");
+};
 
 // -----------------------------------------------------------------------------
 // Fill Exec payloads
@@ -167,23 +160,23 @@ enum fill_program_e {
 
 struct fill_copv_params_s {
     uint16_t target_copv_deci_bar;
-} __attribute__((packed));
+};
 
 struct fill_pressure_params_s {
     uint16_t target_tank_deci_bar;
     uint16_t trigger_tank_deci_bar; // optional: set to 0xFFFF if unused
-} __attribute__((packed));
+};
 
 struct fill_n2o_extra_s {
     uint16_t target_weight_grams;
     int16_t trigger_temp_deci_c;
-} __attribute__((packed));
+};
 
 // Fill exec generic envelope
 struct fill_exec_s {
     uint8_t program_id;                          // values from enum fill_program_e
     uint8_t params[RADIO_CMD_PAYLOAD_BYTES - 1]; // 1 byte for program_id, rest for params
-} __attribute__((packed));
+};
 
 #define FILL_COPV_PARAM_BYTES     (sizeof(struct fill_copv_params_s))
 #define FILL_PRESSURE_PARAM_BYTES (sizeof(struct fill_pressure_params_s))
@@ -207,22 +200,22 @@ enum manual_cmd_e {
 struct manual_valve_state_s {
     uint8_t valve_id;
     uint8_t open; // boolean: 0 closed, 1 open
-} __attribute__((packed));
+};
 
 struct manual_valve_ms_s {
     uint8_t valve_id;
     uint32_t duration_ms;
-} __attribute__((packed));
+};
 
 struct manual_tare_s {
     uint8_t id; // loadcell or tank id
-} __attribute__((packed));
+};
 
 // same logic as struct fill_exec_s
 struct manual_exec_s {
     uint8_t manual_cmd_id;
     uint8_t params[RADIO_CMD_PAYLOAD_BYTES - 1];
-} __attribute__((packed));
+};
 
 // -----------------------------------------------------------------------------
 // ACK payload
@@ -234,7 +227,7 @@ struct ack_s {
     uint8_t ack_cmd_id;  // radio_command_t that is acknowledged
     uint8_t status_code; // 0 = OK, non-zero = error
     uint8_t params[RADIO_CMD_PAYLOAD_BYTES - 2];
-} __attribute__((packed));
+};
 
 // -----------------------------------------------------------------------------
 // Command IDs
@@ -280,12 +273,15 @@ enum radio_command_e {
 
 #define _COMMAND_NAME(name) cmd_##name##_s
 
+#define _ASSERT_CMD_SIZE(name)                                                                \
+    BUILD_ASSERT(sizeof(struct _COMMAND_NAME(name)) == RADIO_CMD_SIZE, #name " size error")
+
 // Command with no payload data (all reserved)
 #define MAKE_CMD(name)                                                                        \
     struct _COMMAND_NAME(name) {                                                              \
         struct cmd_header_s hdr;                                                              \
         uint8_t _reserved[RADIO_CMD_PAYLOAD_BYTES];                                           \
-    } __attribute__((packed))
+    }
 
 // Command with defined payload data
 #define MAKE_CMD_WITH_PAYLOAD(name, partial_s)                                                \
@@ -293,7 +289,8 @@ enum radio_command_e {
         struct cmd_header_s hdr;                                                              \
         partial_s payload;                                                                    \
         uint8_t _reserved[_PAD_SIZE(partial_s)];                                              \
-    } __attribute__((packed));
+    };                                                                                        \
+    _ASSERT_CMD_SIZE(name)
 
 MAKE_CMD(status_req);
 MAKE_CMD(abort);
@@ -310,41 +307,29 @@ MAKE_CMD_WITH_PAYLOAD(fill_exec, struct fill_exec_s);
 MAKE_CMD_WITH_PAYLOAD(status_rep, struct status_rep_s);
 MAKE_CMD_WITH_PAYLOAD(manual_exec, struct manual_exec_s);
 
-BUILD_ASSERT(sizeof(struct cmd_status_req_s) == RADIO_CMD_SIZE,
-             "cmd_status_req_s size mismatch");
-BUILD_ASSERT(sizeof(struct cmd_abort_s) == RADIO_CMD_SIZE, "cmd_abort_s size mismatch");
-BUILD_ASSERT(sizeof(struct cmd_ready_s) == RADIO_CMD_SIZE, "cmd_ready_s size mismatch");
-BUILD_ASSERT(sizeof(struct cmd_arm_s) == RADIO_CMD_SIZE, "cmd_arm_s size mismatch");
-BUILD_ASSERT(sizeof(struct cmd_fire_s) == RADIO_CMD_SIZE, "cmd_fire_s size mismatch");
-BUILD_ASSERT(sizeof(struct cmd_launch_override_s) == RADIO_CMD_SIZE,
-             "cmd_launch_override_s size mismatch");
-BUILD_ASSERT(sizeof(struct cmd_fill_stop_s) == RADIO_CMD_SIZE,
-             "cmd_fill_stop_s size mismatch");
-BUILD_ASSERT(sizeof(struct cmd_fill_resume_s) == RADIO_CMD_SIZE,
-             "cmd_fill_resume_s size mismatch");
-BUILD_ASSERT(sizeof(struct cmd_ack_s) == RADIO_CMD_SIZE, "cmd_ack_s size mismatch");
-BUILD_ASSERT(sizeof(struct cmd_fill_exec_s) == RADIO_CMD_SIZE,
-             "cmd_fill_exec_s size mismatch");
-BUILD_ASSERT(sizeof(struct cmd_status_rep_s) == RADIO_CMD_SIZE,
-             "cmd_status_rep_s size mismatch");
-
-#undef _COMMAND_NAME
 #undef _PAD_SIZE
-#undef MAKE_CMD_WITH_PAYLOAD
+#undef _COMMAND_NAME
+#undef _ASSERT_CMD_SIZE
+
 #undef MAKE_CMD
+#undef MAKE_CMD_WITH_PAYLOAD
 
 // -----------------------------------------------------------------------------
 // Serialization helpers (declarations)
 // -----------------------------------------------------------------------------
 
-int radio_cmd_pack(const struct radio_generic_cmd_s *const cmd, uint8_t *const out_buf,
-                   const size_t out_buf_size);
+enum pack_error_e {
+    PACK_ERROR_NONE = 0,
+    PACK_ERROR_INVALID_ARG,
+    PACK_ERROR_BUFFER_TOO_SMALL,
+    PACK_ERROR_UNSUPPORTED_VERSION,
+    PACK_ERROR_INVALID_CMD_ID,
+};
 
-int radio_cmd_unpack(const uint8_t *const in_buf, const size_t in_buf_size,
-                     struct radio_generic_cmd_s *const cmd);
+enum pack_error_e radio_cmd_pack(const struct radio_generic_cmd_s *const cmd,
+                                 uint8_t *const out_buf, const size_t out_buf_size);
 
-#ifdef __cplusplus
-}
-#endif
+enum pack_error_e radio_cmd_unpack(const uint8_t *const in_buf, const size_t in_buf_size,
+                                   struct radio_generic_cmd_s *const cmd);
 
 #endif // RADIO_COMMANDS_H_
