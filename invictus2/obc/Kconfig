@@ -34,27 +34,31 @@ config MODBUS_ROCKET_HYDRA_SAMPLE_INTERVAL
     int "sample interval for the rocket hydras, in ms"
     default 500
 
-config LIFT_R_SLAVE_ID
+config MODBUS_FS_HYDRA_SLAVE_ID
     int "Modbus slave address for the Rocket LIFT"
-    default 4 // Left 3 free for fs hydra 
+    default 3
 
-config LIFT_R_INPUT_ADDR_START
+config MODBUS_ROCKET_LIFT_SLAVE_ID
+    int "Modbus slave address for the Rocket LIFT"
+    default 4
+
+config MODBUS_ROCKET_LIFT_INPUT_ADDR_START
     int "start address for the Rocket LIFT input registers"
     default 0
 
-config LIFT_R_COILS_ADDR_START
+config MODBUS_ROCKET_LIFT_COILS_ADDR_START
     int "start address for the Rocket LIFT coil registers"
     default 0
 
-config LIFT_FS_SLAVE_ID
+config MODBUS_FS_LIFT_SLAVE_ID
     int "Modbus slave address for the Filling Station LIFT"
     default 5
 
-config LIFT_FS_INPUT_ADDR_START
+config MODBUS_FS_LIFT_INPUT_ADDR_START
     int "start address for the Filling Station LIFT input registers"
     default 0
 
-config LIFT_FS_COILS_ADDR_START
+config MODBUS_FS_LIFT_COILS_ADDR_START
     int "start address for the Filling Station LIFT coil registers"
     default 0
 
@@ -74,7 +78,7 @@ config MODBUS_WORK_Q_STACK
     int "stack size for the modbus work q, in bytes"
     default 1024
 
-config CONFIG_TEST_MODE
+config TEST_MODE
     bool "Enable test mode"
     help
       This option enables test mode for the application, used in the static tests.
