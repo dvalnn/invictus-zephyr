@@ -25,7 +25,7 @@ struct cmd_header_s {
 // Generic Command Structure
 // -----------------------------------------------------------------------------
 
-#define RADIO_CMD_SIZE          256u
+#define RADIO_CMD_SIZE          128u
 #define RADIO_CMD_HEADER_BYTES  ((uint8_t)sizeof(struct cmd_header_s))
 #define RADIO_CMD_PAYLOAD_BYTES (RADIO_CMD_SIZE - RADIO_CMD_HEADER_BYTES)
 
@@ -54,14 +54,17 @@ union actuators_bits_u { // FIXME: correct actuator names
         uint16_t v_fill_valve2: 1;
         uint16_t v_fill_valve3: 1;
 
-        // Filling station Quick Release
-        uint16_t v_fill_qr0: 1;
-        uint16_t v_fill_qr1: 1;
-
         // E-matches: ignition, drogue, main chute (3 bits)
         uint16_t ematch_ignition: 1;
         uint16_t ematch_drogue: 1;
         uint16_t ematch_main: 1;
+
+        // Filling station Quick Release
+        //  NOTE : After launch these should be interpreted
+        //       as reserved bits as their state is no longer
+        //       relevant.
+        uint16_t v_fill_qr0: 1;
+        uint16_t v_fill_qr1: 1;
 
         // remaining bits reserved for alignment
         uint16_t reserved: 3;
