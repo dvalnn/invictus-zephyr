@@ -74,6 +74,11 @@ config MODBUS_WORK_Q_STACK
     int "stack size for the modbus work q, in bytes"
     default 1024
 
-
+config CONFIG_TEST_MODE
+    bool "Enable test mode"
+    help
+      This option enables test mode for the application, used in the static tests.
+      When turned off, the application will run in normal (launch) mode.
+    default 1
 
 source "Kconfig.zephyr"

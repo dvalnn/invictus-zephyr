@@ -30,14 +30,10 @@ struct r_lift {
 
     union r_loadcells {
         struct {
-            uint16_t thrust_loadcell1;
-            uint16_t thrust_loadcell2;
-            uint16_t thrust_loadcell3;
-        } test_loadcells;
-        struct {
-            uint16_t rocket_weight_loadcell;
-            uint16_t _reserved[2];
-        } launch_loadcells;
+            uint16_t loadcell1;
+            uint16_t loadcell2;
+            uint16_t loadcell3;
+        } values;
         uint16_t raw[3];
     } loadcells;
 
