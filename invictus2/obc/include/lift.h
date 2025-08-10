@@ -81,8 +81,10 @@ void rocket_lift_init(struct rocket_lift *h);
  *       If the read fails, it sets the `is_connected` flag to false and logs a warning.
  */
 void rocket_lift_sensor_read(const int client_iface, struct rocket_lift *const h);
+void fs_lift_sensor_read(const int client_iface, struct fs_lift *const l);
 
 // TODO: implement this function
 void rocket_lift_coils_read(const int client_iface, struct rocket_lift *const h);
+void fs_lift_coils_read(const int client_iface, struct fs_lift *const l);
 
 #endif // LIFT_H_
