@@ -42,6 +42,23 @@ ZBUS_CHAN_DEFINE(fs_hydra_chan,        /* Channel Name */
                  ZBUS_MSG_INIT()       /* Initial Value */
 );
 
+ZBUS_CHAN_DEFINE(r_lift_chan,        /* Channel Name */
+                 struct r_lift_msg,  /* Message Type */
+                 NULL,               /* Validator Func */
+                 NULL,               /* User Data*/
+                 ZBUS_OBSERVERS_EMPTY, /* Observers */
+                 ZBUS_MSG_INIT(.loadcell1 = 0, .loadcell2 = 0, .loadcell3 = 0,
+                               .main_ematch = 0) /* Initial Value */
+);
+
+ZBUS_CHAN_DEFINE(fs_lift_chan,        /* Channel Name */
+                 struct fs_lift_msg,  /* Message Type */
+                 NULL,               /* Validator Func */
+                 NULL,               /* User Data*/
+                 ZBUS_OBSERVERS_EMPTY, /* Observers */
+                 ZBUS_MSG_INIT(.n2o_loadcell = 0) /* Initial Value */
+);
+
 ZBUS_CHAN_DEFINE(modbus_write_coils_chan,          /* Channel Name */
                  struct modbus_write_coils_msg,    /* Message Type */
                  modbus_write_coils_msg_validator, /* Validator Func */

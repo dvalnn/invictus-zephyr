@@ -20,9 +20,9 @@ struct fs_hydra_msg { // filling station hydra
 };
 
 struct r_lift_msg {
-    uint16_t thrust_loadcell1; // Thrust loadcell 1 value
-    uint16_t thrust_loadcell2; // Thrust loadcell 2 value
-    uint16_t thrust_loadcell3; // Thrust loadcell 3 value
+    uint16_t loadcell1; // loadcell 1 value
+    uint16_t loadcell2; // loadcell 2 value
+    uint16_t loadcell3; // loadcell 3 value
     uint8_t main_ematch;       // Main e-match state (0 or 1)
 };
 

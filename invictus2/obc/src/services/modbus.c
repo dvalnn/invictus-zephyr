@@ -14,14 +14,18 @@ LOG_MODULE_REGISTER(obc_modbus, LOG_LEVEL_DBG);
 
 static void write_work_handler(struct k_work *work);
 static void rocket_hydra_sample_work_handler(struct k_work *work);
+static void rocket_lift_sample_work_handler(struct k_work *work);
+static void fs_lift_sample_work_handler(struct k_work *work);
 
 static K_WORK_DEFINE(write_work, write_work_handler);
 static K_WORK_DELAYABLE_DEFINE(rocket_hydra_sample_work, rocket_hydra_sample_work_handler);
+static K_WORK_DELAYABLE_DEFINE(rocket_lift_sample_work, rocket_lift_sample_work_handler);
+static K_WORK_DELAYABLE_DEFINE(fs_lift_sample_work, fs_lift_sample_work_handler);
 
 K_THREAD_STACK_DEFINE(modbus_work_q_stack, CONFIG_MODBUS_WORK_Q_STACK);
 static struct k_work_q modbus_work_q;
 
-ZBUS_CHAN_DECLARE(uf_hydra_chan, lf_hydra_chan);
+ZBUS_CHAN_DECLARE(uf_hydra_chan, lf_hydra_chan, r_lift_chan, fs_lift_chan);
 ZBUS_CHAN_DECLARE(modbus_write_coils_chan);
 
 static void listener_cb(const struct zbus_channel *chan)
@@ -125,13 +129,51 @@ static void rocket_hydra_sample_work_handler(struct k_work *work)
     }
 }
 
+static struct r_lift r_lift = {0};
+static struct fs_lift fs_lift = {0};
+
+static void rocket_lift_sample_work_handler(struct k_work *work)
+{
+    k_work_schedule_for_queue(&modbus_work_q, &rocket_lift_sample_work,
+                              K_MSEC(CONFIG_MODBUS_LIFT_SAMPLE_INTERVAL));
+
+    rocket_lift_sensor_read(client_iface, &r_lift);
+    if (r_lift.meta.is_connected) {
+        zbus_chan_pub(&r_lift_chan,
+                      &(const struct r_lift_msg){
+                          .loadcell1 = r_lift.loadcells.values.loadcell1,
+                          .loadcell2 = r_lift.loadcells.values.loadcell2,
+                          .loadcell3 = r_lift.loadcells.values.loadcell3,
+                          .main_ematch = r_lift.ematches.main_ematch,
+                      },
+                      K_NO_WAIT);
+    }
+}
+
+static void fs_lift_sample_work_handler(struct k_work *work)
+{
+    k_work_schedule_for_queue(&modbus_work_q, &fs_lift_sample_work,
+                              K_MSEC(CONFIG_MODBUS_LIFT_SAMPLE_INTERVAL));
+
+    fs_lift_sensor_read(client_iface, &fs_lift);
+    if (fs_lift.meta.is_connected) {
+        zbus_chan_pub(&fs_lift_chan,
+                      &(const struct fs_lift_msg){.n2o_loadcell = fs_lift.n2o_loadcell},
+                      K_NO_WAIT);
+    }
+}
+
 void modbus_service_start(void)
 {
     rocket_hydras_init(&hydras);
+    rocket_lift_init(&r_lift);
+    fs_lift_init(&fs_lift);
 
     k_work_queue_start(&modbus_work_q, modbus_work_q_stack,
                        K_THREAD_STACK_SIZEOF(modbus_work_q_stack), CONFIG_MODBUS_WORK_Q_PRIO,
                        NULL);
 
     k_work_schedule_for_queue(&modbus_work_q, &rocket_hydra_sample_work, K_NO_WAIT);
+    k_work_schedule_for_queue(&modbus_work_q, &rocket_lift_sample_work, K_NO_WAIT);
+    k_work_schedule_for_queue(&modbus_work_q, &fs_lift_sample_work, K_NO_WAIT);
 }
