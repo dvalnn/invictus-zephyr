@@ -92,7 +92,7 @@ struct fs_hydra {
             uint16_t n2o_temperature2; // temperature after solenoid
             uint16_t n2_temperature;
         };
-        uint16_t raw[5];
+        uint16_t raw[6];
     } sensors;
 };
 
