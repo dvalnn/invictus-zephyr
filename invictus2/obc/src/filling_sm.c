@@ -74,9 +74,9 @@ static void idle_run(void *o)
         LOG_DBG("IDLE state: CMD_PRE_PRESSURIZE -> PRE_PRESSURIZING");
         smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING]);
         break;
-    case CMD_FILL_N20:
-        LOG_DBG("IDLE state: CMD_FILL_N20 -> FILLING_N20");
-        smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20]);
+    case CMD_FILL_N2O:
+        LOG_DBG("IDLE state: CMD_FILL_N2O -> FILLING_N2O");
+        smf_set_state(SMF_CTX(s), &filling_states[FILLING_N2O]);
         break;
     case CMD_POST_PRESSURIZE:
         LOG_DBG("IDLE state: CMD_POST_PRESSURIZE -> POST_PRESSURIZING");
@@ -105,8 +105,8 @@ static void abort_entry(void *o)
     LOG_DBG("Entered ABORT state");
     // TODO:
     // Wait for X seconds
-    // Open abort and tank top valves
-    s->valve_states = 0 | BIT(VALVE_ABORT) | BIT(VALVE_TANK_TOP);
+    // Open abort valve
+    s->valve_states = 0 | BIT(VALVE_ABORT) | BIT(VALVE_PRESSURIZING);
 }
 
 static void abort_run(void *o)
@@ -196,12 +196,12 @@ static void safe_pause_idle_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.pre_tank_pressure > s->config->safe_pause.trigger_pre_tank_pressure) {
-        const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->config->safe_pause.trigger_pre_tank_pressure);
+    if (s->data.n2o_tank_pressure > s->config->safe_pause.trigger_n2o_tank_pressure) {
+        const char *var_name = STRINGIFY(s->data.n2o_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->safe_pause.trigger_n2o_tank_pressure);
         LOG_DBG("SAFE_PAUSE_IDLE: %s (%d) > %s (%d) -> SAFE_PAUSE_VENT", var_name,
-                s->data.pre_tank_pressure, cond_name,
-                s->config->safe_pause.trigger_pre_tank_pressure);
+                s->data.n2o_tank_pressure, cond_name,
+                s->config->safe_pause.trigger_n2o_tank_pressure);
         smf_set_state(SMF_CTX(s), &filling_states[SAFE_PAUSE_VENT]);
     }
 }
@@ -224,10 +224,10 @@ static void safe_pause_vent_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.pre_tank_pressure <= s->config->safe_pause.target_pre_tank_pressure) {
-        LOG_DBG("SAFE_PAUSE_VENT: data.pre_tank_pressure (%d) <= target_np (%d) -> "
+    if (s->data.n2o_tank_pressure <= s->config->safe_pause.target_n2o_tank_pressure) {
+        LOG_DBG("SAFE_PAUSE_VENT: data.n2o_tank_pressure (%d) <= target_n2o_tank_pressure (%d) -> "
                 "SAFE_PAUSE_IDLE",
-                s->data.pre_tank_pressure, s->config->safe_pause.target_pre_tank_pressure);
+                s->data.n2o_tank_pressure, s->config->safe_pause.target_n2o_tank_pressure);
         smf_set_state(SMF_CTX(s), &filling_states[SAFE_PAUSE_IDLE]);
     }
 }
@@ -262,12 +262,12 @@ static void filling_copv_idle_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.pre_tank_pressure <= s->config->f_copv.target_pre_tank_pressure) {
-        const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->config->f_copv.target_pre_tank_pressure);
+    if (s->data.n2_tank_pressure <= s->config->f_copv.target_n2_tank_pressure) {
+        const char *var_name = STRINGIFY(s->data.n2_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->f_copv.target_n2_tank_pressure);
         LOG_DBG("FILLING_COPV_IDLE: %s (%d) <= %s (%d) -> FILLING_COPV_FILL", var_name,
-                s->data.pre_tank_pressure, cond_name,
-                s->config->f_copv.target_pre_tank_pressure);
+                s->data.n2_tank_pressure, cond_name,
+                s->config->f_copv.target_n2_tank_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[FILLING_COPV_FILL]);
     }
@@ -294,13 +294,13 @@ static void filling_copv_fill_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.pre_tank_pressure >= s->config->f_copv.target_pre_tank_pressure) {
-        const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->config->f_copv.target_pre_tank_pressure);
+    if (s->data.n2_tank_pressure >= s->config->f_copv.target_n2_tank_pressure) {
+        const char *var_name = STRINGIFY(s->data.n2_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->f_copv.target_n2_tank_pressure);
 
         LOG_DBG("FILLING_COPV_FILL: %s (%d) >= %s (%d) -> FILLING_COPV_IDLE", var_name,
-                s->data.pre_tank_pressure, cond_name,
-                s->config->f_copv.target_pre_tank_pressure);
+                s->data.n2_tank_pressure, cond_name,
+                s->config->f_copv.target_n2_tank_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[FILLING_COPV_IDLE]);
     }
@@ -337,22 +337,22 @@ static void pre_pressurizing_idle_run(void *o)
     }
 
     // TODO: Double check this condition
-    if (s->data.pre_tank_pressure > s->config->pre_p.trigger_main_pressure) {
-        const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->config->pre_p.trigger_main_pressure);
+    if (s->data.n2o_tank_pressure > s->config->pre_p.trigger_n2o_tank_pressure) {
+        const char *var_name = STRINGIFY(s->data.n2o_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->pre_p.trigger_n2o_tank_pressure);
         LOG_DBG("PRE_PRESSURIZING_IDLE: %s (%d) > %s (%d) -> PRE_PRESSURIZING_VENT", var_name,
-                s->data.pre_tank_pressure, cond_name, s->config->pre_p.trigger_main_pressure);
+                s->data.n2o_tank_pressure, cond_name, s->config->pre_p.trigger_n2o_tank_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_VENT]);
         return;
     }
 
-    if (s->data.main_tank_pressure < s->config->pre_p.target_main_pressure) {
-        const char *var_name = STRINGIFY(s->data.main_tank_pressure);
-        const char *cond_name = STRINGIFY(s->config->pre_p.target_main_pressure);
+    if (s->data.n2o_tank_pressure < s->config->pre_p.target_n2o_tank_pressure) {
+        const char *var_name = STRINGIFY(s->data.n2o_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->pre_p.target_n2o_tank_pressure);
         LOG_DBG("PRE_PRESSURIZING_IDLE: %s (%d) < %s (%d) ->  PRE_PRESSURIZING_FILL_N",
-                var_name, s->data.main_tank_pressure, cond_name,
-                s->config->pre_p.target_main_pressure);
+                var_name, s->data.n2o_tank_pressure, cond_name,
+                s->config->pre_p.target_n2o_tank_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_FILL_N]);
     }
@@ -363,8 +363,8 @@ static void pre_pressurizing_fill_entry(void *o)
     struct filling_sm_object *s = (struct filling_sm_object *)o;
     (void)s; // unused
     LOG_DBG("Entered PRE_PRESSURIZING_FILL_N state");
-    // Open N fill valve
-    s->valve_states = 0 | BIT(VALVE_TANK_TOP) | BIT(VALVE_N_FILL);
+    // Open pressurizing valve
+    s->valve_states = 0 | BIT(VALVE_PRESSURIZING);
 }
 
 static void pre_pressurizing_fill_run(void *o)
@@ -379,12 +379,12 @@ static void pre_pressurizing_fill_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.main_tank_pressure >= s->config->pre_p.target_main_pressure) {
-        const char *var_name = STRINGIFY(s->data.main_tank_pressure);
-        const char *cond_name = STRINGIFY(s->config->pre_p.target_main_pressure);
+    if (s->data.n2o_tank_pressure >= s->config->pre_p.target_n2o_tank_pressure) {
+        const char *var_name = STRINGIFY(s->data.n2o_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->pre_p.target_n2o_tank_pressure);
         LOG_DBG("PRE_PRESSURIZING_FILL_N: %s (%d) >= %s (%d) -> PRE_PRESSURIZING_IDLE",
-                var_name, s->data.main_tank_pressure, cond_name,
-                s->config->pre_p.target_main_pressure);
+                var_name, s->data.n2o_tank_pressure, cond_name,
+                s->config->pre_p.target_n2o_tank_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_IDLE]);
     }
@@ -412,38 +412,38 @@ static void pre_pressurizing_vent_run(void *o)
     }
 
     // TODO: Double check this condition
-    if (s->data.pre_tank_pressure <= s->config->pre_p.target_main_pressure) {
-        const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->config->pre_p.target_main_pressure);
+    if (s->data.n2o_tank_pressure <= s->config->pre_p.target_n2o_tank_pressure) {
+        const char *var_name = STRINGIFY(s->data.n2o_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->pre_p.target_n2o_tank_pressure);
         LOG_DBG("PRE_PRESSURIZING_VENT: %s (%d) <= %s (%d) -> PRE_PRESSURIZING_IDLE", var_name,
-                s->data.pre_tank_pressure, cond_name, s->config->pre_p.target_main_pressure);
+                s->data.n2o_tank_pressure, cond_name, s->config->pre_p.target_n2o_tank_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[PRE_PRESSURIZING_IDLE]);
     }
 }
 
-static void filling_n20_run(void *o)
+static void filling_n2o_run(void *o)
 {
     struct filling_sm_object *s = (struct filling_sm_object *)o;
     (void)s;
-    LOG_DBG("Running FILLING_N20 state");
+    LOG_DBG("Running FILLING_N2O state");
     // Do something
     // ...
 }
 
-static void filling_n20_idle_entry(void *o)
+static void filling_n2o_idle_entry(void *o)
 {
     struct filling_sm_object *s = (struct filling_sm_object *)o;
     (void)s; // unused
-    LOG_DBG("Entered FILLING_N20_IDLE state");
+    LOG_DBG("Entered FILLING_N2O_IDLE state");
     // Close all valves
     s->valve_states = 0;
 }
 
-static void filling_n20_idle_run(void *o)
+static void filling_n2o_idle_run(void *o)
 {
     struct filling_sm_object *s = (struct filling_sm_object *)o;
-    LOG_DBG("Running FILLING_N20_IDLE state");
+    LOG_DBG("Running FILLING_N2O_IDLE state");
 
     // Do something
     // ...
@@ -452,29 +452,29 @@ static void filling_n20_idle_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.main_tank_weight < s->config->f_n20.target_main_weight) {
-        const char *var_name = STRINGIFY(s->data.main_tank_weight);
-        const char *cond_name = STRINGIFY(s->config->f_n20.target_main_weight);
-        LOG_DBG("FILLING_N20_IDLE: %s (%d) < %s (%d) -> FILLING_N20_FILL", var_name,
-                s->data.main_tank_weight, cond_name, s->config->f_n20.target_main_weight);
+    if (s->data.n2o_tank_weight < s->config->f_n2o.target_n2o_tank_weight) {
+        const char *var_name = STRINGIFY(s->data.n2o_tank_weight);
+        const char *cond_name = STRINGIFY(s->config->f_n2o.target_n2o_tank_weight);
+        LOG_DBG("FILLING_N2O_IDLE: %s (%d) < %s (%d) -> FILLING_N2O_FILL", var_name,
+                s->data.n2o_tank_weight, cond_name, s->config->f_n2o.target_n2o_tank_weight);
 
-        smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_FILL]);
+        smf_set_state(SMF_CTX(s), &filling_states[FILLING_N2O_FILL]);
     }
 }
 
-static void filling_n20_fill_entry(void *o)
+static void filling_n2o_fill_entry(void *o)
 {
     struct filling_sm_object *s = (struct filling_sm_object *)o;
     (void)s; // unused
-    LOG_DBG("Entered FILLING_N20_FILL state");
-    // Open N20 fill valve
+    LOG_DBG("Entered FILLING_N2O_FILL state");
+    // Open N2O fill valve
     s->valve_states = 0 | BIT(VALVE_N2O_FILL);
 }
 
-static void filling_n20_fill_run(void *o)
+static void filling_n2o_fill_run(void *o)
 {
     struct filling_sm_object *s = (struct filling_sm_object *)o;
-    LOG_DBG("Running FILLING_N20_FILL state");
+    LOG_DBG("Running FILLING_N2O_FILL state");
 
     // Do something
     // ...
@@ -483,47 +483,47 @@ static void filling_n20_fill_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.main_tank_pressure >= s->config->f_n20.trigger_main_pressure &&
-        s->data.main_tank_temperature > s->config->f_n20.trigger_main_temp) {
-        const char *var_name = STRINGIFY(s->data.main_tank_pressure);
-        const char *cond_name = STRINGIFY(s->config->f_n20.trigger_main_pressure);
+    if (s->data.n2o_tank_pressure >= s->config->f_n2o.trigger_n2o_tank_pressure &&
+        s->data.n2o_tank_temperature > s->config->f_n2o.trigger_n2o_tank_temperature) {
+        const char *var_name = STRINGIFY(s->data.n2o_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->f_n2o.trigger_n2o_tank_pressure);
 
-        const char *var2_name = STRINGIFY(s->data.main_tank_temperature);
-        const char *cond2_name = STRINGIFY(s->config->f_n20.trigger_main_temp);
+        const char *var2_name = STRINGIFY(s->data.n2o_tank_temperature);
+        const char *cond2_name = STRINGIFY(s->config->f_n2o.trigger_n2o_tank_temperature);
 
-        LOG_DBG("FILLING_N20_FILL: %s (%d) >= %s (%d) && %s (%d) > %s (%d) ->  "
-                "FILLING_N20_VENT",
-                var_name, s->data.main_tank_pressure, cond_name,
-                s->config->f_n20.trigger_main_pressure, var2_name,
-                s->data.main_tank_temperature, cond2_name, s->config->f_n20.trigger_main_temp);
+        LOG_DBG("FILLING_N2O_FILL: %s (%d) >= %s (%d) && %s (%d) > %s (%d) ->  "
+                "FILLING_N2O_VENT",
+                var_name, s->data.n2o_tank_pressure, cond_name,
+                s->config->f_n2o.trigger_n2o_tank_pressure, var2_name,
+                s->data.n2o_tank_temperature, cond2_name, s->config->f_n2o.trigger_n2o_tank_temperature);
 
-        smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_VENT]);
+        smf_set_state(SMF_CTX(s), &filling_states[FILLING_N2O_VENT]);
         return;
     }
 
-    if (s->data.main_tank_weight >= s->config->f_n20.target_main_weight) {
-        const char *var_name = STRINGIFY(s->data.main_tank_weight);
-        const char *cond_name = STRINGIFY(s->config->f_n20.target_main_weight);
-        LOG_DBG("FILLING_N20_FILL: %s (%d) >= %s (%d) -> FILLING_N20_IDLE", var_name,
-                s->data.main_tank_weight, cond_name, s->config->f_n20.target_main_weight);
+    if (s->data.n2o_tank_weight >= s->config->f_n2o.target_n2o_tank_weight) {
+        const char *var_name = STRINGIFY(s->data.n2o_tank_weight);
+        const char *cond_name = STRINGIFY(s->config->f_n2o.target_n2o_tank_weight);
+        LOG_DBG("FILLING_N2O_FILL: %s (%d) >= %s (%d) -> FILLING_N2O_IDLE", var_name,
+                s->data.n2o_tank_weight, cond_name, s->config->f_n2o.target_n2o_tank_weight);
 
-        smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_IDLE]);
+        smf_set_state(SMF_CTX(s), &filling_states[FILLING_N2O_IDLE]);
     }
 }
 
-static void filling_n20_vent_entry(void *o)
+static void filling_n2o_vent_entry(void *o)
 {
     struct filling_sm_object *s = (struct filling_sm_object *)o;
     (void)s; // unused
-    LOG_DBG("Entered FILLING_N20_VENT state");
+    LOG_DBG("Entered FILLING_N2O_VENT state");
     // Open vent and N2O fill valves
     s->valve_states = 0 | BIT(VALVE_N2O_FILL) | BIT(VALVE_VENT);
 }
 
-static void filling_n20_vent_run(void *o)
+static void filling_n2o_vent_run(void *o)
 {
     struct filling_sm_object *s = (struct filling_sm_object *)o;
-    LOG_DBG("Running FILLING_N20_VENT state");
+    LOG_DBG("Running FILLING_N2O_VENT state");
 
     // Do something
     // ...
@@ -532,21 +532,21 @@ static void filling_n20_vent_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.main_tank_pressure <= s->config->f_n20.target_main_weight ||
-        s->data.main_tank_temperature <= s->config->f_n20.trigger_main_temp) {
-        const char *var_name = STRINGIFY(s->data.main_tank_pressure);
-        const char *cond_name = STRINGIFY(s->config->f_n20.target_main_weight);
+    if (s->data.n2o_tank_pressure <= s->config->f_n2o.target_n2o_tank_pressure ||
+        s->data.n2o_tank_temperature <= s->config->f_n2o.trigger_n2o_tank_temperature) {
+        const char *var_name = STRINGIFY(s->data.n2o_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->f_n2o.target_n2o_tank_pressure);
 
-        const char *var2_name = STRINGIFY(s->data.main_tank_temperature);
-        const char *cond2_name = STRINGIFY(s->config->f_n20.trigger_main_temp);
+        const char *var2_name = STRINGIFY(s->data.n2o_tank_temperature);
+        const char *cond2_name = STRINGIFY(s->config->f_n2o.trigger_n2o_tank_temperature);
 
-        LOG_DBG("FILLING_N20_VENT: %s (%d) <= %s (%d) || %s (%d) <= %s (%d) -> "
-                "FILLING_N20_IDLE",
-                var_name, s->data.main_tank_pressure, cond_name,
-                s->config->f_n20.target_main_weight, var2_name, s->data.main_tank_temperature,
-                cond2_name, s->config->f_n20.trigger_main_temp);
+        LOG_DBG("FILLING_N2O_VENT: %s (%d) <= %s (%d) || %s (%d) <= %s (%d) -> "
+                "FILLING_N2O_FILL",
+                var_name, s->data.n2o_tank_pressure, cond_name,
+                s->config->f_n2o.target_n2o_tank_pressure, var2_name, s->data.n2o_tank_temperature,
+                cond2_name, s->config->f_n2o.trigger_n2o_tank_temperature);
 
-        smf_set_state(SMF_CTX(s), &filling_states[FILLING_N20_FILL]);
+        smf_set_state(SMF_CTX(s), &filling_states[FILLING_N2O_FILL]);
     }
 }
 
@@ -580,24 +580,24 @@ static void post_pressurizing_idle_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.pre_tank_pressure > s->config->post_p.trigger_main_pressure) {
-        const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->config->post_p.trigger_main_pressure);
+    if (s->data.n2o_tank_pressure > s->config->post_p.trigger_n2o_tank_pressure) {
+        const char *var_name = STRINGIFY(s->data.n2o_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->post_p.trigger_n2o_tank_pressure);
 
         LOG_DBG("POST_PRESSURIZING_IDLE: %s (%d) > %s (%d) -> POST_PRESSURIZING_VENT",
-                var_name, s->data.pre_tank_pressure, cond_name,
-                s->config->post_p.trigger_main_pressure);
+                var_name, s->data.n2o_tank_pressure, cond_name,
+                s->config->post_p.trigger_n2o_tank_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_VENT]);
         return;
     }
 
-    if (s->data.main_tank_pressure < s->config->post_p.target_main_pressure) {
-        const char *var_name = STRINGIFY(s->data.main_tank_pressure);
-        const char *cond_name = STRINGIFY(s->config->post_p.target_main_pressure);
+    if (s->data.n2o_tank_pressure < s->config->post_p.target_n2o_tank_pressure) {
+        const char *var_name = STRINGIFY(s->data.n2o_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->post_p.target_n2o_tank_pressure);
         LOG_DBG("POST_PRESSURIZING_IDLE: %s (%d) < %s (%d) -> POST_PRESSURIZING_FILL_N",
-                var_name, s->data.main_tank_pressure, cond_name,
-                s->config->post_p.target_main_pressure);
+                var_name, s->data.n2o_tank_pressure, cond_name,
+                s->config->post_p.target_n2o_tank_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_FILL_N]);
     }
@@ -624,13 +624,13 @@ static void post_pressurizing_fill_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.main_tank_pressure >= s->config->post_p.target_main_pressure) {
-        const char *var_name = STRINGIFY(s->data.main_tank_pressure);
-        const char *cond_name = STRINGIFY(s->config->post_p.target_main_pressure);
+    if (s->data.n2o_tank_pressure >= s->config->post_p.target_n2o_tank_pressure) {
+        const char *var_name = STRINGIFY(s->data.n2o_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->post_p.target_n2o_tank_pressure);
 
         LOG_DBG("POST_PRESSURIZING_FILL_N: %s (%d) >= %s (%d) -> POST_PRESSURIZING_IDLE",
-                var_name, s->data.main_tank_pressure, cond_name,
-                s->config->post_p.target_main_pressure);
+                var_name, s->data.n2o_tank_pressure, cond_name,
+                s->config->post_p.target_n2o_tank_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_IDLE]);
     }
@@ -657,13 +657,13 @@ static void post_pressurizing_vent_run(void *o)
         return; // Global command takes precedence, do not check conditions
     }
 
-    if (s->data.pre_tank_pressure <= s->config->post_p.target_main_pressure) {
-        const char *var_name = STRINGIFY(s->data.pre_tank_pressure);
-        const char *cond_name = STRINGIFY(s->config->post_p.target_main_pressure);
+    if (s->data.n2o_tank_pressure <= s->config->post_p.target_n2o_tank_pressure) {
+        const char *var_name = STRINGIFY(s->data.n2o_tank_pressure);
+        const char *cond_name = STRINGIFY(s->config->post_p.target_n2o_tank_pressure);
 
         LOG_DBG("POST_PRESSURIZING_VENT: %s (%d) <= %s (%d) -> POST_PRESSURIZING_IDLE",
-                var_name, s->data.pre_tank_pressure, cond_name,
-                s->config->post_p.target_main_pressure);
+                var_name, s->data.n2o_tank_pressure, cond_name,
+                s->config->post_p.target_n2o_tank_pressure);
 
         smf_set_state(SMF_CTX(s), &filling_states[POST_PRESSURIZING_IDLE]);
     }
@@ -695,10 +695,10 @@ static const struct smf_state filling_states[] = {
     [PRE_PRESSURIZING_VENT]     = SMF_CREATE_STATE(pre_pressurizing_vent_entry, pre_pressurizing_vent_run, NULL, &filling_states[PRE_PRESSURIZING], NULL),
     [PRE_PRESSURIZING_FILL_N]   = SMF_CREATE_STATE(pre_pressurizing_fill_entry, pre_pressurizing_fill_run, NULL, &filling_states[PRE_PRESSURIZING], NULL),
 
-    [FILLING_N20]       = SMF_CREATE_STATE(NULL, filling_n20_run, NULL, &filling_states[ROOT], &filling_states[FILLING_N20_IDLE]),
-    [FILLING_N20_IDLE]  = SMF_CREATE_STATE(filling_n20_idle_entry, filling_n20_idle_run, NULL, &filling_states[FILLING_N20], NULL),
-    [FILLING_N20_FILL]  = SMF_CREATE_STATE(filling_n20_fill_entry, filling_n20_fill_run, NULL, &filling_states[FILLING_N20], NULL),
-    [FILLING_N20_VENT]  = SMF_CREATE_STATE(filling_n20_vent_entry, filling_n20_vent_run, NULL, &filling_states[FILLING_N20], NULL),
+    [FILLING_N2O]       = SMF_CREATE_STATE(NULL, filling_n2o_run, NULL, &filling_states[ROOT], &filling_states[FILLING_N2O_IDLE]),
+    [FILLING_N2O_IDLE]  = SMF_CREATE_STATE(filling_n2o_idle_entry, filling_n2o_idle_run, NULL, &filling_states[FILLING_N2O], NULL),
+    [FILLING_N2O_FILL]  = SMF_CREATE_STATE(filling_n2o_fill_entry, filling_n2o_fill_run, NULL, &filling_states[FILLING_N2O], NULL),
+    [FILLING_N2O_VENT]  = SMF_CREATE_STATE(filling_n2o_vent_entry, filling_n2o_vent_run, NULL, &filling_states[FILLING_N2O], NULL),
 
     [POST_PRESSURIZING]         = SMF_CREATE_STATE(NULL, post_pressurizing_run, NULL, &filling_states[ROOT], &filling_states[POST_PRESSURIZING_IDLE]),
     [POST_PRESSURIZING_IDLE]    = SMF_CREATE_STATE(post_pressurizing_idle_entry, post_pressurizing_idle_run, NULL, &filling_states[POST_PRESSURIZING], NULL),

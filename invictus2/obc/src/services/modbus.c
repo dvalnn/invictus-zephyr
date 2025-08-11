@@ -114,14 +114,17 @@ static void rocket_hydra_sample_work_handler(struct k_work *work)
 
     if (hydras.uf.meta.is_connected) {
         zbus_chan_pub(&uf_hydra_chan,
-                      &(const struct uf_hydra_msg){.temperature = hydras.uf.temperature},
+                      &(const struct uf_hydra_msg){.uf_temperature1 = hydras.uf.sensors.uf_temperature1,
+                                                   .uf_temperature2 = hydras.uf.sensors.uf_temperature2,
+                                                   .uf_temperature3 = hydras.uf.sensors.uf_temperature3},
                       K_NO_WAIT);
     }
 
     if (hydras.lf.meta.is_connected) {
         zbus_chan_pub(&lf_hydra_chan,
                       &(const struct lf_hydra_msg){
-                          .lf_temperature = hydras.lf.sensors.lf_temperature,
+                          .lf_temperature1 = hydras.lf.sensors.lf_temperature1,
+                          .lf_temperature2 = hydras.lf.sensors.lf_temperature2,
                           .lf_pressure = hydras.lf.sensors.lf_pressure,
                           .cc_pressure = hydras.lf.sensors.cc_pressure,
                       },
