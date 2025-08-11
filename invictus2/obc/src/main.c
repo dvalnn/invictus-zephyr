@@ -22,7 +22,7 @@ ZBUS_CHAN_DEFINE(uf_hydra_chan,                  /* Channel Name */
                  NULL,                           /* Validator Func */
                  NULL,                           /* User Data*/
                  ZBUS_OBSERVERS_EMPTY,           /* Observers */
-                 ZBUS_MSG_INIT(.temperature = 0) /* Initial Value */
+                 ZBUS_MSG_INIT(.uf_temperature1 = 0, .uf_temperature2 = 0, .uf_temperature3 = 0) /* Initial Value */
 );
 
 ZBUS_CHAN_DEFINE(lf_hydra_chan,        /* Channel Name */
@@ -30,7 +30,7 @@ ZBUS_CHAN_DEFINE(lf_hydra_chan,        /* Channel Name */
                  NULL,                 /* Validator Func */
                  NULL,                 /* User Data*/
                  ZBUS_OBSERVERS_EMPTY, /* Observers */
-                 ZBUS_MSG_INIT(.lf_temperature = 0, .lf_pressure = 0, .cc_pressure = 0)
+                 ZBUS_MSG_INIT(.lf_temperature1 = 0, .lf_temperature2 = 0, .lf_pressure = 0, .cc_pressure = 0)
                  /* Initial Value */
 );
 

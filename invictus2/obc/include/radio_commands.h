@@ -40,19 +40,19 @@ struct radio_generic_cmd_s {
 // -----------------------------------------------------------------------------
 
 // Actuators bitfield definition (13 bits -> store in 2 bytes)
-union actuators_bits_u { // FIXME: correct actuator names
+union actuators_bits_u {
     struct {
         // Rocket valves
-        uint16_t v_rocket_valve0: 1;
-        uint16_t v_rocket_valve1: 1;
-        uint16_t v_rocket_valve2: 1;
-        uint16_t v_rocket_valve3: 1;
+        uint16_t v_pressurizing: 1;
+        uint16_t v_venting: 1;
+        uint16_t v_abort: 1;
+        uint16_t v_main: 1;
 
         // Filling station valves
-        uint16_t v_fill_valve0: 1;
-        uint16_t v_fill_valve1: 1;
-        uint16_t v_fill_valve2: 1;
-        uint16_t v_fill_valve3: 1;
+        uint16_t v_n2o_fill: 1;
+        uint16_t v_n2o_purge: 1;
+        uint16_t v_n2_fill: 1;
+        uint16_t v_n2_purge: 1;
 
         // E-matches: ignition, drogue, main chute (3 bits)
         uint16_t ematch_ignition: 1;
@@ -63,8 +63,8 @@ union actuators_bits_u { // FIXME: correct actuator names
         //  NOTE : After launch these should be interpreted
         //       as reserved bits as their state is no longer
         //       relevant.
-        uint16_t v_fill_qr0: 1;
-        uint16_t v_fill_qr1: 1;
+        uint16_t v_n2o_quick_dc: 1;
+        uint16_t v_n2_quick_dc: 1;
 
         // remaining bits reserved for alignment
         uint16_t reserved: 3;
@@ -95,42 +95,45 @@ struct navigator_sensors_s {
     int16_t kalman_quat[4];
 };
 
-union thermocouples_u { // FIXME: correct thermo names
+union thermocouples_u {
     struct {
-        int16_t thermo1;
-        int16_t thermo2;
-        int16_t thermo3;
-        int16_t thermo4;
-        int16_t thermo5;
-        int16_t thermo6;
-        int16_t thermo7;
-        int16_t thermo8;
+        int16_t n2o_tank_uf_t1;
+        int16_t n2o_tank_uf_t2;
+        int16_t n2o_tank_uf_t3;
+        int16_t n2o_tank_lf_t1;
+        int16_t n2o_tank_lf_t2;
+        int16_t chamber_thermo;
+        int16_t n2o_line_thermo1; // before and after solenoids
+        int16_t n2o_line_thermo2;
+        int16_t n2_line_thermo;
     };
     int16_t raw[8];
 };
 
-union pressures_u { // FIXME: correct pressure names
+union pressures_u {
     struct {
-        uint16_t pressure1;
-        uint16_t pressure2;
-        uint16_t pressure3;
-        uint16_t pressure4;
-        uint16_t pressure5;
-        uint16_t pressure6;
+        uint16_t n2o_tank_pressure;
+        uint16_t chamber_pressure;
+        uint16_t n2o_line_pressure;
+        uint16_t n2_line_pressure;
+        uint16_t quick_dc_pressure;
     };
     uint16_t raw[6];
 };
 
-union loadcell_weights_u { // FIXME: correct loadcell names
+union loadcell_weights_u {
     struct {
-        uint16_t loadcell1;
-        uint16_t loadcell2;
-        uint16_t loadcell3;
-        uint16_t loadcell4;
+        uint16_t n2o_loadcell; // N2O bottle loadcell
+        uint16_t rail_loadcell; // Only used during competition to measure rocket weight
+        uint16_t thrust_loadcell1; // Only used during static test
+        uint16_t thrust_loadcell2; // Only used during static test
+        uint16_t thrust_loadcell3; // Only used during static test
     };
-    uint16_t raw[4];
+    uint16_t raw[5];
 };
 
+
+// FIXME: 1 loadcell was added. Check if alignment is still correct.
 // NOTE: Alignment was manually checked. It might be usable cross-platform even without
 //       compiler-specific attributes, as long as the fields are defined in the same order
 //       and sizes are consistent across platforms.

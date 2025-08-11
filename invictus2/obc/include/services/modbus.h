@@ -15,4 +15,5 @@ void modbus_service_start(void);
 
 void modbus_slave_check_connection(const int rc, struct modbus_slave_metadata *const meta,
                                    const char *const label);
+                                   
 #endif

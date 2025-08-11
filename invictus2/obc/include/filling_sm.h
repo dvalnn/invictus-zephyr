@@ -26,7 +26,7 @@ enum cmd_global {
 enum cmd_idle {
     CMD_FILL_COPV = CMD_IDLE_START, // IDLE -> FILLING_COPV_IDLE
     CMD_PRE_PRESSURIZE,             // IDLE -> PRE_PRESSURIZING_IDLE
-    CMD_FILL_N20,                   // IDLE -> FILLING_N20_IDLE
+    CMD_FILL_N2O,                   // IDLE -> FILLING_N2O_IDLE
     CMD_POST_PRESSURIZE,            // IDLE -> POST_PRESSURIZING_IDLE
 };
 
@@ -61,11 +61,11 @@ enum filling_state {
     PRE_PRESSURIZING_VENT,
     PRE_PRESSURIZING_FILL_N,
 
-    // FILLING_N20
-    FILLING_N20, // parent state
-    FILLING_N20_IDLE,
-    FILLING_N20_FILL,
-    FILLING_N20_VENT,
+    // FILLING_N2O
+    FILLING_N2O, // parent state
+    FILLING_N2O_IDLE,
+    FILLING_N2O_FILL,
+    FILLING_N2O_VENT,
 
     // POST_PRESSURIZING
     POST_PRESSURIZING, // parent state
@@ -79,7 +79,9 @@ enum valves {
     VALVE_N2O_PURGE,
     VALVE_N_FILL,
     VALVE_N_PURGE,
-    VALVE_TANK_TOP,
+    VALVE_N2O_QUICK_DC,
+    VALVE_N2_QUICK_DC,
+    VALVE_PRESSURIZING,
     VALVE_MAIN,
     VALVE_VENT,
     VALVE_ABORT,
@@ -88,39 +90,39 @@ enum valves {
 
 struct filling_sm_config {
     struct safe_pause {
-        uint16_t target_pre_tank_pressure;
-        uint16_t trigger_pre_tank_pressure;
+        uint16_t target_n2o_tank_pressure; 
+        uint16_t trigger_n2o_tank_pressure;
     } safe_pause;
 
     // State Machine Configuration
     struct filling_copv {
-        uint16_t target_pre_tank_pressure;
+        uint16_t target_n2_tank_pressure; // NOTE: this is the pressure on the n2 line before the tank, as there is no pressure sensor on the n2 tank.
     } f_copv;
 
     struct pre_pressurizing {
-        uint16_t target_main_pressure;
-        uint16_t trigger_main_pressure;
+        uint16_t target_n2o_tank_pressure;
+        uint16_t trigger_n2o_tank_pressure;
     } pre_p;
 
-    struct filling_n20 {
-        uint16_t target_main_pressure;
-        uint16_t target_main_weight;
-        uint16_t trigger_main_pressure;
-        uint16_t trigger_main_temp;
-    } f_n20;
+    struct filling_n2o {
+        uint16_t target_n2o_tank_weight;
+        uint16_t target_n2o_tank_pressure;
+        uint16_t trigger_n2o_tank_pressure;
+        uint16_t trigger_n2o_tank_temperature; // Minimum temperature safe for the valves
+    } f_n2o;
 
     struct post_pressurizing {
-        uint16_t target_main_pressure;
-        uint16_t trigger_main_pressure;
+        uint16_t target_n2o_tank_pressure;
+        uint16_t trigger_n2o_tank_pressure;
     } post_p;
 };
 
 union filling_data {
     struct {
-        uint16_t pre_tank_pressure;
-        uint16_t main_tank_pressure;
-        uint16_t main_tank_weight;
-        uint16_t main_tank_temperature;
+        uint16_t n2_tank_pressure; // This value is from the N2 line (Filling Station)
+        uint16_t n2o_tank_pressure;
+        uint16_t n2o_tank_weight;
+        uint16_t n2o_tank_temperature; // Temperature of the N2O tank
     }; // anonymous struct
     uint16_t raw[4];
 };
@@ -146,40 +148,40 @@ extern const struct smf_state filling_states[];
 void filling_sm_init(struct filling_sm_object *initial_s_obj);
 
 #define LOG_FILLING_DATA(fsm_data)                                                            \
-    do {                                                                                      \
-        LOG_INF("Pressurizing Tank P: %u", (fsm_data).pre_tank_pressure);                     \
-        LOG_INF("Main Tank P: %u", (fsm_data).main_tank_pressure);                            \
-        LOG_INF("Main Tank W: %u", (fsm_data).main_tank_weight);                              \
-        LOG_INF("Main Tank T: %u", (fsm_data).main_tank_temperature);                         \
+    do {                                                                                     \
+        LOG_INF("N2 Tank P: %u", (fsm_data).n2_tank_pressure);                             \
+        LOG_INF("N2O Tank P: %u", (fsm_data).n2o_tank_pressure);                          \
+        LOG_INF("N2O Tank W: %u", (fsm_data).n2o_tank_weight);                            \
+        LOG_INF("N2O Tank T: %u", (fsm_data).n2o_tank_temperature);                       \
     } while (0)
 
 #define DEFAULT_FSM_CONFIG(name)                                                              \
     struct filling_sm_config name = {                                                         \
         .safe_pause =                                                                         \
             {                                                                                 \
-                .target_pre_tank_pressure = SAFE_PAUSE_TARGET_PRE_P,                          \
-                .trigger_pre_tank_pressure = SAFE_PAUSE_TRIGGER_PRE_P,                        \
+                .target_n2o_tank_pressure = SAFE_PAUSE_TARGET_N2O_TANK_P,                          \
+                .trigger_n2o_tank_pressure = SAFE_PAUSE_TRIGGER_N2O_TANK_P,                        \
             },                                                                                \
         .f_copv =                                                                             \
             {                                                                                 \
-                .target_pre_tank_pressure = FILLING_COPV_TARGET_PRE_P,                        \
+                .target_n2_tank_pressure = FILLING_COPV_TARGET_N2_TANK_P,                        \
             },                                                                                \
         .pre_p =                                                                              \
             {                                                                                 \
-                .target_main_pressure = PRE_PRESSURIZING_TARGET_MAIN_P,                       \
-                .trigger_main_pressure = PRE_PRESSURIZING_TRIGGER_MAIN_P,                     \
+                .target_n2o_tank_pressure = PRE_PRESSURIZING_TARGET_N2O_TANK_P,                       \
+                .trigger_n2o_tank_pressure = PRE_PRESSURIZING_TRIGGER_N2O_TANK_P,                     \
             },                                                                                \
-        .f_n20 =                                                                              \
+        .f_n2o =                                                                              \
             {                                                                                 \
-                .target_main_pressure = FILLING_N20_TARGET_MAIN_P,                            \
-                .target_main_weight = FILLING_N20_TARGET_MAIN_W,                              \
-                .trigger_main_pressure = FILLING_N20_TRIGGER_MAIN_P,                          \
-                .trigger_main_temp = FILLING_N20_TRIGGER_MAIN_T,                              \
+                .target_n2o_tank_pressure = FILLING_N2O_TARGET_N2O_TANK_P,                            \
+                .target_n2o_tank_weight = FILLING_N2O_TARGET_N2O_TANK_W,                              \
+                .trigger_n2o_tank_pressure = FILLING_N2O_TRIGGER_N2O_TANK_P,                          \
+                .trigger_n2o_tank_temperature = FILLING_N2O_TRIGGER_N2O_TANK_T,                              \
             },                                                                                \
         .post_p =                                                                             \
             {                                                                                 \
-                .target_main_pressure = POST_PRESSURIZING_TARGET_MAIN_P,                      \
-                .trigger_main_pressure = POST_PRESSURIZING_TRIGGER_MAIN_P,                    \
+                .target_n2o_tank_pressure = POST_PRESSURIZING_TARGET_N2O_TANK_P,                      \
+                .trigger_n2o_tank_pressure = POST_PRESSURIZING_TRIGGER_N2O_TANK_P,                    \
             },                                                                                \
     }
 

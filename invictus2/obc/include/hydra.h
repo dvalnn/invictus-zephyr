@@ -14,18 +14,22 @@ struct uf_hydra {
     struct modbus_slave_metadata meta;
 
     union uf_solenoids {
-        // REVIEW: change these names once there is a better naming convention
         struct {
-            uint8_t vsl2_valve: 1;
-            uint8_t vsv2_vent: 1;
+            uint8_t pressurizing_valve: 1;
+            uint8_t venting_valve: 1;
             uint8_t _reserved: 6;
         };
         uint8_t raw;
     } solenoids;
 
-    // REVIEW: There is a change this hydra has a triple temperature probe
-    //  In that case, this may need to be changed to an union with a struct
-    uint16_t temperature;
+    union uf_sensors {
+        struct {
+            uint16_t uf_temperature1; 
+            uint16_t uf_temperature2;
+            uint16_t uf_temperature3;
+        };
+        uint16_t raw[3];
+    } sensors;
 };
 
 // Lower Feed (UF) Hydraulic Regulation and Actuation (HYDRA) board structure
@@ -35,8 +39,8 @@ struct lf_hydra {
     union lf_solenoids {
         // REVIEW: change these names once there is a better naming convention
         struct {
-            uint8_t vsa1_abort: 1;
-            uint8_t vsl1_main: 1;
+            uint8_t abort_valve: 1;
+            uint8_t main_valve: 1;
             uint8_t _reserved: 6;
         };
         uint8_t raw;
@@ -44,11 +48,12 @@ struct lf_hydra {
 
     union lf_sensors {
         struct {
-            uint16_t lf_temperature;
+            uint16_t lf_temperature1;
+            uint16_t lf_temperature2;
             uint16_t lf_pressure;
             uint16_t cc_pressure;
         };
-        uint16_t raw[3];
+        uint16_t raw[4];
     } sensors;
 };
 
@@ -64,12 +69,12 @@ struct fs_hydra {
 
     union fs_solenoids {
         struct {
-            uint8_t enable_N2O: 1;
-            uint8_t enable_N2: 1;
-            uint8_t vent_N2O: 1;
-            uint8_t vent_N2: 1;
-            uint8_t quick_dc_t1: 1;
-            uint8_t quick_dc_t2: 1;
+            uint8_t n2o_fill_valve: 1;
+            uint8_t n2_fill_valve: 1;
+            uint8_t n2o_purge_valve: 1;
+            uint8_t n2_purge_valve: 1;
+            uint8_t n2o_quick_dc: 1;
+            uint8_t n2_quick_dc: 1;
             uint8_t _reserved: 2;
         };
         uint8_t raw;
@@ -78,13 +83,14 @@ struct fs_hydra {
     union fs_sensors {
         struct {
             // Pressure sensors
-            uint16_t pressure_N2O;
-            uint16_t pressure_N2;
-            uint16_t pressure_quick_dc;
+            uint16_t n2o_pressure;
+            uint16_t n2_pressure;
+            uint16_t quick_dc_pressure;
 
             // Temperature sensors
-            uint16_t temp_N2_probe1;
-            uint16_t temp_N2_probe2;
+            uint16_t n2o_temperature1; // temperature before solenoid
+            uint16_t n2o_temperature2; // temperature after solenoid
+            uint16_t n2_temperature;
         };
         uint16_t raw[5];
     } sensors;

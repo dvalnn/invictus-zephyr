@@ -10,17 +10,25 @@
 #include "stddef.h"
 
 struct uf_hydra_msg {     // upper feed hydra
-    uint16_t temperature; // Upper feed temperature probe temperature in ºC
+    uint16_t uf_temperature1; // Upper feed temperature probe 1 in ºC
+    uint16_t uf_temperature2; // Upper feed temperature probe 2 in ºC
+    uint16_t uf_temperature3; // Upper feed temperature probe 3 in ºC
 };
 
 struct lf_hydra_msg {        // lower feed hydra
-    uint16_t lf_temperature; // Lower feed temperature probe temperature in ºC
-    uint16_t lf_pressure;    // Lower feed pressure in bar
-    uint16_t cc_pressure;    // Combustion chamber pressure in bar
+    uint16_t lf_temperature1; // Lower feed temperature probe 1 in ºC
+    uint16_t lf_temperature2; // Lower feed temperature probe 2 in ºC
+    uint16_t lf_pressure;      // Lower feed pressure in bar
+    uint16_t cc_pressure;      // Combustion chamber pressure in bar
 };
 
 struct fs_hydra_msg { // filling station hydra
-    // TODO: Add filling station hydra message structure
+    uint16_t n2o_pressure; // N2O pressure in bar
+    uint16_t n2_pressure;  // N2 pressure in bar
+    uint16_t quick_dc_pressure; // Quick disconnect pressure in bar
+    uint16_t n2o_temperature1;   // N2O temperature before solenoid in ºC
+    uint16_t n2o_temperature2;   // N2O temperature after solenoid in ºC
+    uint16_t n2_temperature;      // N2 temperature in ºC
 };
 
 struct r_lift_msg {

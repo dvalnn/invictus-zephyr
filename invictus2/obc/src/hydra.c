@@ -36,7 +36,8 @@ void rocket_hydras_sensor_read(const int client_iface, struct rocket_hydras *con
 
     // Read upper feed hydra sensors
     int uf_rc = modbus_read_input_regs(client_iface, h->uf.meta.slave_id, h->uf.meta.ir_start,
-                                       &h->uf.temperature, 1);
+                                       (uint16_t *const)&h->uf.sensors.raw,
+                                       ARRAY_SIZE(h->uf.sensors.raw));
     int lf_rc = modbus_read_input_regs(client_iface, h->lf.meta.slave_id, h->lf.meta.ir_start,
                                        (uint16_t *const)&h->lf.sensors.raw,
                                        ARRAY_SIZE(h->lf.sensors.raw));

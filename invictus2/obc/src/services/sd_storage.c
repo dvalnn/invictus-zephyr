@@ -43,7 +43,7 @@ static void uf_work_handler(struct k_work *work)
 {
     static struct uf_hydra_msg msg;
     if (zbus_chan_read(&uf_hydra_chan, &msg, K_NO_WAIT) == 0) {
-        LOG_INF("UF Hydra: Temperature: %d", msg.temperature);
+        LOG_INF("UF Hydra: Temperature 1: %d, Temperature 2: %d, Temperature 3: %d", msg.uf_temperature1, msg.uf_temperature2, msg.uf_temperature3);
     } else {
         LOG_WRN("UF read failed or empty");
     }
@@ -53,8 +53,8 @@ static void lf_work_handler(struct k_work *work)
 {
     static struct lf_hydra_msg msg;
     if (zbus_chan_read(&lf_hydra_chan, &msg, K_NO_WAIT) == 0) {
-        LOG_INF("LF Hydra: Temperature: %d, Pressure: %d, CC Pressure: %d", msg.lf_temperature,
-                msg.lf_pressure, msg.cc_pressure);
+        LOG_INF("LF Hydra: Temperature 1: %d, Temperature 2: %d, Temperature 3: %d, Pressure: %d, CC Pressure: %d", msg.lf_temperature1,
+                msg.lf_temperature2, msg.lf_pressure, msg.cc_pressure);
     } else {
         LOG_WRN("LF read failed or empty");
     }
