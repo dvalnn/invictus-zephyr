@@ -4,6 +4,8 @@
 
 LOG_MODULE_REGISTER(filling_sm, LOG_LEVEL_DBG);
 
+#define STRINGIFY(x) #x
+
 #ifndef UNIT_TEST
 /* Forward declaration of state table.
  * If unittesting, the state table is exported from the header file instead.
