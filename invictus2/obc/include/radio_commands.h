@@ -123,15 +123,14 @@ union pressures_u {
 
 union loadcell_weights_u {
     struct {
-        uint16_t n2o_loadcell; // N2O bottle loadcell
-        uint16_t rail_loadcell; // Only used during competition to measure rocket weight
+        uint16_t n2o_loadcell;     // N2O bottle loadcell
+        uint16_t rail_loadcell;    // Only used during competition to measure rocket weight
         uint16_t thrust_loadcell1; // Only used during static test
         uint16_t thrust_loadcell2; // Only used during static test
         uint16_t thrust_loadcell3; // Only used during static test
     };
     uint16_t raw[5];
 };
-
 
 // FIXME: 1 loadcell was added. Check if alignment is still correct.
 // NOTE: Alignment was manually checked. It might be usable cross-platform even without

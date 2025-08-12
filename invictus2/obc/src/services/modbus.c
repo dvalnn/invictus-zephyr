@@ -39,6 +39,7 @@ ZBUS_CHAN_ADD_OBS(modbus_write_coils_chan, modbus_listener, CONFIG_MODBUS_ZBUS_L
 #define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
 
 static struct rocket_hydras hydras = {0};
+// TODO: filling station hydra
 static struct rocket_lift r_lift = {0};
 static struct fs_lift fs_lift = {0};
 
@@ -113,11 +114,12 @@ static void rocket_hydra_sample_work_handler(struct k_work *work)
     rocket_hydras_sensor_read(client_iface, &hydras);
 
     if (hydras.uf.meta.is_connected) {
-        zbus_chan_pub(&uf_hydra_chan,
-                      &(const struct uf_hydra_msg){.uf_temperature1 = hydras.uf.sensors.uf_temperature1,
-                                                   .uf_temperature2 = hydras.uf.sensors.uf_temperature2,
-                                                   .uf_temperature3 = hydras.uf.sensors.uf_temperature3},
-                      K_NO_WAIT);
+        zbus_chan_pub(
+            &uf_hydra_chan,
+            &(const struct uf_hydra_msg){.uf_temperature1 = hydras.uf.sensors.uf_temperature1,
+                                         .uf_temperature2 = hydras.uf.sensors.uf_temperature2,
+                                         .uf_temperature3 = hydras.uf.sensors.uf_temperature3},
+            K_NO_WAIT);
     }
 
     if (hydras.lf.meta.is_connected) {
