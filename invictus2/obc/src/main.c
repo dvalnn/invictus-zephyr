@@ -17,12 +17,13 @@ LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 
 // --- ZBUS Definitions ---
 
-ZBUS_CHAN_DEFINE(uf_hydra_chan,                  /* Channel Name */
-                 struct uf_hydra_msg,            /* Message Type */
-                 NULL,                           /* Validator Func */
-                 NULL,                           /* User Data*/
-                 ZBUS_OBSERVERS_EMPTY,           /* Observers */
-                 ZBUS_MSG_INIT(.uf_temperature1 = 0, .uf_temperature2 = 0, .uf_temperature3 = 0) /* Initial Value */
+ZBUS_CHAN_DEFINE(uf_hydra_chan,        /* Channel Name */
+                 struct uf_hydra_msg,  /* Message Type */
+                 NULL,                 /* Validator Func */
+                 NULL,                 /* User Data*/
+                 ZBUS_OBSERVERS_EMPTY, /* Observers */
+                 ZBUS_MSG_INIT(.uf_temperature1 = 0, .uf_temperature2 = 0,
+                               .uf_temperature3 = 0) /* Initial Value */
 );
 
 ZBUS_CHAN_DEFINE(lf_hydra_chan,        /* Channel Name */
@@ -30,7 +31,8 @@ ZBUS_CHAN_DEFINE(lf_hydra_chan,        /* Channel Name */
                  NULL,                 /* Validator Func */
                  NULL,                 /* User Data*/
                  ZBUS_OBSERVERS_EMPTY, /* Observers */
-                 ZBUS_MSG_INIT(.lf_temperature1 = 0, .lf_temperature2 = 0, .lf_pressure = 0, .cc_pressure = 0)
+                 ZBUS_MSG_INIT(.lf_temperature1 = 0, .lf_temperature2 = 0, .lf_pressure = 0,
+                               .cc_pressure = 0)
                  /* Initial Value */
 );
 
@@ -42,20 +44,20 @@ ZBUS_CHAN_DEFINE(fs_hydra_chan,        /* Channel Name */
                  ZBUS_MSG_INIT()       /* Initial Value */
 );
 
-ZBUS_CHAN_DEFINE(r_lift_chan,        /* Channel Name */
-                 struct r_lift_msg,  /* Message Type */
-                 NULL,               /* Validator Func */
-                 NULL,               /* User Data*/
+ZBUS_CHAN_DEFINE(r_lift_chan,          /* Channel Name */
+                 struct r_lift_msg,    /* Message Type */
+                 NULL,                 /* Validator Func */
+                 NULL,                 /* User Data*/
                  ZBUS_OBSERVERS_EMPTY, /* Observers */
                  ZBUS_MSG_INIT(.loadcell1 = 0, .loadcell2 = 0, .loadcell3 = 0,
                                .main_ematch = 0) /* Initial Value */
 );
 
-ZBUS_CHAN_DEFINE(fs_lift_chan,        /* Channel Name */
-                 struct fs_lift_msg,  /* Message Type */
-                 NULL,               /* Validator Func */
-                 NULL,               /* User Data*/
-                 ZBUS_OBSERVERS_EMPTY, /* Observers */
+ZBUS_CHAN_DEFINE(fs_lift_chan,                    /* Channel Name */
+                 struct fs_lift_msg,              /* Message Type */
+                 NULL,                            /* Validator Func */
+                 NULL,                            /* User Data*/
+                 ZBUS_OBSERVERS_EMPTY,            /* Observers */
                  ZBUS_MSG_INIT(.n2o_loadcell = 0) /* Initial Value */
 );
 
