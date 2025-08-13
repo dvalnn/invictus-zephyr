@@ -1,5 +1,7 @@
 #include "zephyr/kernel.h"
 #include "zephyr/logging/log.h"
+#include "zephyr/sys/atomic.h"
+#include "zephyr/sys/atomic_types.h"
 #include "zephyr/zbus/zbus.h"
 
 #include "filling_sm.h"
@@ -134,11 +136,11 @@ int main(void)
         LOG_ERR("Failed to setup services");
         return -1;
     }
-    // FIXME: remove, it's just to make sure linker is working
-    sx128x_hal_wakeup(NULL);
+
+    atomic_t stop_signal = ATOMIC_INIT(0);
 
     modbus_service_start();
-    lora_service_start();
+    lora_service_start(&stop_signal);
     sd_service_start();
 
     LOG_INF("Work queues started. Sleeping main thread.");
