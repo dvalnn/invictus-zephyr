@@ -1,3 +1,5 @@
+#include <assert.h>
+#include <stdint.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
@@ -7,15 +9,85 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(sx128x_device, CONFIG_LORA_SX128X_LOG_LEVEL);
 
+#include <invictus2/drivers/sx128x.h>
 #include <invictus2/drivers/sx128x_context.h>
 #include <invictus2/drivers/sx128x_hal.h>
 
 #define SX128X_SPI_OPERATION (SPI_WORD_SET(8) | SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB)
 
+// TODO make kconfig
+#define LORA_SX128X_USE_SPLIT_BUFFER true
+// 256MB
+#define LORA_SX128X_BUFFER_SIZE_BYTES 256U
+
+#define RETURN_ON_ERROR(status)          \
+  if (status != SX128X_STATUS_OK) {      \
+      return status;                     \
+  }
+
 static int sx128x_init(const struct device *dev)
 {
+    LOG_INF("sx128x: init");
     // TODO: Implement the initialization of the device
-    return 0;
+    // NOTE: Followed datasheet section "14.4 Lora Operation"
+    sx128x_status_t init_status; 
+
+    // 1. Set in standby mode if not already
+    LOG_DBG("setting standby mode");
+    init_status = sx128x_set_standby(dev, SX128X_STANDBY_CFG_RC);
+    RETURN_ON_ERROR(init_status);
+
+    // 2. Set packet type as lora
+    LOG_DBG("setting lora packet type");
+    init_status = sx128x_set_pkt_type(dev, SX128X_PKT_TYPE_LORA);
+    RETURN_ON_ERROR(init_status);
+
+    // 3. Set rf frequency
+    LOG_DBG("setting 2.4GHz");
+    init_status = sx128x_set_rf_freq(dev, 2400000000);
+    RETURN_ON_ERROR(init_status);
+
+    // 4. Set base adresses for Rx and Tx (Either full 256MB for both or 128MB each)
+    const uint8_t tx_base = 0;
+    uint8_t rx_base = 0;
+    if (LORA_SX128X_USE_SPLIT_BUFFER)
+    {
+        rx_base = tx_base + (LORA_SX128X_BUFFER_SIZE_BYTES / 2);
+    }
+
+    LOG_DBG("setting buffer addresses to Tx %u and Rx %u", tx_base, rx_base);
+    init_status = sx128x_set_buffer_base_address(dev, tx_base, rx_base);
+    RETURN_ON_ERROR(init_status);
+
+    // 5. Set modulation parameter
+    // TODO: make these parameters a kConfig as we might need to experiment with them
+    static const sx128x_mod_params_lora_t mod_params =
+    {
+       .sf = SX128X_LORA_RANGING_SF6,
+       .bw = SX128X_LORA_RANGING_BW_800,
+       .cr = SX128X_LORA_RANGING_CR_4_7,
+    };
+
+    LOG_DBG("setting modulation parameters");
+    init_status = sx128x_set_lora_mod_params(dev, &mod_params);
+    RETURN_ON_ERROR(init_status);
+   
+    // 6. Set packet parameters
+    static const sx128x_pkt_params_lora_t params =
+    {
+         .preamble_len = {12}, // recomended value. FIXME: exponent and mantissa
+         .header_type = SX128X_LORA_RANGING_PKT_IMPLICIT,
+         .pld_len_in_bytes = 253, // 255 - CRC length. TODO confirm
+         .crc_is_on = true,
+         .invert_iq_is_on = false
+    };
+
+    LOG_DBG("configuring packets");
+    init_status = sx128x_set_lora_pkt_params(dev, &params);
+    RETURN_ON_ERROR(init_status);
+
+    LOG_INF("finished configuration");
+    return SX128X_STATUS_OK;
 }
 
 #define SX128X_DEFINE(node_id)                                                                     \
