@@ -52,7 +52,7 @@ static void idle_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered IDLE state");
     // Close all valves
-    s->valve_states = 0;
+    s->valve_states.raw = 0;
 }
 
 static void idle_run(void *o)
@@ -106,7 +106,7 @@ static void abort_entry(void *o)
     // TODO:
     // Wait for X seconds
     // Open abort valve
-    s->valve_states = 0 | BIT(VALVE_ABORT) | BIT(VALVE_PRESSURIZING);
+    s->valve_states.raw = 0 | BIT(VALVE_ABORT) | BIT(VALVE_PRESSURIZING);
 }
 
 static void abort_run(void *o)
@@ -181,7 +181,7 @@ static void safe_pause_idle_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered SAFE_PAUSE_IDLE state");
     // Close all valves
-    s->valve_states = 0;
+    s->valve_states.raw = 0;
 }
 
 static void safe_pause_idle_run(void *o)
@@ -212,7 +212,7 @@ static void safe_pause_vent_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered SAFE_PAUSE_VENT state");
     // Open vent valve
-    s->valve_states = 0 | BIT(VALVE_VENT);
+    s->valve_states.raw = 0 | BIT(VALVE_VENT);
 }
 
 static void safe_pause_vent_run(void *o)
@@ -247,7 +247,7 @@ static void filling_copv_idle_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered FILLING_COPV_IDLE state");
     // Close all valves
-    s->valve_states = 0;
+    s->valve_states.raw = 0;
 }
 
 static void filling_copv_idle_run(void *o)
@@ -279,7 +279,7 @@ static void filling_copv_fill_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered FILLING_COPV_FILL state");
     // Open N fill valve
-    s->valve_states = 0 | BIT(VALVE_N_FILL);
+    s->valve_states.raw = 0 | BIT(VALVE_N_FILL);
 }
 
 static void filling_copv_fill_run(void *o)
@@ -321,7 +321,7 @@ static void pre_pressurizing_idle_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered PRE_PRESSURIZING_IDLE state");
     // Close all valves
-    s->valve_states = 0;
+    s->valve_states.raw = 0;
 }
 
 static void pre_pressurizing_idle_run(void *o)
@@ -364,7 +364,7 @@ static void pre_pressurizing_fill_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered PRE_PRESSURIZING_FILL_N state");
     // Open pressurizing valve
-    s->valve_states = 0 | BIT(VALVE_PRESSURIZING);
+    s->valve_states.raw = 0 | BIT(VALVE_PRESSURIZING);
 }
 
 static void pre_pressurizing_fill_run(void *o)
@@ -396,7 +396,7 @@ static void pre_pressurizing_vent_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered PRE_PRESSURIZING_VENT state");
     // Open vent valve
-    s->valve_states = 0 | BIT(VALVE_VENT);
+    s->valve_states.raw = 0 | BIT(VALVE_VENT);
 }
 
 static void pre_pressurizing_vent_run(void *o)
@@ -437,7 +437,7 @@ static void filling_n2o_idle_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered FILLING_N2O_IDLE state");
     // Close all valves
-    s->valve_states = 0;
+    s->valve_states.raw = 0;
 }
 
 static void filling_n2o_idle_run(void *o)
@@ -468,7 +468,7 @@ static void filling_n2o_fill_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered FILLING_N2O_FILL state");
     // Open N2O fill valve
-    s->valve_states = 0 | BIT(VALVE_N2O_FILL);
+    s->valve_states.raw = 0 | BIT(VALVE_N2O_FILL);
 }
 
 static void filling_n2o_fill_run(void *o)
@@ -517,7 +517,7 @@ static void filling_n2o_vent_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered FILLING_N2O_VENT state");
     // Open vent and N2O fill valves
-    s->valve_states = 0 | BIT(VALVE_N2O_FILL) | BIT(VALVE_VENT);
+    s->valve_states.raw = 0 | BIT(VALVE_N2O_FILL) | BIT(VALVE_VENT);
 }
 
 static void filling_n2o_vent_run(void *o)
@@ -565,7 +565,7 @@ static void post_pressurizing_idle_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered POST_PRESSURIZING_IDLE state");
     // Close all valves
-    s->valve_states = 0;
+    s->valve_states.raw = 0;
 }
 
 static void post_pressurizing_idle_run(void *o)
@@ -609,7 +609,7 @@ static void post_pressurizing_fill_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered POST_PRESSURIZING_FILL_N state");
     // Open N fill valve
-    s->valve_states = 0 | BIT(VALVE_N_FILL);
+    s->valve_states.raw = 0 | BIT(VALVE_N_FILL);
 }
 
 static void post_pressurizing_fill_run(void *o)
@@ -642,7 +642,7 @@ static void post_pressurizing_vent_entry(void *o)
     (void)s; // unused
     LOG_DBG("Entered POST_PRESSURIZING_VENT state");
     // Open vent valve
-    s->valve_states = 0 | BIT(VALVE_VENT);
+    s->valve_states.raw = 0 | BIT(VALVE_VENT);
 }
 
 static void post_pressurizing_vent_run(void *o)
