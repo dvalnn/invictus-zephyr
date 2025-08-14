@@ -136,7 +136,7 @@ struct filling_sm_object {
     union filling_data data;
 
     // TODO: Make this into an union
-    uint8_t valve_states;
+    uint16_t valve_states;
 
     struct filling_sm_config *config;
 };
