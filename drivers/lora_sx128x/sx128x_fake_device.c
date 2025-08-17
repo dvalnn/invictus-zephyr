@@ -21,10 +21,21 @@ static struct sx1280_data {
     void (*rx_callback)(uint8_t *, uint16_t);
 } dev_data;
 
+const struct device *fake_sx128x_get_device()
+{
+    return dev_data.dev;
+}
+
+bool fake_sx128x_is_rx_callback_set()
+{
+    return dev_data.rx_callback != NULL;
+}
+
 static int sx128x_init(const struct device *dev)
 {
     LOG_INF("fake_sx128x: init");
     dev_data.dev = dev;
+    LOG_INF("fake_sx128x: init sucess");
     return SX128X_STATUS_OK;
 }
 
