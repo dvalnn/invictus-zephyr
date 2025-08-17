@@ -1,5 +1,7 @@
 #include "zephyr/kernel.h"
 #include "zephyr/logging/log.h"
+#include "zephyr/sys/atomic.h"
+#include "zephyr/sys/atomic_types.h"
 #include "zephyr/zbus/zbus.h"
 
 #include "filling_sm.h"
@@ -9,6 +11,22 @@
 #include "services/modbus.h"
 #include "services/sd_storage.h"
 
+// FIXME: remove, it's just to make sure linker is working
+#include "invictus2/drivers/sx128x_hal.h"
+
+// THREADS:
+// - Main thread: LoRa communication. (for now just pipe everything to stdout).
+//   - Pre-Flight Mode: Switches between receive and transmit modes based
+//   periodically -- High priority thread.
+//   - Flight Model: passively sends data to the ground station. Should not
+//   block other threads, switch to low priority.
+// - Modbus thread: Reads holding registers from the slave devices and updates
+// the filling state machine. -- Medium priority thread.
+// - Navigator thread: Reads data from the navigator board via uart. -- Medium
+// priority thread.
+// - Data Thread: Saves sensor data and debug logs to the SD card. -- Low
+// priority thread.
+//
 LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 
 // LOGGING:
@@ -91,23 +109,29 @@ ZBUS_CHAN_DEFINE(lora_cmd_chan,        /* Channel Name */
 // --- Filling FSM Config ---
 DEFAULT_FSM_CONFIG(filling_sm_config);
 
+static lora_context_t lora_context;
+
 // --- Thread Spawning ---
 
-bool setup_services(void)
+bool setup_services(atomic_t *stop_signal)
 {
     LOG_INF("Setting up threads...");
+    lora_context.stop_signal = stop_signal;
 
     // Initialize the modbus thread
+    LOG_INF("  * modbus...");
     if (!modbus_service_setup()) {
         LOG_ERR("Modbus RTU master initialization failed");
         return false;
     }
 
-    if (!lora_service_setup()) {
+    LOG_INF("  * lora...");
+    if (!lora_service_setup(&lora_context)) {
         LOG_ERR("LoRa thread setup failed");
         return false;
     }
 
+    LOG_INF("done...");
     return true;
 }
 
@@ -115,14 +139,17 @@ bool setup_services(void)
 int main(void)
 {
     LOG_INF("Starting OBC main thread");
+    atomic_t stop_signal = ATOMIC_INIT(0);
 
-    if (!setup_services()) {
+    if (!setup_services(&stop_signal)) {
         LOG_ERR("Failed to setup services");
         return -1;
     }
 
     modbus_service_start();
+
     lora_service_start();
+
     sd_service_start();
 
     LOG_INF("Work queues started. Sleeping main thread.");
