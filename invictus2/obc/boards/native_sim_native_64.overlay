@@ -1,3 +1,16 @@
+/{
+	fake_sx128x: fake_sx128x {
+		compatible = "zephyr,fake-sx128x";
+		status = "okay";
+		size = <DT_SIZE_K(8)>;
+	};
+
+  aliases {
+        lora0 = &fake_sx128x;
+    };
+};
+
+
 &uart0 {
        modbus0  {
                 status = "okay";
