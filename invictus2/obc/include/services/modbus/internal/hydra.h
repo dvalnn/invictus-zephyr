@@ -1,7 +1,8 @@
 #ifndef HYDRA_H_
 #define HYDRA_H_
 
-#include "services/modbus.h"
+#include "services/modbus/modbus.h"
+#include "radio_commands.h"
 
 #include <stdint.h>
 
@@ -24,7 +25,7 @@ struct uf_hydra {
 
     union uf_sensors {
         struct {
-            uint16_t uf_temperature1; 
+            uint16_t uf_temperature1;
             uint16_t uf_temperature2;
             uint16_t uf_temperature3;
         };
@@ -55,12 +56,6 @@ struct lf_hydra {
         };
         uint16_t raw[4];
     } sensors;
-};
-
-// Rocket Hydras structure containing upper and lower feed hydras
-struct rocket_hydras {
-    struct uf_hydra uf;
-    struct lf_hydra lf;
 };
 
 // Filling station hydra structure
@@ -96,6 +91,12 @@ struct fs_hydra {
     } sensors;
 };
 
+struct hydra_boards {
+    struct uf_hydra uf; // Upper Feed hydra
+    struct lf_hydra lf; // Lower Feed hydra
+    struct fs_hydra fs; // Filling Station hydra
+};
+
 /*
  * Initialize the hydras structure with default values.
  * This function sets the slave IDs, connection states, solenoid states, and sensor data to
@@ -109,12 +110,10 @@ struct fs_hydra {
  * @param h Pointer to the hydras structure to initialize.
  * @returns void.
  */
-void rocket_hydras_init(struct rocket_hydras *h);
+void hydra_boards_init(struct hydra_boards *const hb);
 
 /**
- * Read the sensors from the hydras.
- * This function reads the input registers for the upper feed and lower feed hydras
- * and updates their respective sensor values.
+ * Read the input registers from each hydra board.
  *
  * @param client_iface The Modbus client interface to use for reading.
  * @param h Pointer to the hydras structure containing the hydras to read.
@@ -124,9 +123,10 @@ void rocket_hydras_init(struct rocket_hydras *h);
  *       If the read is successful, it sets the `is_connected` flag to true.
  *       If the read fails, it sets the `is_connected` flag to false and logs a warning.
  */
-void rocket_hydras_sensor_read(const int client_iface, struct rocket_hydras *const h);
+void hydra_boards_read_irs(const int client_iface, struct hydra_boards *const hb);
 
-// TODO: implement this function
-void rocket_hydras_coils_read(const int client_iface, struct rocket_hydras *const h);
+void hydra_boards_irs_to_zbus_rep(const struct hydra_boards *const hb,
+                                  union thermocouples_u *const thermocouples,
+                                  union pressures_u *const pressures);
 
 #endif // HYDRA_H_

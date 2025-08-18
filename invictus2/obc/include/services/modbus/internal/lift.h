@@ -1,7 +1,7 @@
 #ifndef LIFT_H_
 #define LIFT_H_
 
-#include "services/modbus.h"
+#include "services/modbus/modbus.h"
 
 #include <stdint.h>
 
@@ -37,6 +37,11 @@ struct rocket_lift {
     } ematches;
 };
 
+struct lift_boards {
+    struct rocket_lift rocket;
+    struct fs_lift fs;
+};
+
 /*
  * Initialize the lift structure with default values.
  * This function sets the slave IDs, connection states, e-match states, and sensor data to
@@ -50,10 +55,10 @@ struct rocket_lift {
  * @param h Pointer to the lift structure to initialize.
  * @returns void.
  */
-void lift_init(struct rocket_lift *r, struct fs_lift *l);
+void lift_boards_init(struct lift_boards *const lb);
 
 /**
- * Read the sensors from the lift.
+ * Read the input registers from each lift board.
  * This function reads the input registers for the filling station and rocket lift
  * and updates their respective sensor values.
  *
@@ -65,11 +70,6 @@ void lift_init(struct rocket_lift *r, struct fs_lift *l);
  *       If the read is successful, it sets the `is_connected` flag to true.
  *       If the read fails, it sets the `is_connected` flag to false and logs a warning.
  */
-void rocket_lift_sensor_read(const int client_iface, struct rocket_lift *const h);
-void fs_lift_sensor_read(const int client_iface, struct fs_lift *const l);
-
-// TODO: implement this function
-void rocket_lift_coils_read(const int client_iface, struct rocket_lift *const h);
-void fs_lift_coils_read(const int client_iface, struct fs_lift *const l);
+void lift_boards_read_irs(const int client_iface, struct lift_boards *const lb);
 
 #endif // LIFT_H_

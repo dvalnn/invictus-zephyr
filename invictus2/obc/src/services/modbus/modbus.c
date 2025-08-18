@@ -1,4 +1,4 @@
-#include "services/modbus.h"
+#include "services/modbus/modbus.h"
 
 #include "zephyr/kernel.h"
 #include "zephyr/logging/log.h"
@@ -6,47 +6,50 @@
 #include "zephyr/usb/usb_device.h"
 #include "zephyr/zbus/zbus.h"
 
-#include "hydra.h"
-#include "lift.h"
+#include "services/modbus/internal/hydra.h"
+#include "services/modbus/internal/lift.h"
 #include "zbus_messages.h"
 
 LOG_MODULE_REGISTER(obc_modbus, LOG_LEVEL_DBG);
 
 static void write_work_handler(struct k_work *work);
-static void rocket_hydra_sample_work_handler(struct k_work *work);
+static void hydra_read_ir_work_handler(struct k_work *work);
 static void lift_sample_work_handler(struct k_work *work);
 
 static K_WORK_DEFINE(write_work, write_work_handler);
-static K_WORK_DELAYABLE_DEFINE(rocket_hydra_sample_work, rocket_hydra_sample_work_handler);
+static K_WORK_DELAYABLE_DEFINE(rocket_hydra_sample_work, hydra_read_ir_work_handler);
 static K_WORK_DELAYABLE_DEFINE(lift_sample_work, lift_sample_work_handler);
 
 K_THREAD_STACK_DEFINE(modbus_work_q_stack, CONFIG_MODBUS_WORK_Q_STACK);
 static struct k_work_q modbus_work_q;
 
-ZBUS_CHAN_DECLARE(uf_hydra_chan, lf_hydra_chan, r_lift_chan, fs_lift_chan);
-ZBUS_CHAN_DECLARE(modbus_write_coils_chan);
+// Published channels
+ZBUS_CHAN_DECLARE(chan_thermo_sensors, chan_pressure_sensors, chan_weight_sensors);
+
+// Subcribed channels
+ZBUS_CHAN_DECLARE(chan_actuators);
 
 static void listener_cb(const struct zbus_channel *chan)
 {
-    if (chan == &modbus_write_coils_chan) {
-        k_work_submit_to_queue(&modbus_work_q, &write_work);
+    if (chan == &chan_actuators) {
+        /* k_work_submit_to_queue(&modbus_work_q, &write_work); */
     }
 }
 
 ZBUS_LISTENER_DEFINE(modbus_listener, listener_cb);
-ZBUS_CHAN_ADD_OBS(modbus_write_coils_chan, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
+/* ZBUS_CHAN_ADD_OBS(modbus_write_coils_chan, modbus_listener,
+ * CONFIG_MODBUS_ZBUS_LISTENER_PRIO); */
 
 #define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
 
-static struct rocket_hydras hydras = {0};
-static struct rocket_lift r_lift = {0};
-static struct fs_lift fs_lift = {0};
-
+static struct hydra_boards hydras = {0};
+static struct lift_boards lifts = {0};
 static int client_iface;
+static int rocket_state; // TODO
 
 const static struct modbus_iface_param client_param = {
     .mode = MODBUS_MODE_RTU,
-    .rx_timeout = 50000,
+    .rx_timeout = 50000, // TODO Make KCONFIG
     .serial =
         {
             .baud = 115200,
@@ -89,7 +92,7 @@ static void write_work_handler(struct k_work *work)
 {
     static struct modbus_write_coils_msg msg;
 
-    if (zbus_chan_read(&modbus_write_coils_chan, &msg, K_NO_WAIT) != 0) {
+    if (zbus_chan_read(&chan_actuators, &msg, K_NO_WAIT) != 0) {
         LOG_WRN("Chan read failed or empty");
         return;
     }
@@ -105,31 +108,12 @@ static void write_work_handler(struct k_work *work)
     }
 }
 
-static void rocket_hydra_sample_work_handler(struct k_work *work)
+static void hydra_read_ir_work_handler(struct k_work *work)
 {
     k_work_schedule_for_queue(&modbus_work_q, &rocket_hydra_sample_work,
                               K_MSEC(CONFIG_MODBUS_ROCKET_HYDRA_SAMPLE_INTERVAL));
 
-    rocket_hydras_sensor_read(client_iface, &hydras);
-
-    if (hydras.uf.meta.is_connected) {
-        zbus_chan_pub(&uf_hydra_chan,
-                      &(const struct uf_hydra_msg){.uf_temperature1 = hydras.uf.sensors.uf_temperature1,
-                                                   .uf_temperature2 = hydras.uf.sensors.uf_temperature2,
-                                                   .uf_temperature3 = hydras.uf.sensors.uf_temperature3},
-                      K_NO_WAIT);
-    }
-
-    if (hydras.lf.meta.is_connected) {
-        zbus_chan_pub(&lf_hydra_chan,
-                      &(const struct lf_hydra_msg){
-                          .lf_temperature1 = hydras.lf.sensors.lf_temperature1,
-                          .lf_temperature2 = hydras.lf.sensors.lf_temperature2,
-                          .lf_pressure = hydras.lf.sensors.lf_pressure,
-                          .cc_pressure = hydras.lf.sensors.cc_pressure,
-                      },
-                      K_NO_WAIT);
-    }
+    hydra_boards_read_irs(client_iface, &hydras);
 }
 
 static void lift_sample_work_handler(struct k_work *work)
@@ -137,35 +121,13 @@ static void lift_sample_work_handler(struct k_work *work)
     k_work_schedule_for_queue(&modbus_work_q, &lift_sample_work,
                               K_MSEC(CONFIG_MODBUS_LIFT_SAMPLE_INTERVAL));
 
-    rocket_lift_sensor_read(client_iface, &r_lift);
-    if (r_lift.meta.is_connected) {
-        zbus_chan_pub(&r_lift_chan,
-                      &(const struct r_lift_msg){
-                          .loadcell1 = r_lift.loadcells.values.loadcell1,
-                          .loadcell2 = r_lift.loadcells.values.loadcell2,
-                          .loadcell3 = r_lift.loadcells.values.loadcell3,
-                          .main_ematch = r_lift.ematches.main_ematch,
-                      },
-                      K_NO_WAIT);
-    }
-
-    // TODO: early return if rocket has launched
-    /* if (0 /\* rocket_state == launched *\/) { */
-    /*     return; */
-    /* } */
-
-    fs_lift_sensor_read(client_iface, &fs_lift);
-    if (fs_lift.meta.is_connected) {
-        zbus_chan_pub(&fs_lift_chan,
-                      &(const struct fs_lift_msg){.n2o_loadcell = fs_lift.n2o_loadcell},
-                      K_NO_WAIT);
-    }
+    lift_boards_read_irs(client_iface, &lifts);
 }
 
 void modbus_service_start(void)
 {
-    rocket_hydras_init(&hydras);
-    lift_init(&r_lift, &fs_lift);
+    hydra_boards_init(&hydras);
+    lift_boards_init(&lifts);
 
     k_work_queue_start(&modbus_work_q, modbus_work_q_stack,
                        K_THREAD_STACK_SIZEOF(modbus_work_q_stack), CONFIG_MODBUS_WORK_Q_PRIO,
