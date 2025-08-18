@@ -6,37 +6,41 @@ config LORA_REDIRECT_UART
       This option enables a specific UART shell for interacting with the LoRa module.
       It is useful for debugging and direct control of the LoRa functions via a terminal.
 
-config HYDRA_UF_SLAVE_ID
+config MODBUS_HYDRA_UF_SLAVE_ID
     int "Modbus slave address for the Upper Feed HYDRA"
     default 1
 
-config HYDRA_UF_INPUT_ADDR_START
+config MODBUS_HYDRA_UF_INPUT_ADDR_START
     int "start address for the UF HYDRA input registers"
     default 0
 
-config HYDRA_UF_COILS_ADDR_START
+config MODBUS_HYDRA_UF_COILS_ADDR_START
     int "start address for the UF HYDRA coil registers"
     default 0
 
-config HYDRA_LF_SLAVE_ID
+config MODBUS_HYDRA_LF_SLAVE_ID
     int "Modbus slave address for the Lower Feed HYDRA"
     default 2
 
-config HYDRA_LF_INPUT_ADDR_START
+config MODBUS_HYDRA_LF_INPUT_ADDR_START
     int "start address for the LF HYDRA input registers"
     default 0
 
-config HYDRA_LF_COILS_ADDR_START
+config MODBUS_HYDRA_LF_COILS_ADDR_START
     int "start address for the LF HYDRA coil registers"
     default 0
 
-config MODBUS_ROCKET_HYDRA_SAMPLE_INTERVAL
-    int "sample interval for the rocket hydras, in ms"
-    default 500
-
-config MODBUS_FS_HYDRA_SLAVE_ID
+config MODBUS_HYDRA_FS_SLAVE_ID
     int "Modbus slave address for the Rocket LIFT"
     default 3
+
+config MODBUS_HYDRA_FS_INPUT_ADDR_START
+    int "start address for the LF HYDRA input registers"
+    default 0
+
+config MODBUS_HYDRA_FS_COILS_ADDR_START
+    int "start address for the LF HYDRA coil registers"
+    default 0
 
 config MODBUS_ROCKET_LIFT_SLAVE_ID
     int "Modbus slave address for the Rocket LIFT"
