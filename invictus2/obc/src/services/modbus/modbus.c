@@ -1,24 +1,25 @@
 #include "services/modbus/modbus.h"
 
+#include "services/modbus/internal/hydra.h"
+#include "services/modbus/internal/lift.h"
+#include "radio_commands.h"
+#include "zbus_messages.h"
+
 #include "zephyr/kernel.h"
 #include "zephyr/logging/log.h"
 #include "zephyr/modbus/modbus.h"
 #include "zephyr/usb/usb_device.h"
 #include "zephyr/zbus/zbus.h"
 
-#include "services/modbus/internal/hydra.h"
-#include "services/modbus/internal/lift.h"
-#include "zbus_messages.h"
-
 LOG_MODULE_REGISTER(obc_modbus, LOG_LEVEL_DBG);
 
 static void write_work_handler(struct k_work *work);
 static void hydra_read_ir_work_handler(struct k_work *work);
-static void lift_sample_work_handler(struct k_work *work);
+static void lift_read_ir_work_handlert(struct k_work *work);
 
 static K_WORK_DEFINE(write_work, write_work_handler);
-static K_WORK_DELAYABLE_DEFINE(rocket_hydra_sample_work, hydra_read_ir_work_handler);
-static K_WORK_DELAYABLE_DEFINE(lift_sample_work, lift_sample_work_handler);
+static K_WORK_DELAYABLE_DEFINE(hydra_sample_work, hydra_read_ir_work_handler);
+static K_WORK_DELAYABLE_DEFINE(lift_sample_work, lift_read_ir_work_handlert);
 
 K_THREAD_STACK_DEFINE(modbus_work_q_stack, CONFIG_MODBUS_WORK_Q_STACK);
 static struct k_work_q modbus_work_q;
@@ -29,22 +30,23 @@ ZBUS_CHAN_DECLARE(chan_thermo_sensors, chan_pressure_sensors, chan_weight_sensor
 // Subcribed channels
 ZBUS_CHAN_DECLARE(chan_actuators);
 
-static void listener_cb(const struct zbus_channel *chan)
+static void modbus_listener_cb(const struct zbus_channel *chan)
 {
     if (chan == &chan_actuators) {
-        /* k_work_submit_to_queue(&modbus_work_q, &write_work); */
+        k_work_submit_to_queue(&modbus_work_q, &write_work);
+        return;
     }
 }
 
-ZBUS_LISTENER_DEFINE(modbus_listener, listener_cb);
-/* ZBUS_CHAN_ADD_OBS(modbus_write_coils_chan, modbus_listener,
- * CONFIG_MODBUS_ZBUS_LISTENER_PRIO); */
+ZBUS_LISTENER_DEFINE(modbus_listener, modbus_listener_cb);
+ZBUS_CHAN_ADD_OBS(chan_actuators, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
 
 #define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
 
 static struct hydra_boards hydras = {0};
 static struct lift_boards lifts = {0};
 static int client_iface;
+
 static int rocket_state; // TODO
 
 const static struct modbus_iface_param client_param = {
@@ -110,18 +112,30 @@ static void write_work_handler(struct k_work *work)
 
 static void hydra_read_ir_work_handler(struct k_work *work)
 {
-    k_work_schedule_for_queue(&modbus_work_q, &rocket_hydra_sample_work,
-                              K_MSEC(CONFIG_MODBUS_ROCKET_HYDRA_SAMPLE_INTERVAL));
+    k_work_schedule_for_queue(&modbus_work_q, &hydra_sample_work,
+                              K_MSEC(CONFIG_MODBUS_HYDRA_SAMPLE_INTERVAL_MSEC));
 
     hydra_boards_read_irs(client_iface, &hydras);
+
+    union thermocouples_u temperatures = {0};
+    union pressures_u pressures = {0};
+    hydra_boards_irs_to_zbus_rep(&hydras, &temperatures, &pressures);
+
+    zbus_chan_pub(&chan_thermo_sensors, (const void *)&temperatures, K_NO_WAIT);
+    zbus_chan_pub(&chan_pressure_sensors, (const void *)&pressures, K_NO_WAIT);
 }
 
-static void lift_sample_work_handler(struct k_work *work)
+static void lift_read_ir_work_handlert(struct k_work *work)
 {
     k_work_schedule_for_queue(&modbus_work_q, &lift_sample_work,
-                              K_MSEC(CONFIG_MODBUS_LIFT_SAMPLE_INTERVAL));
+                              K_MSEC(CONFIG_MODBUS_LIFT_SAMPLE_INTERVAL_MSEC));
 
     lift_boards_read_irs(client_iface, &lifts);
+
+    union loadcell_weights_u weights = {0};
+    lift_boards_irs_to_zbus_rep(&lifts, &weights);
+
+    zbus_chan_pub(&chan_weight_sensors, (const void *)&weights, K_NO_WAIT);
 }
 
 void modbus_service_start(void)
@@ -133,31 +147,6 @@ void modbus_service_start(void)
                        K_THREAD_STACK_SIZEOF(modbus_work_q_stack), CONFIG_MODBUS_WORK_Q_PRIO,
                        NULL);
 
-    k_work_schedule_for_queue(&modbus_work_q, &rocket_hydra_sample_work, K_NO_WAIT);
+    k_work_schedule_for_queue(&modbus_work_q, &hydra_sample_work, K_NO_WAIT);
     k_work_schedule_for_queue(&modbus_work_q, &lift_sample_work, K_NO_WAIT);
-}
-
-// -------------------------------------------------------------------------------------------
-// Modbus Helpers
-// -------------------------------------------------------------------------------------------
-inline void modbus_slave_check_connection(const int read_result,
-                                          struct modbus_slave_metadata *const meta,
-                                          const char *const label)
-{
-    if (!meta || !label) {
-        LOG_ERR("Invalid parameters for connection check.");
-        return;
-    }
-
-    if (read_result < 0 && !meta->is_connected) {
-        return; // Already disconnected, no need to log again
-    }
-
-    if (read_result < 0 && meta->is_connected) {
-        LOG_ERR("Failed to read [%s]: %d. Flagging disconnect.", label, read_result);
-        meta->is_connected = false;
-    } else if (read_result >= 0 && !meta->is_connected) {
-        LOG_INF("Reconnected to [%s].", label);
-        meta->is_connected = true;
-    }
 }

@@ -1,10 +1,8 @@
 #ifndef HYDRA_H_
 #define HYDRA_H_
 
-#include "services/modbus/modbus.h"
+#include "services/modbus/internal/common.h"
 #include "radio_commands.h"
-
-#include <stdint.h>
 
 // NOTE: Solenoids are represented as modbus coils.
 // Sensors are represented as modbus input registers.

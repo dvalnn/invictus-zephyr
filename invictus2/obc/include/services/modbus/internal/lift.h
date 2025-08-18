@@ -1,9 +1,8 @@
 #ifndef LIFT_H_
 #define LIFT_H_
 
-#include "services/modbus/modbus.h"
-
-#include <stdint.h>
+#include "services/modbus/internal/common.h"
+#include "radio_commands.h"
 
 // NOTE: E-Matches are represented as modbus coils.
 // Load Cells are represented as modbus input registers.
@@ -21,11 +20,13 @@ struct rocket_lift {
 
     union r_loadcells {
         struct {
-            uint16_t loadcell1;
-            uint16_t loadcell2;
-            uint16_t loadcell3;
-        } values;
-        uint16_t raw[3];
+            uint16_t rail;
+            // testing only, not used in competition
+            uint16_t thrust_1;
+            uint16_t thrust_2;
+            uint16_t thrust_3;
+        };
+        uint16_t raw[4];
     } loadcells;
 
     union r_ematches {
@@ -71,5 +72,8 @@ void lift_boards_init(struct lift_boards *const lb);
  *       If the read fails, it sets the `is_connected` flag to false and logs a warning.
  */
 void lift_boards_read_irs(const int client_iface, struct lift_boards *const lb);
+
+void lift_boards_irs_to_zbus_rep(const struct lift_boards *const lb,
+                                 union loadcell_weights_u *const weights);
 
 #endif // LIFT_H_

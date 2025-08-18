@@ -42,6 +42,10 @@ config MODBUS_HYDRA_FS_COILS_ADDR_START
     int "start address for the LF HYDRA coil registers"
     default 0
 
+config MODBUS_HYDRA_SAMPLE_INTERVAL_MSEC
+    int "sample interval for hydra boards in milliseconds"
+    default 500
+
 config MODBUS_ROCKET_LIFT_SLAVE_ID
     int "Modbus slave address for the Rocket LIFT"
     default 4
@@ -66,7 +70,7 @@ config MODBUS_FS_LIFT_COILS_ADDR_START
     int "start address for the Filling Station LIFT coil registers"
     default 0
 
-config MODBUS_LIFT_SAMPLE_INTERVAL
+config MODBUS_LIFT_SAMPLE_INTERVAL_MSEC
     int "sample interval for the lifts, in ms"
     default 500
 
