@@ -1,0 +1,33 @@
+* Inbox
+** TODO Meeting Tue Aug 12 13:52:41 2025 [0/9] [0%]
+*** TODO Service health status
+
+*** TODO Revamp zbus_messages.h/c [0/3] [0%]
+**** TODO Create gh discussion to post ideas / possible solutions
+**** TODO Centralized vs Decentralized <-- All channels defined in main (for instance) vs each service defines exported channels
+**** TODO Human readable channel names. *ch_* namespace
+
+*** TODO Look into integrations test [0/2] [0%]
+**** TODO LoRa Mock over UART
+**** TODO ZBUS contant msg references <- look for zbus samples in the documentation
+
+*** TODO Rocket State Machine [0/2] [0%]
+**** TODO Add RSM to thead communications diagram
+**** TODO Create RSM channels
+
+*** TODO Start prototyping HYDRA SW [0/3] [0%]
+**** TODO Update DeviceTree definitions
+**** TODO Implement modbus slave
+**** TODO Implement sensor sampling, check for any missing drivers
+
+*** TODO Start prototyping LIFT SW [0/4] [0%]
+**** TODO Create DeviceTree definitions
+**** TODO Look for Drivers
+**** TODO Implement modbus slave
+**** TODO Implement sensor sampling
+
+*** TODO Communications from OBC receiver board to Ground Station computer
+*** TODO Communications rocket OBC <-> NAV [0/1] [0%]
+**** TODO Figure out UART serialization format (csv, binary, etc)
+
+*** TODO Ground station GUI

@@ -135,8 +135,22 @@ struct filling_sm_object {
     cmd_t command;
     union filling_data data;
 
-    // TODO: Make this into an union
-    uint8_t valve_states;
+    union valve_states {
+        struct {
+            uint16_t n2o_fill : 1;
+            uint16_t n2o_purge : 1;
+            uint16_t n_fill : 1;
+            uint16_t n_purge : 1;
+            uint16_t n2o_quick_dc : 1;
+            uint16_t n2_quick_dc : 1;
+            uint16_t pressurizing : 1;
+            uint16_t main : 1;
+            uint16_t vent : 1;
+            uint16_t abort : 1;
+            uint16_t reserved : 6;
+        }; // anonymous struct for individual valve states
+        uint16_t raw;
+    } valve_states;
 
     struct filling_sm_config *config;
 };
