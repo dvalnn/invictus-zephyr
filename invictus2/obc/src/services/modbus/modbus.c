@@ -3,7 +3,6 @@
 #include "services/modbus/internal/hydra.h"
 #include "services/modbus/internal/lift.h"
 #include "radio_commands.h"
-#include "zbus_messages.h"
 
 #include "zephyr/kernel.h"
 #include "zephyr/logging/log.h"
@@ -28,12 +27,19 @@ static struct k_work_q modbus_work_q;
 ZBUS_CHAN_DECLARE(chan_thermo_sensors, chan_pressure_sensors, chan_weight_sensors);
 
 // Subscribed channels
-ZBUS_CHAN_DECLARE(chan_actuators);
+ZBUS_CHAN_DECLARE(chan_actuators, chan_radio_cmds);
 
 static void modbus_listener_cb(const struct zbus_channel *chan)
 {
     if (chan == &chan_actuators) {
         k_work_submit_to_queue(&modbus_work_q, &write_work);
+        return;
+    }
+
+    if (chan == &chan_radio_cmds) {
+        // TODO: implement worker
+        /* k_work_submit_to_queue(&modbus_work_q, &write_work); */
+        LOG_DBG("Received radio command"); // FIXME: remove
         return;
     }
 }
@@ -92,22 +98,7 @@ bool modbus_service_setup(void)
 
 static void write_work_handler(struct k_work *work)
 {
-    static struct modbus_write_coils_msg msg;
-
-    if (zbus_chan_read(&chan_actuators, &msg, K_NO_WAIT) != 0) {
-        LOG_WRN("Chan read failed or empty");
-        return;
-    }
-
-    LOG_DBG("Received command: slave_id=%d, start_addr=%d, num_coils=%d", msg.slave_id,
-            msg.start_addr, msg.num_coils);
-    LOG_HEXDUMP_DBG(msg.values, msg.num_coils, "Coil Values");
-
-    const int write_res = modbus_write_coils(client_iface, msg.slave_id, msg.start_addr,
-                                             msg.values, msg.num_coils);
-    if (write_res < 0) {
-        LOG_ERR("Failed to write coils: %d", write_res);
-    }
+    k_oops(); // FIXME: implement function
 }
 
 static void hydra_read_ir_work_handler(struct k_work *work)
