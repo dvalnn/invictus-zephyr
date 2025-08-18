@@ -1,7 +1,6 @@
-#ifndef MODBUS_THRD_H_
-#define MODBUS_THRD_H_
+#ifndef MODBUS_COMMON_H
+#define MODBUS_COMMON_H
 
-#include <stdbool.h>
 #include <stdint.h>
 
 struct modbus_slave_metadata {
@@ -10,10 +9,8 @@ struct modbus_slave_metadata {
     uint16_t ir_start;    // Start address for input registers
 };
 
-bool modbus_service_setup(void);
-void modbus_service_start(void);
-
-void modbus_slave_check_connection(const int rc, struct modbus_slave_metadata *const meta,
+void modbus_slave_check_connection(const int read_result,
+                                   struct modbus_slave_metadata *const meta,
                                    const char *const label);
 
-#endif
+#endif // MODBUS_COMMON_H

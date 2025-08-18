@@ -2,7 +2,6 @@
 
 #include "filling_sm.h"
 
-#include "zbus_messages.h"
 #include "zephyr/kernel/thread_stack.h"
 #include "zephyr/logging/log.h"
 #include "zephyr/toolchain.h"
@@ -116,18 +115,6 @@ void lora_uart_backend()
         // TODO: refactor
         if (strcmp(command_type, "normal") == 0) {
             LOG_INF("Processing normal command: %d", command);
-
-            struct lora_cmd_msg cmd_msg = {
-                .subsystem = SUBSYSTEM_ID_FSM,
-                .command = command,
-            };
-
-            // TODO: better timeout handling
-            int ret = zbus_chan_pub(&lora_cmd_chan, &cmd_msg, K_NO_WAIT);
-            if (ret < 0) {
-                LOG_ERR("Failed to publish command to LORA channel: %d", ret);
-            }
-
         } else {
             LOG_WRN("Unsupported command type: %s", command_type);
         }

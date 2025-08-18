@@ -1,9 +1,8 @@
 #ifndef LIFT_H_
 #define LIFT_H_
 
-#include "services/modbus.h"
-
-#include <stdint.h>
+#include "services/modbus/internal/common.h"
+#include "radio_commands.h"
 
 // NOTE: E-Matches are represented as modbus coils.
 // Load Cells are represented as modbus input registers.
@@ -21,11 +20,13 @@ struct rocket_lift {
 
     union r_loadcells {
         struct {
-            uint16_t loadcell1;
-            uint16_t loadcell2;
-            uint16_t loadcell3;
-        } values;
-        uint16_t raw[3];
+            uint16_t rail;
+            // testing only, not used in competition
+            uint16_t thrust_1;
+            uint16_t thrust_2;
+            uint16_t thrust_3;
+        };
+        uint16_t raw[4];
     } loadcells;
 
     union r_ematches {
@@ -35,6 +36,11 @@ struct rocket_lift {
         };
         uint8_t raw;
     } ematches;
+};
+
+struct lift_boards {
+    struct rocket_lift rocket;
+    struct fs_lift fs;
 };
 
 /*
@@ -50,10 +56,10 @@ struct rocket_lift {
  * @param h Pointer to the lift structure to initialize.
  * @returns void.
  */
-void lift_init(struct rocket_lift *r, struct fs_lift *l);
+void lift_boards_init(struct lift_boards *const lb);
 
 /**
- * Read the sensors from the lift.
+ * Read the input registers from each lift board.
  * This function reads the input registers for the filling station and rocket lift
  * and updates their respective sensor values.
  *
@@ -65,11 +71,9 @@ void lift_init(struct rocket_lift *r, struct fs_lift *l);
  *       If the read is successful, it sets the `is_connected` flag to true.
  *       If the read fails, it sets the `is_connected` flag to false and logs a warning.
  */
-void rocket_lift_sensor_read(const int client_iface, struct rocket_lift *const h);
-void fs_lift_sensor_read(const int client_iface, struct fs_lift *const l);
+void lift_boards_read_irs(const int client_iface, struct lift_boards *const lb);
 
-// TODO: implement this function
-void rocket_lift_coils_read(const int client_iface, struct rocket_lift *const h);
-void fs_lift_coils_read(const int client_iface, struct fs_lift *const l);
+void lift_boards_irs_to_zbus_rep(const struct lift_boards *const lb,
+                                 union loadcell_weights_u *const weights);
 
 #endif // LIFT_H_

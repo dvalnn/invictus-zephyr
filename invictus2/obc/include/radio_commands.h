@@ -40,7 +40,7 @@ struct radio_generic_cmd_s {
 // -----------------------------------------------------------------------------
 
 // Actuators bitfield definition (13 bits -> store in 2 bytes)
-union actuators_bits_u {
+union actuators_bitmap_u {
     struct {
         // Rocket valves
         uint16_t v_pressurizing: 1;
@@ -123,11 +123,13 @@ union pressures_u {
 
 union loadcell_weights_u {
     struct {
-        uint16_t n2o_loadcell;     // N2O bottle loadcell
-        uint16_t rail_loadcell;    // Only used during competition to measure rocket weight
-        uint16_t thrust_loadcell1; // Only used during static test
-        uint16_t thrust_loadcell2; // Only used during static test
-        uint16_t thrust_loadcell3; // Only used during static test
+        uint16_t n2o_loadcell;  // N2O bottle loadcell
+        uint16_t rail_loadcell; // Only used during competition to measure rocket weight
+
+        // Loadcells for static tests
+        uint16_t thrust_loadcell1;
+        uint16_t thrust_loadcell2;
+        uint16_t thrust_loadcell3;
     };
     uint16_t raw[5];
 };
@@ -146,7 +148,7 @@ struct status_rep_s {                     // byte block | 2 byte block | 4 byte 
     uint8_t rocket_substate;              //     2      |       1      |     0.50     |
     union pressures_u pressures;          //     14     |       7      |     3.50     |
     union thermocouples_u thermocouples;  //     30     |       15     |     7.50     |
-    union actuators_bits_u actuators;     //     32     |       16     |     8.00     |
+    union actuators_bitmap_u actuators;   //     32     |       16     |     8.00     |
     union loadcell_weights_u loadcells;   //     40     |       20     |     10.0     |
     struct navigator_sensors_s navigator; //     92     |       46     |     23.0     |
 };
