@@ -15,11 +15,11 @@ LOG_MODULE_REGISTER(obc_modbus, LOG_LEVEL_DBG);
 
 static void write_work_handler(struct k_work *work);
 static void hydra_read_ir_work_handler(struct k_work *work);
-static void lift_read_ir_work_handlert(struct k_work *work);
+static void lift_read_ir_work_handler(struct k_work *work);
 
 static K_WORK_DEFINE(write_work, write_work_handler);
 static K_WORK_DELAYABLE_DEFINE(hydra_sample_work, hydra_read_ir_work_handler);
-static K_WORK_DELAYABLE_DEFINE(lift_sample_work, lift_read_ir_work_handlert);
+static K_WORK_DELAYABLE_DEFINE(lift_sample_work, lift_read_ir_work_handler);
 
 K_THREAD_STACK_DEFINE(modbus_work_q_stack, CONFIG_MODBUS_WORK_Q_STACK);
 static struct k_work_q modbus_work_q;
@@ -27,7 +27,7 @@ static struct k_work_q modbus_work_q;
 // Published channels
 ZBUS_CHAN_DECLARE(chan_thermo_sensors, chan_pressure_sensors, chan_weight_sensors);
 
-// Subcribed channels
+// Subscribed channels
 ZBUS_CHAN_DECLARE(chan_actuators);
 
 static void modbus_listener_cb(const struct zbus_channel *chan)
@@ -125,7 +125,7 @@ static void hydra_read_ir_work_handler(struct k_work *work)
     zbus_chan_pub(&chan_pressure_sensors, (const void *)&pressures, K_NO_WAIT);
 }
 
-static void lift_read_ir_work_handlert(struct k_work *work)
+static void lift_read_ir_work_handler(struct k_work *work)
 {
     k_work_schedule_for_queue(&modbus_work_q, &lift_sample_work,
                               K_MSEC(CONFIG_MODBUS_LIFT_SAMPLE_INTERVAL_MSEC));
