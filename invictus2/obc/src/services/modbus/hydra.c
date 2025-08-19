@@ -1,7 +1,7 @@
-#include "services/modbus/internal/hydra.h"
-#include "services/modbus/internal/common.h"
+#include "services/modbus/hydra.h"
+#include "services/modbus/common.h"
 
-#include "zephyr/modbus/modbus.h"
+#include "zephyr/modbus.h"
 #include "zephyr/logging/log.h"
 
 LOG_MODULE_REGISTER(hydra, LOG_LEVEL_INF);

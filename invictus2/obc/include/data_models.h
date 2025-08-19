@@ -102,8 +102,8 @@ struct navigator_sensors_s {
 };
 
 struct rocket_state_s {
-    uint8_t state;    // Values from enum rocket_state_e
-    uint8_t substate; // Values from enum rocket_state_flight_e or enum rocket_state_fill_e
+    uint8_t major; // Values from enum rocket_state_e
+    uint8_t minor; // Values from enum rocket_state_flight_e or enum rocket_state_fill_e
 };
 
 enum rocket_state_e {

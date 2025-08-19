@@ -1,24 +1,32 @@
-#include "services/modbus/modbus.h"
+#include "services/modbus.h"
+#include "services/modbus/hydra.h"
+#include "services/modbus/lift.h"
 
-#include "services/modbus/internal/hydra.h"
-#include "services/modbus/internal/lift.h"
-#include "radio_commands.h"
+#include "data_models.h"
 
 #include "zephyr/kernel.h"
 #include "zephyr/logging/log.h"
 #include "zephyr/modbus/modbus.h"
-#include "zephyr/usb/usb_device.h"
 #include "zephyr/zbus/zbus.h"
+
+// NOTE: do not remove. Used with cdc_acm USB device overlay
+#include "zephyr/usb/usb_device.h"
 
 LOG_MODULE_REGISTER(obc_modbus, LOG_LEVEL_DBG);
 
-static void write_work_handler(struct k_work *work);
-static void hydra_read_ir_work_handler(struct k_work *work);
 static void lift_read_ir_work_handler(struct k_work *work);
+static void hydra_read_ir_work_handler(struct k_work *work);
 
-static K_WORK_DEFINE(write_work, write_work_handler);
-static K_WORK_DELAYABLE_DEFINE(hydra_sample_work, hydra_read_ir_work_handler);
+static void actuator_work_handler(struct k_work *work);
+static void radio_cmd_work_handler(struct k_work *work);
+static void rocket_state_work_handler(struct k_work *work);
+
+static K_WORK_DEFINE(actuator_work, actuator_work_handler);
+static K_WORK_DEFINE(radio_cmd_work, radio_cmd_work_handler);
+static K_WORK_DEFINE(rocket_state_work, rocket_state_work_handler);
+
 static K_WORK_DELAYABLE_DEFINE(lift_sample_work, lift_read_ir_work_handler);
+static K_WORK_DELAYABLE_DEFINE(hydra_sample_work, hydra_read_ir_work_handler);
 
 K_THREAD_STACK_DEFINE(modbus_work_q_stack, CONFIG_MODBUS_WORK_Q_STACK);
 static struct k_work_q modbus_work_q;
@@ -27,19 +35,33 @@ static struct k_work_q modbus_work_q;
 ZBUS_CHAN_DECLARE(chan_thermo_sensors, chan_pressure_sensors, chan_weight_sensors);
 
 // Subscribed channels
-ZBUS_CHAN_DECLARE(chan_actuators, chan_radio_cmds);
+ZBUS_CHAN_DECLARE(chan_actuators, chan_radio_cmds, chan_rocket_state);
+
+// Static Variables
+//
+static struct hydra_boards hydras = {0};
+static struct lift_boards lifts = {0};
+static int client_iface;
+static atomic_t fs_disabled = ATOMIC_INIT(false);
+
+// Function Implementations
 
 static void modbus_listener_cb(const struct zbus_channel *chan)
 {
     if (chan == &chan_actuators) {
-        k_work_submit_to_queue(&modbus_work_q, &write_work);
+        k_work_submit_to_queue(&modbus_work_q, &actuator_work);
         return;
     }
 
     if (chan == &chan_radio_cmds) {
-        // TODO: implement worker
-        /* k_work_submit_to_queue(&modbus_work_q, &write_work); */
-        LOG_DBG("Received radio command"); // FIXME: remove
+        k_work_submit_to_queue(&modbus_work_q, &radio_cmd_work);
+        return;
+    }
+
+    // NOTE: There is no need to listen to the rocket state after the filling station is
+    // disabled.
+    if (chan == &chan_rocket_state && !(bool)atomic_get(&fs_disabled)) {
+        k_work_submit_to_queue(&modbus_work_q, &rocket_state_work);
         return;
     }
 }
@@ -48,12 +70,6 @@ ZBUS_LISTENER_DEFINE(modbus_listener, modbus_listener_cb);
 ZBUS_CHAN_ADD_OBS(chan_actuators, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
 
 #define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
-
-static struct hydra_boards hydras = {0};
-static struct lift_boards lifts = {0};
-static int client_iface;
-
-static int rocket_state; // TODO
 
 const static struct modbus_iface_param client_param = {
     .mode = MODBUS_MODE_RTU,
@@ -96,11 +112,6 @@ bool modbus_service_setup(void)
     return modbus_init_client(client_iface, client_param) == 0;
 }
 
-static void write_work_handler(struct k_work *work)
-{
-    k_oops(); // FIXME: implement function
-}
-
 static void hydra_read_ir_work_handler(struct k_work *work)
 {
     k_work_schedule_for_queue(&modbus_work_q, &hydra_sample_work,
@@ -121,12 +132,32 @@ static void lift_read_ir_work_handler(struct k_work *work)
     k_work_schedule_for_queue(&modbus_work_q, &lift_sample_work,
                               K_MSEC(CONFIG_MODBUS_LIFT_SAMPLE_INTERVAL_MSEC));
 
-    lift_boards_read_irs(client_iface, &lifts);
-
     union loadcell_weights_u weights = {0};
-    lift_boards_irs_to_zbus_rep(&lifts, &weights);
+    lift_boards_read_irs(client_iface, &lifts, (bool)atomic_get(&fs_disabled));
+    lift_boards_irs_to_zbus_rep(&lifts, &weights, (bool)atomic_get(&fs_disabled));
 
     zbus_chan_pub(&chan_weight_sensors, (const void *)&weights, K_NO_WAIT);
+}
+
+static void actuator_work_handler(struct k_work *work)
+{
+    k_oops(); // FIXME: implement function
+}
+
+static void radio_cmd_work_handler(struct k_work *work)
+{
+    k_oops(); // FIXME: implement function
+}
+
+static void rocket_state_work_handler(struct k_work *work)
+{
+    struct rocket_state_s state = {0};
+    zbus_chan_read(&chan_radio_cmds, &state, K_NO_WAIT); // REVIEW: consider const msg ref
+    if ((enum rocket_state_e)state.major == ROCKET_STATE_ARMED) {
+        LOG_INF("Rocket is ARMED, disabling filling station reads.");
+        atomic_set(&fs_disabled, true);
+        return;
+    }
 }
 
 void modbus_service_start(void)

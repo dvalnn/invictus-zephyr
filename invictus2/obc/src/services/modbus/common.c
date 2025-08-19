@@ -1,4 +1,4 @@
-#include "services/modbus/internal/common.h"
+#include "services/modbus/common.h"
 
 #include "zephyr/logging/log.h"
 

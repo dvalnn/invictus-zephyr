@@ -1,6 +1,4 @@
-#include "services/modbus/internal/lift.h"
-
-#include "services/modbus/modbus.h"
+#include "services/modbus/lift.h"
 
 #include "zephyr/modbus/modbus.h"
 #include "zephyr/logging/log.h"
@@ -29,7 +27,8 @@ inline void lift_boards_init(struct lift_boards *const lb)
     lb->fs.meta.ir_start = CONFIG_MODBUS_FS_LIFT_INPUT_ADDR_START;
 }
 
-void lift_boards_read_irs(const int client_iface, struct lift_boards *const lb)
+void lift_boards_read_irs(const int client_iface, struct lift_boards *const lb,
+                          const bool fs_disabled)
 {
 
     if (!lb || client_iface < 0) {
@@ -42,24 +41,30 @@ void lift_boards_read_irs(const int client_iface, struct lift_boards *const lb)
         client_iface, lb->rocket.meta.slave_id, lb->rocket.meta.ir_start,
         (uint16_t *const)&lb->rocket.loadcells.raw, ARRAY_SIZE(lb->rocket.loadcells.raw));
 
-    // TODO: flag to skip filling station read after quick disconnect / launch
+    modbus_slave_check_connection(rocket_rc, &lb->rocket.meta, "Rocket LIFT");
+
+    if (fs_disabled) {
+        LOG_DBG("Filling Station is disconnected, skipping read.");
+        return;
+    }
+
     int fs_rc =
         modbus_read_input_regs(client_iface, lb->fs.meta.slave_id, lb->fs.meta.ir_start,
-                               (uint16_t *const)&lb->fs.n2o_loadcell, 1); // REVIEW:
+                               (uint16_t *const)&lb->fs.n2o_loadcell, 1);
 
-    modbus_slave_check_connection(rocket_rc, &lb->rocket.meta, "Rocket LIFT");
     modbus_slave_check_connection(fs_rc, &lb->fs.meta, "Filling Station LIFT");
 }
 
 inline void lift_boards_irs_to_zbus_rep(const struct lift_boards *const lb,
-                                        union loadcell_weights_u *const weights)
+                                        union loadcell_weights_u *const weights,
+                                        const bool fs_disabled)
 {
     if (!lb || !weights) {
         LOG_ERR("Invalid parameters for LIFT IRs ZBUS conversion.");
         return;
     }
 
-    weights->n2o_loadcell = lb->fs.n2o_loadcell;
+    weights->n2o_loadcell = fs_disabled ? 0 : lb->fs.n2o_loadcell;
     weights->rail_loadcell = lb->rocket.loadcells.rail;
 
     // TODO: include based on KConfig option
