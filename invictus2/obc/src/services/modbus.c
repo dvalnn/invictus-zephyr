@@ -9,10 +9,11 @@
 #include "zephyr/modbus/modbus.h"
 #include "zephyr/zbus/zbus.h"
 
-// NOTE: do not remove. Used with cdc_acm USB device overlay
+#if DT_NODE_HAS_COMPAT(DT_PARENT(MODBUS_NODE), zephyr_cdc_acm_uart)
 #include "zephyr/usb/usb_device.h"
+#endif
 
-LOG_MODULE_REGISTER(obc_modbus, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(modbus_service, LOG_LEVEL_DBG);
 
 static void lift_read_ir_work_handler(struct k_work *work);
 static void hydra_read_ir_work_handler(struct k_work *work);
@@ -36,6 +37,13 @@ ZBUS_CHAN_DECLARE(chan_thermo_sensors, chan_pressure_sensors, chan_weight_sensor
 
 // Subscribed channels
 ZBUS_CHAN_DECLARE(chan_actuators, chan_radio_cmds, chan_rocket_state);
+
+static void modbus_listener_cb(const struct zbus_channel *chan);
+
+ZBUS_LISTENER_DEFINE(modbus_listener, modbus_listener_cb);
+ZBUS_CHAN_ADD_OBS(chan_actuators, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
+ZBUS_CHAN_ADD_OBS(chan_radio_cmds, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
+ZBUS_CHAN_ADD_OBS(chan_rocket_state, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
 
 // Static Variables
 //
@@ -65,9 +73,6 @@ static void modbus_listener_cb(const struct zbus_channel *chan)
         return;
     }
 }
-
-ZBUS_LISTENER_DEFINE(modbus_listener, modbus_listener_cb);
-ZBUS_CHAN_ADD_OBS(chan_actuators, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
 
 #define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
 

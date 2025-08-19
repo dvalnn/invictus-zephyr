@@ -9,6 +9,7 @@
 
 #include "services/lora.h"
 #include "services/modbus.h"
+#include "services/rocket_state.h"
 
 // FIXME: remove, it's just to make sure linker is working
 #include "invictus2/drivers/sx128x_hal.h"
@@ -32,20 +33,20 @@ LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 //
 //
 // --- Sensor Channels ---
-ZBUS_CHAN_DEFINE(chan_thermo_sensors,      /* Channel Name */
-                 union thermocouples_u,    /* Message Type */
-                 NULL,                     /* Validator Func */
-                 NULL,                     /* User Data */
-                 ZBUS_OBSERVERS_EMPTY,     /* Observers */
-                 ZBUS_MSG_INIT(.raw = {0}) /* Initial Value */
+ZBUS_CHAN_DEFINE(chan_thermo_sensors,   /* Channel Name */
+                 union thermocouples_u, /* Message Type */
+                 NULL,                  /* Validator Func */
+                 NULL,                  /* User Data */
+                 ZBUS_OBSERVERS_EMPTY,  /* Observers */
+                 ZBUS_MSG_INIT(0)       /* Initial Value */
 )
 
-ZBUS_CHAN_DEFINE(chan_pressure_sensors,    /* Channel Name */
-                 union pressures_u,        /* Message Type */
-                 NULL,                     /* Validator Func */
-                 NULL,                     /* User Data */
-                 ZBUS_OBSERVERS_EMPTY,     /* Observers */
-                 ZBUS_MSG_INIT(.raw = {0}) /* Initial Value */
+ZBUS_CHAN_DEFINE(chan_pressure_sensors, /* Channel Name */
+                 union pressures_u,     /* Message Type */
+                 NULL,                  /* Validator Func */
+                 NULL,                  /* User Data */
+                 ZBUS_OBSERVERS_EMPTY,  /* Observers */
+                 ZBUS_MSG_INIT(0)       /* Initial Value */
 )
 
 ZBUS_CHAN_DEFINE(chan_weight_sensors,      /* Channel Name */
@@ -53,7 +54,7 @@ ZBUS_CHAN_DEFINE(chan_weight_sensors,      /* Channel Name */
                  NULL,                     /* Validator Func */
                  NULL,                     /* User Data */
                  ZBUS_OBSERVERS_EMPTY,     /* Observers */
-                 ZBUS_MSG_INIT(.raw = {0}) /* Initial Value */
+                 ZBUS_MSG_INIT(0)          /* Initial Value */
 )
 
 ZBUS_CHAN_DEFINE(chan_navigator_sensors,     /* Channel Name */
@@ -70,7 +71,7 @@ ZBUS_CHAN_DEFINE(chan_actuators,           /* Channel Name */
                  NULL,                     /* Validator Func */
                  NULL,                     /* User Data */
                  ZBUS_OBSERVERS_EMPTY,     /* Observers */
-                 ZBUS_MSG_INIT(.raw = 0)   /* Initial Value */
+                 ZBUS_MSG_INIT(0)          /* Initial Value */
 )
 
 // --- Radio Commands from Ground Station ---
@@ -100,10 +101,16 @@ bool setup_services(atomic_t *stop_signal)
     LOG_INF("Setting up threads...");
     lora_context.stop_signal = stop_signal;
 
+    LOG_INF("  * rocket state...");
+    if (!rocket_state_service_setup()) {
+        LOG_ERR("Rocket state service setup failed");
+        return false;
+    }
+
     // Initialize the modbus thread
     LOG_INF("  * modbus...");
     if (!modbus_service_setup()) {
-        LOG_ERR("Modbus RTU master initialization failed");
+        LOG_ERR("Modbus RTU master setup failed");
         return false;
     }
 
@@ -128,11 +135,11 @@ int main(void)
         return -1;
     }
 
+    rocket_state_service_start();
     modbus_service_start();
-
     lora_service_start();
 
-    LOG_INF("Work queues started. Sleeping main thread.");
+    LOG_INF("Services started. Sleeping main thread.");
     k_sleep(K_FOREVER);
 
     k_oops(); // Should never reach here
