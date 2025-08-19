@@ -1,6 +1,7 @@
 #include "services/modbus/hydra.h"
 #include "services/modbus/common.h"
 
+#include "zephyr/kernel.h"
 #include "zephyr/modbus/modbus.h"
 #include "zephyr/logging/log.h"
 
@@ -60,7 +61,7 @@ void hydra_boards_read_irs(const int client_iface, struct hydra_boards *const hb
 
     if (fs_disabled) {
         LOG_DBG("Filling Station is disconnected, skipping read.");
-        return; // Filling station is not connected, skip reading its sensors
+        return;
     }
 
     int fs_rc = modbus_read_input_regs(
@@ -77,30 +78,32 @@ inline void hydra_boards_irs_to_zbus_rep(const struct hydra_boards *const hb,
 {
     if (!hb || !thermocouples || !pressures) {
         LOG_ERR("Invalid parameters for HYDRA IRs to ZBUS conversion.");
-        return;
+        k_oops(); // Should never reach here
     }
 
-    // Initialize the thermocouples union
-    thermocouples->n2o_tank_uf_t1 = hb->uf.sensors.uf_temperature1;
-    thermocouples->n2o_tank_uf_t2 = hb->uf.sensors.uf_temperature2;
-    thermocouples->n2o_tank_uf_t3 = hb->uf.sensors.uf_temperature3;
+    // clang-format off
+    #define ZERO_IF_FS_DISABLED(x) ((fs_disabled) ? 0 : (x))
 
-    thermocouples->n2o_tank_lf_t1 = hb->lf.sensors.lf_temperature1;
-    thermocouples->n2o_tank_lf_t2 = hb->lf.sensors.lf_temperature2;
+    // ---
+    // --- thermocouple readings ---
+    // ---
+    thermocouples->n2o_tank_uf_t1   = hb->uf.sensors.uf_temperature1;
+    thermocouples->n2o_tank_uf_t2   = hb->uf.sensors.uf_temperature2;
+    thermocouples->n2o_tank_uf_t3   = hb->uf.sensors.uf_temperature3;
+    thermocouples->n2o_tank_lf_t1   = hb->lf.sensors.lf_temperature1;
+    thermocouples->n2o_tank_lf_t2   = hb->lf.sensors.lf_temperature2;
+    thermocouples->chamber_thermo   = 0; // REVIEW: MISSING FROM hydra.h
+    thermocouples->n2_line_thermo   = ZERO_IF_FS_DISABLED(hb->fs.sensors.n2_temperature);
+    thermocouples->n2o_line_thermo1 = ZERO_IF_FS_DISABLED(hb->fs.sensors.n2o_temperature1); // before solenoid
+    thermocouples->n2o_line_thermo2 = ZERO_IF_FS_DISABLED(hb->fs.sensors.n2o_temperature2); // after solenoid
 
-    thermocouples->chamber_thermo = 0; // REVIEW: MISSING FROM hydra.h
-
-    thermocouples->n2o_line_thermo1 =
-        fs_disabled ? 0 : hb->fs.sensors.n2o_temperature1; // before solenoid
-    thermocouples->n2o_line_thermo2 =
-        fs_disabled ? 0 : hb->fs.sensors.n2o_temperature2; // after solenoid
-    thermocouples->n2_line_thermo = fs_disabled ? 0 : hb->fs.sensors.n2_temperature;
-
-    // Initialize the pressures union
+    // ---
+    // --- pressure readings ---
+    // ---
+    pressures->chamber_pressure  = hb->lf.sensors.cc_pressure;
     pressures->n2o_tank_pressure = hb->lf.sensors.lf_pressure; // REVIEW: name mismatch
-    pressures->chamber_pressure = hb->lf.sensors.cc_pressure;
-
-    pressures->n2_line_pressure = fs_disabled ? 0 : hb->fs.sensors.n2_pressure;
-    pressures->n2o_line_pressure = fs_disabled ? 0 : hb->fs.sensors.n2o_pressure;
-    pressures->quick_dc_pressure = fs_disabled ? 0 : hb->fs.sensors.quick_dc_pressure;
+    pressures->n2_line_pressure  = ZERO_IF_FS_DISABLED(hb->fs.sensors.n2_pressure);
+    pressures->n2o_line_pressure = ZERO_IF_FS_DISABLED(hb->fs.sensors.n2o_pressure);
+    pressures->quick_dc_pressure = ZERO_IF_FS_DISABLED(hb->fs.sensors.quick_dc_pressure);
+    // clang-format on
 }

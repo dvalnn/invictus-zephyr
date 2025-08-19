@@ -1,5 +1,6 @@
 #include "services/modbus/lift.h"
 
+#include "zephyr/kernel.h"
 #include "zephyr/modbus/modbus.h"
 #include "zephyr/logging/log.h"
 
@@ -61,10 +62,13 @@ inline void lift_boards_irs_to_zbus_rep(const struct lift_boards *const lb,
 {
     if (!lb || !weights) {
         LOG_ERR("Invalid parameters for LIFT IRs ZBUS conversion.");
-        return;
+        k_oops(); // Should never reach here
     }
 
-    weights->n2o_loadcell = fs_disabled ? 0 : lb->fs.n2o_loadcell;
+    // clang-format off
+    #define ZERO_IF_FS_DISABLED(x) ((fs_disabled) ? 0 : (x))
+
+    weights->n2o_loadcell  = ZERO_IF_FS_DISABLED(lb->fs.n2o_loadcell);
     weights->rail_loadcell = lb->rocket.loadcells.rail;
 
     // TODO: include based on KConfig option
@@ -72,4 +76,5 @@ inline void lift_boards_irs_to_zbus_rep(const struct lift_boards *const lb,
     weights->thrust_loadcell1 = lb->rocket.loadcells.thrust_1;
     weights->thrust_loadcell2 = lb->rocket.loadcells.thrust_2;
     weights->thrust_loadcell3 = lb->rocket.loadcells.thrust_3;
+    // clang-format on
 }
