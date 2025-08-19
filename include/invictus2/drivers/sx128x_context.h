@@ -21,10 +21,11 @@ enum sx128x_sleep_status {
 };
 
 struct sx128x_context_data {
-    // const struct device *sx128x_dev;
-
     enum sx128x_sleep_status sleep_status;
     uint8_t tx_offset;
 };
+
+void sx1280x_write(uint8_t *, size_t);
+void sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t));
 
 #endif // SX128X_HAL_CONTEXT_H
