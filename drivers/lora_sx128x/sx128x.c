@@ -42,7 +42,6 @@
 #include <invictus2/drivers/sx128x_hal.h>
 #include <invictus2/drivers/sx128x_regs.h>
 #include <invictus2/drivers/sx128x.h>
-
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------

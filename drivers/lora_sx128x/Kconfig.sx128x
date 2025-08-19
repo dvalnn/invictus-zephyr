@@ -6,7 +6,7 @@
 config SEMTECH_SX128X
 	bool "Semtech SX128x family LoRa transceiver driver"
 	default y
-	depends on DT_HAS_SEMTECH_SX1280_LORA_ENABLED || DT_HAS_SEMTECH_SX1281_LORA_ENABLED
+#	depends on DT_HAS_SEMTECH_SX1280_LORA_ENABLED || DT_HAS_SEMTECH_SX1281_LORA_ENABLED
 	select SPI
 	help
 	  Enable driver for the SX128x family LoRa transceiver driver

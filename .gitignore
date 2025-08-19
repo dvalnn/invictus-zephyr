@@ -2,6 +2,7 @@
 .vscode
 *.swp
 *~
+.idea
 
 # python
 .venv
@@ -9,6 +10,7 @@
 # build
 /build*
 /twister-out*
+/compile_commands.json
 
 .cache
 __pycache__/
