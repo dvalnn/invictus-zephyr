@@ -4,12 +4,11 @@
 #include "zephyr/sys/atomic_types.h"
 #include "zephyr/zbus/zbus.h"
 
-#include "filling_sm.h"
 #include "data_models.h"
 #include "radio_commands.h"
 
 #include "services/lora.h"
-#include "services/modbus/modbus.h"
+#include "services/modbus.h"
 
 // FIXME: remove, it's just to make sure linker is working
 #include "invictus2/drivers/sx128x_hal.h"
@@ -91,9 +90,6 @@ ZBUS_CHAN_DEFINE(chan_rocket_state,     /* Channel Name */
                  ZBUS_OBSERVERS_EMPTY,  /* Observers */
                  ZBUS_MSG_INIT(0)       /* Initial Value */
 )
-
-// --- Filling FSM Config ---
-DEFAULT_FSM_CONFIG(filling_sm_config);
 
 static lora_context_t lora_context;
 

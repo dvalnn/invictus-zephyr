@@ -4,6 +4,8 @@
 #include "services/modbus/common.h"
 #include "data_models.h"
 
+#include <stdbool.h>
+
 // NOTE: Solenoids are represented as modbus coils.
 // Sensors are represented as modbus input registers.
 // Temperatures in ºC. Pressures in Bar.
@@ -121,10 +123,12 @@ void hydra_boards_init(struct hydra_boards *const hb);
  *       If the read is successful, it sets the `is_connected` flag to true.
  *       If the read fails, it sets the `is_connected` flag to false and logs a warning.
  */
-void hydra_boards_read_irs(const int client_iface, struct hydra_boards *const hb);
+
+void hydra_boards_read_irs(const int client_iface, struct hydra_boards *const hb,
+                           const bool fs_disabled);
 
 void hydra_boards_irs_to_zbus_rep(const struct hydra_boards *const hb,
                                   union thermocouples_u *const thermocouples,
-                                  union pressures_u *const pressures);
+                                  union pressures_u *const pressures, const bool fs_disabled);
 
 #endif // HYDRA_H_

@@ -117,11 +117,11 @@ static void hydra_read_ir_work_handler(struct k_work *work)
     k_work_schedule_for_queue(&modbus_work_q, &hydra_sample_work,
                               K_MSEC(CONFIG_MODBUS_HYDRA_SAMPLE_INTERVAL_MSEC));
 
-    hydra_boards_read_irs(client_iface, &hydras);
-
     union thermocouples_u temperatures = {0};
     union pressures_u pressures = {0};
-    hydra_boards_irs_to_zbus_rep(&hydras, &temperatures, &pressures);
+    hydra_boards_read_irs(client_iface, &hydras, (bool)atomic_get(&fs_disabled));
+    hydra_boards_irs_to_zbus_rep(&hydras, &temperatures, &pressures,
+                                 (bool)atomic_get(&fs_disabled));
 
     zbus_chan_pub(&chan_thermo_sensors, (const void *)&temperatures, K_NO_WAIT);
     zbus_chan_pub(&chan_pressure_sensors, (const void *)&pressures, K_NO_WAIT);
