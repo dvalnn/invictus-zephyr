@@ -5,6 +5,7 @@
 #include "zephyr/zbus/zbus.h"
 
 #include "filling_sm.h"
+#include "data_models.h"
 #include "radio_commands.h"
 
 #include "services/lora.h"
@@ -29,6 +30,9 @@
 LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 
 // --- ZBUS Channel Definitions ---
+//
+//
+// --- Sensor Channels ---
 ZBUS_CHAN_DEFINE(chan_thermo_sensors,      /* Channel Name */
                  union thermocouples_u,    /* Message Type */
                  NULL,                     /* Validator Func */
@@ -53,28 +57,39 @@ ZBUS_CHAN_DEFINE(chan_weight_sensors,      /* Channel Name */
                  ZBUS_MSG_INIT(.raw = {0}) /* Initial Value */
 )
 
-ZBUS_CHAN_DEFINE(chan_actuators,           /* Channel Name */
-                 union actuators_bitmap_u, /* Message Type */
-                 NULL,                     /* Validator Func */
-                 NULL,                     /* User Data */
-                 ZBUS_OBSERVERS_EMPTY,     /* Observers */
-                 ZBUS_MSG_INIT(.raw = 0)   /* Initial Value */
-);
-
 ZBUS_CHAN_DEFINE(chan_navigator_sensors,     /* Channel Name */
                  struct navigator_sensors_s, /* Message Type */
                  NULL,                       /* Validator Func */
                  NULL,                       /* User Data */
                  ZBUS_OBSERVERS_EMPTY,       /* Observers */
                  ZBUS_MSG_INIT(0)            /* Initial Value */
-);
+)
 
+// --- Mobdus Actuator Write Channel ---
+ZBUS_CHAN_DEFINE(chan_actuators,           /* Channel Name */
+                 union actuators_bitmap_u, /* Message Type */
+                 NULL,                     /* Validator Func */
+                 NULL,                     /* User Data */
+                 ZBUS_OBSERVERS_EMPTY,     /* Observers */
+                 ZBUS_MSG_INIT(.raw = 0)   /* Initial Value */
+)
+
+// --- Radio Commands from Ground Station ---
 ZBUS_CHAN_DEFINE(chan_radio_cmds,            /* Channel Name */
                  struct radio_generic_cmd_s, /* Message Type */
                  NULL,                       /* Validator Func */
                  NULL,                       /* User Data */
                  ZBUS_OBSERVERS_EMPTY,       /* Observers */
                  ZBUS_MSG_INIT(0)            /* Initial Value */
+)
+
+// --- Rocket State ---
+ZBUS_CHAN_DEFINE(chan_rocket_state,     /* Channel Name */
+                 struct rocket_state_s, /* Message Type */
+                 NULL,                  /* Validator Func */
+                 NULL,                  /* User Data */
+                 ZBUS_OBSERVERS_EMPTY,  /* Observers */
+                 ZBUS_MSG_INIT(0)       /* Initial Value */
 )
 
 // --- Filling FSM Config ---
