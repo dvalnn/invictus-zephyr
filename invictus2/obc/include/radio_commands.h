@@ -63,23 +63,26 @@ struct status_rep_s {
 // -----------------------------------------------------------------------------
 
 enum fill_program_e {
-    FILL_PROGRAM_NONE = 0,
-    FILL_PROGRAM_COPV = 1,
-    FILL_PROGRAM_N_PRE,
+    _FILL_PROGRAM_NONE = 0,
+
+    FILL_PROGRAM_N2 = 1,
+    FILL_PROGRAM_PRE_PRESS,
     FILL_PROGRAM_N2O,
-    FILL_PROGRAM_N_POST,
+    FILL_PROGRAM_POST_PRESS,
+
+    _FILL_PROGRAM_MAX
 };
 
-struct fill_copv_params_s {
-    uint16_t target_copv_deci_bar;
+struct fill_N2_params_s {
+    uint16_t target_N2_deci_bar;
 };
 
-struct fill_pressure_params_s {
+struct fill_press_params_s {
     uint16_t target_tank_deci_bar;
     uint16_t trigger_tank_deci_bar; // optional: set to 0xFFFF if unused
 };
 
-struct fill_n2o_extra_s {
+struct fill_N20_params_s {
     uint16_t target_weight_grams;
     int16_t trigger_temp_deci_c;
 };
@@ -90,7 +93,7 @@ struct fill_exec_s {
     uint8_t params[RADIO_CMD_PAYLOAD_BYTES - 1]; // 1 byte for program_id, rest for params
 };
 
-#define FILL_COPV_PARAM_BYTES     (sizeof(struct fill_copv_params_s))
+#define FILL_N2_PARAM_BYTES       (sizeof(struct fill_N2_params_s))
 #define FILL_PRESSURE_PARAM_BYTES (sizeof(struct fill_pressure_params_s))
 #define FILL_N2O_EXTRA_BYTES      (sizeof(struct fill_n2o_extra_s))
 
@@ -99,7 +102,8 @@ struct fill_exec_s {
 // -----------------------------------------------------------------------------
 
 enum manual_cmd_e {
-    MANUAL_CMD_NONE = 0,
+    _MANUAL_CMD_NONE = 0,
+
     MANUAL_CMD_SD_LOG_START,
     MANUAL_CMD_SD_LOG_STOP,
     MANUAL_CMD_SD_STATUS,
@@ -107,6 +111,8 @@ enum manual_cmd_e {
     MANUAL_CMD_VALVE_MS,
     MANUAL_CMD_LOADCELL_TARE,
     MANUAL_CMD_TANK_TARE,
+
+    _MANUAL_CMD_MAX
 };
 
 struct manual_valve_state_s {
@@ -145,9 +151,11 @@ struct ack_s {
 // Command IDs
 // -----------------------------------------------------------------------------
 enum radio_command_e {
-    RCMD_NONE = 0,
+    _RCMD_NONE = 0,
 
-    // No Payload Commands
+    // FROM GROUND STATION to OBC
+    //
+    // No payload data, just reserved bytes
     RCMD_STATUS_REQ = 1,
     RCMD_ABORT,
     RCMD_READY,
@@ -158,13 +166,16 @@ enum radio_command_e {
     RCMD_FILL_RESUME,
     RCMD_MANUAL_TOGGLE,
 
-    // Payload Commands
-    RCMD_STATUS_REP,
+    // Commands with payload data
     RCMD_FILL_EXEC,
     RCMD_MANUAL_EXEC,
+
+    // FROM OBC to GROUND STATION
+    //
+    RCMD_STATUS_REP,
     RCMD_ACK,
 
-    RCMD_MAX
+    _RCMD_MAX
 };
 
 // -----------------------------------------------------------------------------

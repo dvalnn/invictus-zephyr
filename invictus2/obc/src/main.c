@@ -5,6 +5,7 @@
 #include "zephyr/zbus/zbus.h"
 
 #include "data_models.h"
+#include "validators.h"
 #include "radio_commands.h"
 
 #include "services/lora.h"
@@ -77,19 +78,19 @@ ZBUS_CHAN_DEFINE(chan_actuators,           /* Channel Name */
 // --- Radio Commands from Ground Station ---
 ZBUS_CHAN_DEFINE(chan_radio_cmds,            /* Channel Name */
                  struct radio_generic_cmd_s, /* Message Type */
-                 NULL,                       /* Validator Func */
+                 radio_cmd_validator,        /* Validator Func */
                  NULL,                       /* User Data */
                  ZBUS_OBSERVERS_EMPTY,       /* Observers */
                  ZBUS_MSG_INIT(0)            /* Initial Value */
 )
 
 // --- Rocket State ---
-ZBUS_CHAN_DEFINE(chan_rocket_state,     /* Channel Name */
-                 struct rocket_state_s, /* Message Type */
-                 NULL,                  /* Validator Func */
-                 NULL,                  /* User Data */
-                 ZBUS_OBSERVERS_EMPTY,  /* Observers */
-                 ZBUS_MSG_INIT(0)       /* Initial Value */
+ZBUS_CHAN_DEFINE(chan_rocket_state,      /* Channel Name */
+                 struct rocket_state_s,  /* Message Type */
+                 rocket_state_validator, /* Validator Func */
+                 NULL,                   /* User Data */
+                 ZBUS_OBSERVERS_EMPTY,   /* Observers */
+                 ZBUS_MSG_INIT(0)        /* Initial Value */
 )
 
 static lora_context_t lora_context;
