@@ -145,18 +145,22 @@ Payload: The ID of the command received + errors during execution <!-- REVIEW --
 The Fill Exec Payload specifies which filling program to execute and its parameters. The available filling programs, based on the filling state machine, are:
 
 - **FILL_COPV**
-    Desc: Fill the COPV tank with Nitrogen
+    Desc: Open the N2 fill valve until the N2 tank (COPV) reaches the target pressure 
     Parameters:
-    - TargetCOPVP (COPV Pressure): default 200 bar
+    - TargetCopvP (COPV Pressure): default 200 bar
 
 - **FILL_N_PRE**
-    Desc: Pre-pressurize the main tank with Nitrogen
+    Desc: Open the pressurizing valve, until the N2O tank pressure reaches target pressure;
+    If for some reason the pressure exceeds the trigger value, open the vent valve until target
+    pressure is reached.
     Parameters:
     - TargetTankP (Main Tank Pressure): default 5 bar
     - TriggerTankP (Max Main Tank Pressure): default 7 bar
 
 - **FILL_N2O**
-    Desc: Fill the main tank with Nitrous Oxide
+    Desc: Open the N2O filling valve until the N2O bottle reaches the target weight (loss);
+    If the pressure exceeds the trigger value, keep filling with the vent valve open;
+    If any of the temperatures of the tank reaches below triggerTemp, keep filling with the vent valve closed.
     Parameters:
     - TargetTankP (Main Tank Pressure): default 35 bar
     - TriggerTankP (Max Main Tank Pressure): default 38 bar
@@ -164,10 +168,15 @@ The Fill Exec Payload specifies which filling program to execute and its paramet
     - TriggerTemp (Min Main Tank Temperature): default 2 ºC
 
 - **FILL_N_POST**
-    Desc: Post-pressurize the main tank with Nitrogen
+    Desc: Same procedure as pre pressurizing, but with different default values.
     Parameters:
     - TargetTankP (Main Tank Pressure): default 50 bar
     - TriggerTankP (Max Main Tank Pressure): default 55 bar (optional)
+
+### Custom Parameters
+The programs have default parameters, but you can set your own OTA.
+The meaning of each parameter is explained [here](#fill-exec-payload)
+
 
 ### Manual Commands
 **SD_LOG_START**
