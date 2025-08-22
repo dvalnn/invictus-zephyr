@@ -9,6 +9,7 @@
 #include "zephyr/kernel.h"
 #include "zephyr/zbus/zbus.h"
 #include <stdint.h>
+#include <string.h>
 
 LOG_MODULE_REGISTER(lora_thread, LOG_LEVEL_DBG);
 ZBUS_CHAN_DECLARE(lora_cmd_chan);
@@ -29,10 +30,23 @@ static void lora_on_recv_data(uint8_t *payload, uint16_t size)
 bool lora_service_setup(lora_context_t *context)
 {
     LOG_INF("Setting up LoRa thread...");
-    ctx = context;
 
+    if (context == NULL)
+    {
+        LOG_ERR("Invalid context object");
+        return false;
+    }
+
+    if (context->stop_signal == NULL)
+    {
+        LOG_ERR("Invalid stop source");
+        return false;
+    }
+
+    ctx = context;
     const struct device *dev = DEVICE_DT_GET(DT_ALIAS(lora0));
-    if (dev == NULL) {
+    if (dev == NULL)
+    {
         LOG_ERR("failed to find loRa device");
         return false;
     }
@@ -41,6 +55,7 @@ bool lora_service_setup(lora_context_t *context)
     ring_buf_init(&ctx->rx_rb, sizeof(lora_rx_buffer), lora_rx_buffer);
 
     sx128x_register_recv_callback(&lora_on_recv_data);
+    LOG_INF("initialized loRa service thread");
     return true;
 }
 
@@ -50,20 +65,25 @@ void lora_thread_entry(void *p1, void *p2, void *p3)
     ARG_UNUSED(p2);
     ARG_UNUSED(p3);
 
-    if (ctx == NULL) {
+    if (ctx == NULL)
+    {
         LOG_ERR("Lora service has not been properly configured");
         return;
     }
 
     LOG_INF("LoRa thread starting");
     const uint32_t c_sleep_time_ms = 80;
-    while (*ctx->stop_signal != 1) {
+    while (*ctx->stop_signal != 1)
+    {
         LOG_INF("LoRa thread");
 
         // handle lora reception
-        if (k_sem_take(&ctx->data_available, K_MSEC(c_sleep_time_ms)) == 0) {
+        if (k_sem_take(&ctx->data_available, K_MSEC(c_sleep_time_ms)) == 0)
+        {
             LOG_INF("read %u bytes", ctx->rx_size);
-        } else {
+        }
+        else
+        {
             LOG_DBG("LoRa timeout");
         }
 
