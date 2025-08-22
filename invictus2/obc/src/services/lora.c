@@ -32,6 +32,19 @@ static void lora_on_recv_data(uint8_t *payload, uint16_t size)
 bool lora_service_setup(lora_context_t *context)
 {
     LOG_INF("Setting up LoRa thread...");
+
+    if (context == NULL)
+    {
+        LOG_ERR("Invalid context object");
+        return false;
+    }
+
+    if (context->stop_signal == NULL)
+    {
+        LOG_ERR("Invalid stop source");
+        return false;
+    }
+
     ctx = context;
 
     const struct device *dev = DEVICE_DT_GET(DT_ALIAS(lora0));
@@ -45,6 +58,7 @@ bool lora_service_setup(lora_context_t *context)
     ring_buf_init(&ctx->rx_rb, sizeof(lora_rx_buffer), lora_rx_buffer);
 
     sx128x_register_recv_callback(&lora_on_recv_data);
+    LOG_INF("initialized loRa service thread");
     return true;
 }
 
