@@ -17,7 +17,7 @@
         if (cmd->header.packet_version != SUPPORTED_PACKET_VERSION) {                         \
             return PACK_ERROR_UNSUPPORTED_VERSION;                                            \
         }                                                                                     \
-        if (cmd->header.command_id <= RCMD_NONE || cmd->header.command_id >= RCMD_MAX) {      \
+    if (cmd->header.command_id <= _RCMD_NONE || cmd->header.command_id >= _RCMD_MAX) {    \
             return PACK_ERROR_INVALID_CMD_ID;                                                 \
         }                                                                                     \
     } while (0)

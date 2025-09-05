@@ -662,7 +662,7 @@ static const struct smf_state filling_states[] = {
 
     [RS_FILL_POST_PRESS]         = SMF_CREATE_STATE(NULL, post_press_run, NULL, &filling_states[RS_FILL_ROOT], &filling_states[RS_FILL_POST_PRESS_IDLE]),
     [RS_FILL_POST_PRESS_IDLE]    = SMF_CREATE_STATE(post_press_idle_entry, post_press_idle_run, NULL, &filling_states[RS_FILL_POST_PRESS], NULL),
-    [RS_FILL_POST_PRESS_VENT]    = SMF_CREATE_STATE(post_press_vent_entry, post_press_vent_runt, NULL, &filling_states[RS_FILL_POST_PRESS], NULL),
+    [RS_FILL_POST_PRESS_VENT]    = SMF_CREATE_STATE(post_press_vent_entry, post_press_vent_run, NULL, &filling_states[RS_FILL_POST_PRESS], NULL),
     [RS_FILL_POST_PRESS_FILL_N2] = SMF_CREATE_STATE(post_press_fill_entry, post_press_fill_run, NULL, &filling_states[RS_FILL_POST_PRESS], NULL),
     // clang-format on
 };
