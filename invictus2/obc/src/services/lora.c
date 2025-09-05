@@ -30,12 +30,13 @@ static void lora_on_recv_data(uint8_t *payload, uint16_t size)
 
 bool lora_service_setup(lora_context_t *context)
 {
+    LOG_INF("Setting up LoRa thread...");
     #if CONFIG_LORA_REDIRECT_UART
+        LOG_INF("Setting up fake LoRa backend (UART)...");
         return fake_lora_setup();
     #else
-        LOG_INF("Setting up LoRa thread...");
+        LOG_INF("Setting up real LoRa backend (SX128x)...");
         ctx = context;
-
         const struct device *dev = DEVICE_DT_GET(DT_ALIAS(lora0));
         if (dev == NULL) {
             LOG_ERR("failed to find loRa device");
@@ -48,6 +49,7 @@ bool lora_service_setup(lora_context_t *context)
         sx128x_register_recv_callback(&lora_on_recv_data);
         return true;
     #endif
+    return true;
 }
 
 void lora_thread_entry(void *p1, void *p2, void *p3)
@@ -56,9 +58,11 @@ void lora_thread_entry(void *p1, void *p2, void *p3)
     ARG_UNUSED(p2);
     ARG_UNUSED(p3);
 
-    #if CONFIG_LORA_REDIRECT_UART==1
+    #if CONFIG_LORA_REDIRECT_UART
         LOG_INF("Starting fake LoRa backend (UART)...");
         fake_lora_backend();
+
+        LOG_INF("Fake LoRa backend (UART) exiting.");
     #else
         if (ctx == NULL) {
             LOG_ERR("Lora service has not been properly configured");
