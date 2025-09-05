@@ -608,7 +608,7 @@ static void post_press_vent_entry(void *o)
     s->valve_states.vent = 1;
 }
 
-static void post_press_vent_runt(void *o)
+static void post_press_vent_run(void *o)
 {
     struct filling_sm_object *s = (struct filling_sm_object *)o;
     LOG_DBG("Running RS_FILL_POST_PRESS_VENT state");
