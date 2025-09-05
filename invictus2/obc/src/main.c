@@ -129,14 +129,15 @@ bool setup_services(atomic_t *stop_signal)
         return false;
     }
 
-    
+    /*
     // Initialize the modbus thread
     LOG_INF("  * modbus...");
     if (!modbus_service_setup()) {
         LOG_ERR("Modbus RTU master setup failed");
         return false;
     }
-    
+    */
+
     LOG_INF("  * lora...");
     if (!lora_service_setup(&lora_context)) {
         LOG_ERR("LoRa thread setup failed");
@@ -158,8 +159,8 @@ int main(void)
     }
 
     rocket_state_service_start();
-    modbus_service_start();
-    //lora_service_start();
+    //modbus_service_start();
+    lora_service_start();
 
     LOG_INF("Services started. Sleeping main thread.");
    

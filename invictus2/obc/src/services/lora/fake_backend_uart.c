@@ -22,20 +22,34 @@ static void serial_cb(const struct device *dev, void *user_data)
         return;
     }
 
-    //k_sleep(K_MSEC(1)); // debounce
-    LOG_INF("UART interrupt received, d=%d", d++);
+    //k_sleep(K_MSEC(8)); // debounce
+    //LOG_INF("UART interrupt received, d=%d", d++);
     uint8_t c;
 
 	if (!uart_irq_update(uart_dev)) {
 		return;
 	}
 
-	if (!uart_irq_rx_ready(uart_dev)) {
+    //LOG_INF("UART IRQ updated");
+
+	int ret = uart_irq_rx_ready(uart_dev);
+    if (ret <= 0) {
+		if (ret == -ENOTSUP) {
+			LOG_ERR("API not enabled\n");
+		} else if (ret == -ENOSYS) {
+			LOG_ERR("function not implemented\n");
+		} else {
+			// LOG_INF("Rx not ready: %d\n", ret);
+		}
 		return;
 	}
 
+
+    LOG_INF("UART RX ready");
+
 	// read until FIFO empty 
 	while (uart_fifo_read(uart_dev, &c, 1) == 1) {
+        LOG_INF("UART RX read char: %c (0x%02x)", c, c);
 		if ((c == '\n' || c == '\r') && rx_buf_pos > 0) {
 			// terminate string 
 			rx_buf[rx_buf_pos] = '\0';
@@ -77,8 +91,6 @@ bool fake_lora_setup(void)
 	}
     LOG_INF("UART device is ready: %s", uart_dev->name);
 
-    serial_cb(NULL, NULL); // just to test if callback works
-
 	/* configure interrupt and callback to receive data */
 	int ret = uart_irq_callback_user_data_set(uart_dev, serial_cb, NULL);
     LOG_INF("UART callback set");
@@ -100,8 +112,6 @@ void fake_lora_backend()
 {
     LOG_INF("Fake LoRa backend (UART) started");
     uart_irq_rx_enable(uart_dev);
-	print_uart("Hello! I'm your echo bot.\r\n");
-	print_uart("Tell me something and press enter:\r\n");
 
 	// indefinitely wait for input from the user 
 	while (k_msgq_get(&uart_msgq, &rx_buf, K_FOREVER) == 0) {
