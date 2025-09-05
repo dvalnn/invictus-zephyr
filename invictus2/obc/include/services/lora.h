@@ -6,11 +6,6 @@
 #include "zephyr/kernel.h"
 #include "zephyr/sys/atomic_types.h"
 
-// Set to use production backend
-#define CONFIG_LORA_BACKEND       1
-// Set to use backend for testing
-#define CONFIG_LORA_REDIRECT_UART 0
-
 typedef struct lora_context {
     atomic_t *stop_signal;
     // Signal from lora device

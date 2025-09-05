@@ -28,20 +28,24 @@ static void lora_on_recv_data(uint8_t *payload, uint16_t size)
 
 bool lora_service_setup(lora_context_t *context)
 {
-    LOG_INF("Setting up LoRa thread...");
-    ctx = context;
+    #if CONFIG_LORA_REDIRECT_UART==1
+        return fake_lora_setup();
+    #else
+        LOG_INF("Setting up LoRa thread...");
+        ctx = context;
 
-    const struct device *dev = DEVICE_DT_GET(DT_ALIAS(lora0));
-    if (dev == NULL) {
-        LOG_ERR("failed to find loRa device");
-        return false;
-    }
+        const struct device *dev = DEVICE_DT_GET(DT_ALIAS(lora0));
+        if (dev == NULL) {
+            LOG_ERR("failed to find loRa device");
+            return false;
+        }
 
-    k_sem_init(&ctx->data_available, 0, 1);
-    ring_buf_init(&ctx->rx_rb, sizeof(lora_rx_buffer), lora_rx_buffer);
+        k_sem_init(&ctx->data_available, 0, 1);
+        ring_buf_init(&ctx->rx_rb, sizeof(lora_rx_buffer), lora_rx_buffer);
 
-    sx128x_register_recv_callback(&lora_on_recv_data);
-    return true;
+        sx128x_register_recv_callback(&lora_on_recv_data);
+        return true;
+    #endif
 }
 
 void lora_thread_entry(void *p1, void *p2, void *p3)
@@ -55,25 +59,29 @@ void lora_thread_entry(void *p1, void *p2, void *p3)
         return;
     }
 
-    LOG_INF("LoRa thread starting");
-    const uint32_t c_sleep_time_ms = 80;
-    while (*ctx->stop_signal != 1) {
-        LOG_INF("LoRa thread");
+    #if CONFIG_LORA_REDIRECT_UART==1
+        fake_lora_backend();
+    #else
+        LOG_INF("LoRa thread starting");
+        const uint32_t c_sleep_time_ms = 80;
+        while (*ctx->stop_signal != 1) {
+            LOG_INF("LoRa thread");
 
-        // handle lora reception
-        if (k_sem_take(&ctx->data_available, K_MSEC(c_sleep_time_ms)) == 0) {
-            LOG_INF("read %u bytes", ctx->rx_size);
-        } else {
-            LOG_DBG("LoRa timeout");
+            // handle lora reception
+            if (k_sem_take(&ctx->data_available, K_MSEC(c_sleep_time_ms)) == 0) {
+                LOG_INF("read %u bytes", ctx->rx_size);
+            } else {
+                LOG_DBG("LoRa timeout");
+            }
+
+            // handle zbus reception
+
+            // TODO sleep only difference
+            k_sleep(K_MSEC(c_sleep_time_ms));
         }
 
-        // handle zbus reception
-
-        // TODO sleep only difference
-        k_sleep(K_MSEC(c_sleep_time_ms));
-    }
-
-    LOG_INF("LoRa thread exiting.");
+        LOG_INF("LoRa thread exiting.");
+    #endif
 }
 
 #define LORA_THREAD_PRIO 5               // TODO: make KConfig

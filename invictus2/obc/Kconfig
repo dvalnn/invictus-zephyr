@@ -5,6 +5,7 @@ config LORA_REDIRECT_UART
     help
       This option enables a specific UART shell for interacting with the LoRa module.
       It is useful for debugging and direct control of the LoRa functions via a terminal.
+    default 1
 
 config MODBUS_HYDRA_UF_SLAVE_ID
     int "Modbus slave address for the Upper Feed HYDRA"

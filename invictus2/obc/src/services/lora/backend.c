@@ -1,13 +1,10 @@
 #include "services/lora.h"
-
-#if CONFIG_LORA_BACKEND
-
 #include "zephyr/logging/log.h"
 #include "zephyr/kernel.h"
 
 LOG_MODULE_REGISTER(lora_backend, LOG_LEVEL_DBG);
 
-bool lora_setup(void)
+bool lora_setup(lora_context_t *context)
 {
   return true;
 }
@@ -25,4 +22,3 @@ void lora_backend(void)
     LOG_INF("LoRa thread exiting.");
 }
 
-#endif /* ifdef CONFIG_LORA_BACKEND */
