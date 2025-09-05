@@ -13,9 +13,8 @@
 LOG_MODULE_REGISTER(lora_thread, LOG_LEVEL_DBG);
 ZBUS_CHAN_DECLARE(lora_cmd_chan);
 
-static lora_context_t *ctx = NULL;
-
 #if !CONFIG_LORA_REDIRECT_UART
+static lora_context_t *ctx = NULL;
 // TODO fine tune size
 static uint8_t lora_rx_buffer[253 * 5];
 
@@ -57,14 +56,14 @@ void lora_thread_entry(void *p1, void *p2, void *p3)
     ARG_UNUSED(p2);
     ARG_UNUSED(p3);
 
-    if (ctx == NULL) {
-        LOG_ERR("Lora service has not been properly configured");
-        return;
-    }
-
     #if CONFIG_LORA_REDIRECT_UART==1
+        LOG_INF("Starting fake LoRa backend (UART)...");
         fake_lora_backend();
     #else
+        if (ctx == NULL) {
+            LOG_ERR("Lora service has not been properly configured");
+            return;
+        }
         LOG_INF("LoRa thread starting");
         const uint32_t c_sleep_time_ms = 80;
         while (*ctx->stop_signal != 1) {

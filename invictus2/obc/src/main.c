@@ -12,6 +12,9 @@
 #include "services/modbus.h"
 #include "services/rocket_state.h"
 
+// FIXME: remove, testing uart
+#include "zephyr/drivers/uart.h"
+
 // FIXME: remove, it's just to make sure linker is working
 #include "invictus2/drivers/sx128x_hal.h"
 
