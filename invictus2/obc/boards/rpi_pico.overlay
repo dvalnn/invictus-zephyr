@@ -5,3 +5,15 @@
        };
        status = "okay";
 };
+
+/ {
+       sx128x: sx128x {
+              compatible = "zephyr,fake-sx128x";
+              status = "okay";
+              size = <DT_SIZE_K(8)>;
+       };
+
+       aliases {
+              lora0 = &sx128x;
+       };
+};
