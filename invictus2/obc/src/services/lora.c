@@ -1,6 +1,6 @@
 #include "services/lora.h"
+#include "services/fake_lora.h"
 #include "invictus2/drivers/sx128x_context.h"
-
 #include "syscalls/kernel.h"
 #include "zephyr/kernel/thread_stack.h"
 #include "zephyr/logging/log.h"
@@ -14,6 +14,8 @@ LOG_MODULE_REGISTER(lora_thread, LOG_LEVEL_DBG);
 ZBUS_CHAN_DECLARE(lora_cmd_chan);
 
 static lora_context_t *ctx = NULL;
+
+#if !CONFIG_LORA_REDIRECT_UART
 // TODO fine tune size
 static uint8_t lora_rx_buffer[253 * 5];
 
@@ -25,10 +27,11 @@ static void lora_on_recv_data(uint8_t *payload, uint16_t size)
     // 2. trigger semaphore
     k_sem_give(&ctx->data_available);
 }
+#endif
 
 bool lora_service_setup(lora_context_t *context)
 {
-    #if CONFIG_LORA_REDIRECT_UART==1
+    #if CONFIG_LORA_REDIRECT_UART
         return fake_lora_setup();
     #else
         LOG_INF("Setting up LoRa thread...");
