@@ -157,7 +157,7 @@ static void radio_cmd_work_handler(struct k_work *work)
 static void rocket_state_work_handler(struct k_work *work)
 {
     struct rocket_state_s state = {0};
-    zbus_chan_read(&chan_radio_cmds, &state, K_NO_WAIT); // REVIEW: consider const msg ref
+    zbus_chan_read(&chan_rocket_state, &state, K_NO_WAIT); // REVIEW: consider const msg ref
     if ((enum rocket_state_e)state.major == ROCKET_STATE_ARMED) {
         LOG_INF("Rocket is ARMED, disabling filling station reads.");
         atomic_set(&fs_disabled, true);
