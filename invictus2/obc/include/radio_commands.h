@@ -2,9 +2,12 @@
 #define RADIO_COMMANDS_H_
 
 #include "zephyr/toolchain.h"
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+
+#include "data_models.h"
 
 // REVIEW: make this KConfig param?
 #define SUPPORTED_PACKET_VERSION 1
@@ -39,118 +42,20 @@ struct radio_generic_cmd_s {
 // STATUS_REP payload layout
 // -----------------------------------------------------------------------------
 
-// Actuators bitfield definition (13 bits -> store in 2 bytes)
-union actuators_bitmap_u {
-    struct {
-        // Rocket valves
-        uint16_t v_pressurizing: 1;
-        uint16_t v_venting: 1;
-        uint16_t v_abort: 1;
-        uint16_t v_main: 1;
-
-        // Filling station valves
-        uint16_t v_n2o_fill: 1;
-        uint16_t v_n2o_purge: 1;
-        uint16_t v_n2_fill: 1;
-        uint16_t v_n2_purge: 1;
-
-        // E-matches: ignition, drogue, main chute (3 bits)
-        uint16_t ematch_ignition: 1;
-        uint16_t ematch_drogue: 1;
-        uint16_t ematch_main: 1;
-
-        // Filling station Quick Release
-        //  NOTE : After launch these should be interpreted
-        //       as reserved bits as their state is no longer
-        //       relevant.
-        uint16_t v_n2o_quick_dc: 1;
-        uint16_t v_n2_quick_dc: 1;
-
-        // remaining bits reserved for alignment
-        uint16_t reserved: 3;
-    };
-    uint16_t raw;
-};
-
-struct navigator_sensors_s {
-    uint32_t gps_latitude_u32;  // reinterpret-casted float bits
-    uint32_t gps_longitude_u32; // reinterpret-casted float bits
-    uint16_t gps_altitude;      // altitude in meters
-    uint16_t gps_hspeed;        // horizontal speed (units TBD)
-    uint8_t gps_sats;           // gps number of satelites
-    uint8_t _reserved;          // extra byte for alignment
-
-    // NAV Sensors:
-    uint16_t baro_altitude[2]; // Bar Altitude
-    int16_t mag[3];            // Mag XYZ
-    int16_t imu_gyr[3];        // IMU Gyr XYZ
-    int16_t imu_accel[3];      // IMU Accel XYZ sensors/samples
-
-    // Kalman NAV (16 bytes total): vel_z, accel_z, alt, max_alt (each int16),
-    // then 4 quaternions as int16 each
-    int16_t kalman_vel_z;
-    int16_t kalman_accel_z;
-    int16_t kalman_alt;
-    int16_t kalman_max_alt;
-    int16_t kalman_quat[4];
-};
-
-union thermocouples_u {
-    struct {
-        int16_t n2o_tank_uf_t1;
-        int16_t n2o_tank_uf_t2;
-        int16_t n2o_tank_uf_t3;
-        int16_t n2o_tank_lf_t1;
-        int16_t n2o_tank_lf_t2;
-        int16_t chamber_thermo;
-        int16_t n2o_line_thermo1; // before and after solenoids
-        int16_t n2o_line_thermo2;
-        int16_t n2_line_thermo;
-    };
-    int16_t raw[8];
-};
-
-union pressures_u {
-    struct {
-        uint16_t n2o_tank_pressure;
-        uint16_t chamber_pressure;
-        uint16_t n2o_line_pressure;
-        uint16_t n2_line_pressure;
-        uint16_t quick_dc_pressure;
-    };
-    uint16_t raw[6];
-};
-
-union loadcell_weights_u {
-    struct {
-        uint16_t n2o_loadcell;  // N2O bottle loadcell
-        uint16_t rail_loadcell; // Only used during competition to measure rocket weight
-
-        // Loadcells for static tests
-        uint16_t thrust_loadcell1;
-        uint16_t thrust_loadcell2;
-        uint16_t thrust_loadcell3;
-    };
-    uint16_t raw[5];
-};
-
-// FIXME: 1 loadcell was added. Check if alignment is still correct.
-// NOTE: Alignment was manually checked. It might be usable cross-platform even without
-//       compiler-specific attributes, as long as the fields are defined in the same order
-//       and sizes are consistent across platforms.
+// NOTE: Alignment needs to be kept in mind.
+//       It might be usable cross-platform even without compiler-specific attributes, as long
+//       as the fields are defined in the same order and sizes are consistent across platforms.
 //
 //       For our use case, however, both the sender and receiver are the same platform
 //       and compiler, so we can safely use memcpy to serialize and deserialize.
 //
-// NOTE:                                                 byte alignments
-struct status_rep_s {                     // byte block | 2 byte block | 4 byte block |
-    uint8_t rocket_state;                 //     1      |      0.5     |     0.25     |
-    uint8_t rocket_substate;              //     2      |       1      |     0.50     |
-    union pressures_u pressures;          //     14     |       7      |     3.50     |
-    union thermocouples_u thermocouples;  //     30     |       15     |     7.50     |
-    union actuators_bitmap_u actuators;   //     32     |       16     |     8.00     |
-    union loadcell_weights_u loadcells;   //     40     |       20     |     10.0     |
-    struct navigator_sensors_s navigator; //     92     |       46     |     23.0     |
+struct status_rep_s {
+    struct rocket_state_s rocket_state;
+    union pressures_u pressures;
+    union thermocouples_u thermocouples;
+    union actuators_bitmap_u actuators;
+    union loadcell_weights_u loadcells;
+    struct navigator_sensors_s navigator;
 };
 
 // -----------------------------------------------------------------------------
@@ -158,23 +63,26 @@ struct status_rep_s {                     // byte block | 2 byte block | 4 byte 
 // -----------------------------------------------------------------------------
 
 enum fill_program_e {
-    FILL_PROGRAM_NONE = 0,
-    FILL_PROGRAM_COPV = 1,
-    FILL_PROGRAM_N_PRE,
+    _FILL_PROGRAM_NONE = 0,
+
+    FILL_PROGRAM_N2 = 1,
+    FILL_PROGRAM_PRE_PRESS,
     FILL_PROGRAM_N2O,
-    FILL_PROGRAM_N_POST,
+    FILL_PROGRAM_POST_PRESS,
+
+    _FILL_PROGRAM_MAX
 };
 
-struct fill_copv_params_s {
-    uint16_t target_copv_deci_bar;
+struct fill_N2_params_s {
+    uint16_t target_N2_deci_bar;
 };
 
-struct fill_pressure_params_s {
+struct fill_press_params_s {
     uint16_t target_tank_deci_bar;
     uint16_t trigger_tank_deci_bar; // optional: set to 0xFFFF if unused
 };
 
-struct fill_n2o_extra_s {
+struct fill_N20_params_s {
     uint16_t target_weight_grams;
     int16_t trigger_temp_deci_c;
 };
@@ -185,7 +93,7 @@ struct fill_exec_s {
     uint8_t params[RADIO_CMD_PAYLOAD_BYTES - 1]; // 1 byte for program_id, rest for params
 };
 
-#define FILL_COPV_PARAM_BYTES     (sizeof(struct fill_copv_params_s))
+#define FILL_N2_PARAM_BYTES       (sizeof(struct fill_N2_params_s))
 #define FILL_PRESSURE_PARAM_BYTES (sizeof(struct fill_pressure_params_s))
 #define FILL_N2O_EXTRA_BYTES      (sizeof(struct fill_n2o_extra_s))
 
@@ -194,7 +102,8 @@ struct fill_exec_s {
 // -----------------------------------------------------------------------------
 
 enum manual_cmd_e {
-    MANUAL_CMD_NONE = 0,
+    _MANUAL_CMD_NONE = 0,
+
     MANUAL_CMD_SD_LOG_START,
     MANUAL_CMD_SD_LOG_STOP,
     MANUAL_CMD_SD_STATUS,
@@ -202,6 +111,8 @@ enum manual_cmd_e {
     MANUAL_CMD_VALVE_MS,
     MANUAL_CMD_LOADCELL_TARE,
     MANUAL_CMD_TANK_TARE,
+
+    _MANUAL_CMD_MAX
 };
 
 struct manual_valve_state_s {
@@ -240,9 +151,11 @@ struct ack_s {
 // Command IDs
 // -----------------------------------------------------------------------------
 enum radio_command_e {
-    RCMD_NONE = 0,
+    _RCMD_NONE = 0,
 
-    // No Payload Commands
+    // FROM GROUND STATION to OBC
+    //
+    // No payload data, just reserved bytes
     RCMD_STATUS_REQ = 1,
     RCMD_ABORT,
     RCMD_READY,
@@ -253,13 +166,16 @@ enum radio_command_e {
     RCMD_FILL_RESUME,
     RCMD_MANUAL_TOGGLE,
 
-    // Payload Commands
-    RCMD_STATUS_REP,
+    // Commands with payload data
     RCMD_FILL_EXEC,
     RCMD_MANUAL_EXEC,
+
+    // FROM OBC to GROUND STATION
+    //
+    RCMD_STATUS_REP,
     RCMD_ACK,
 
-    RCMD_MAX
+    _RCMD_MAX
 };
 
 // -----------------------------------------------------------------------------

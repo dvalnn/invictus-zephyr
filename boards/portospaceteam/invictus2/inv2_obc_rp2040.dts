@@ -19,6 +19,7 @@
 / {
     aliases {
         led0 = &led_green_0;
+        lora0 = &smt_radio;
     };
 
     // special node to handle simple bindings

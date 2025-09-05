@@ -1,8 +1,10 @@
 #ifndef LIFT_H_
 #define LIFT_H_
 
-#include "services/modbus/internal/common.h"
-#include "radio_commands.h"
+#include "services/modbus/common.h"
+#include "data_models.h"
+
+#include <stdbool.h>
 
 // NOTE: E-Matches are represented as modbus coils.
 // Load Cells are represented as modbus input registers.
@@ -71,9 +73,11 @@ void lift_boards_init(struct lift_boards *const lb);
  *       If the read is successful, it sets the `is_connected` flag to true.
  *       If the read fails, it sets the `is_connected` flag to false and logs a warning.
  */
-void lift_boards_read_irs(const int client_iface, struct lift_boards *const lb);
+void lift_boards_read_irs(const int client_iface, struct lift_boards *const lb,
+                          const bool fs_disconnected);
 
 void lift_boards_irs_to_zbus_rep(const struct lift_boards *const lb,
-                                 union loadcell_weights_u *const weights);
+                                 union loadcell_weights_u *const weights,
+                                 const bool fs_disabled);
 
 #endif // LIFT_H_
