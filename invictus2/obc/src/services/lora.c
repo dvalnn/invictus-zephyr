@@ -76,7 +76,6 @@ void lora_handle_incoming_packet()
         return;
     }
 
-    int number_of_packets_read = 0;
     // radio command unpack util buffer empty
     /* const struct fill_N2_params_s *const params = */
     /*     (const struct fill_N2_params_s *const)cmd->payload.params; */
@@ -116,6 +115,8 @@ void lora_thread_entry(void *p1, void *p2, void *p3)
         k_sleep(K_MSEC(c_sleep_time_ms));
     }
 
+    // unregister callback
+    sx128x_register_recv_callback(NULL);
     LOG_INF("LoRa thread exiting.");
 }
 
