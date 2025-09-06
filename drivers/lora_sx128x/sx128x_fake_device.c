@@ -32,7 +32,7 @@ bool fake_sx128x_is_rx_callback_set()
     return dev_data.rx_callback != NULL;
 }
 
-void fake_sx128x_rf_reception(const uint8_t *bfr, const size_t size)
+void fake_sx128x_rf_reception(uint8_t *bfr, size_t size)
 {
     if (dev_data.rx_callback == NULL)
     {
