@@ -38,3 +38,14 @@ For example:
 When building, west will automatically detect and merge available overlays and config fragments.
 If west is not automatically picking up the necessary files, check the zephyr documentation for the correct board name.
 Board names and tags can be found under https://docs.zephyrproject.org/latest/boards/index.html#
+
+## Run tests
+
+To run unit or integration tests do the following for within the invictus' project root
+
+    ../zephyr/scripts/twister -W -T invictus2/obc/tests/<TEST_NAME>
+
+e.g.
+
+
+    ../zephyr/scripts/twister -W -T invictus2/obc/tests/lora
