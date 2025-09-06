@@ -20,6 +20,7 @@
     aliases {
         led0 = &led_green_0;
         lora0 = &smt_radio;
+        modbus-rtu = &modbus_uart;
     };
 
     // special node to handle simple bindings
@@ -93,7 +94,7 @@
 	pinctrl-0 = <&uart_rs485>;
 	pinctrl-names = "default";
 
-    modbus0{
+    modbus_uart: modbus0{
         compatible = "zephyr,modbus-serial";
         status = "okay";
         de-gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;

@@ -14,7 +14,6 @@
 #include "services/modbus.h"
 #include "services/rocket_state.h"
 
-
 /* The devicetree node identifier for the "led0" alias. */
 #define LED0_NODE DT_ALIAS(led0)
 
@@ -113,13 +112,13 @@ int ret;
 bool setup_services(atomic_t *stop_signal)
 {
     if (!gpio_is_ready_dt(&led)) {
-		return 0;
-	}
+        return 0;
+    }
 
-	ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
-	if (ret < 0) {
-		return 0;
-	}
+    ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
+    if (ret < 0) {
+        return 0;
+    }
     LOG_INF("Setting up threads...");
     lora_context.stop_signal = stop_signal;
 
@@ -129,14 +128,12 @@ bool setup_services(atomic_t *stop_signal)
         return false;
     }
 
-    /*
-    // Initialize the modbus thread
-    LOG_INF("  * modbus...");
-    if (!modbus_service_setup()) {
-        LOG_ERR("Modbus RTU master setup failed");
-        return false;
-    }
-    */
+    /* Initialize the modbus thread */
+    /* LOG_INF("  * modbus..."); */
+    /* if (!modbus_service_setup()) { */
+    /*     LOG_ERR("Modbus RTU master setup failed"); */
+    /*     return false; */
+    /* } */
 
     LOG_INF("  * lora...");
     if (!lora_service_setup(&lora_context)) {
@@ -159,17 +156,17 @@ int main(void)
     }
 
     rocket_state_service_start();
-    //modbus_service_start();
+    /* modbus_service_start(); */
     lora_service_start();
 
     LOG_INF("Services started. Sleeping main thread.");
-   
-    while(1) {
+
+    while (1) {
         ret = gpio_pin_toggle_dt(&led);
-		if (ret < 0) {
-			return 0;
-		}
-		k_sleep(K_MSEC(1000));
+        if (ret < 0) {
+            return 0;
+        }
+        k_sleep(K_MSEC(1000));
     }
     k_sleep(K_FOREVER);
 

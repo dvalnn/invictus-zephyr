@@ -91,8 +91,8 @@ class OBCMonitorTUI:
 
         # Calculate visible lines for each panel
         term_height = self.console.size.height
-        log_lines = max(int((term_height) * 0.80), 10)
-        uart_lines = max(int(term_height * 0.65), 15)
+        log_lines = max(int(term_height * 0.80), 10)
+        uart_lines = max(int(term_height * 0.65), 10)
 
         # Command log panel
         command_text = Text()

@@ -9,6 +9,8 @@
 #include "zephyr/modbus/modbus.h"
 #include "zephyr/zbus/zbus.h"
 
+#define MODBUS_NODE DT_ALIAS(modbus_rtu)
+
 #if DT_NODE_HAS_COMPAT(DT_PARENT(MODBUS_NODE), zephyr_cdc_acm_uart)
 #include "zephyr/usb/usb_device.h"
 #endif
@@ -74,8 +76,6 @@ static void modbus_listener_cb(const struct zbus_channel *chan)
     }
 }
 
-#define MODBUS_NODE DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_modbus_serial)
-
 const static struct modbus_iface_param client_param = {
     .mode = MODBUS_MODE_RTU,
     .rx_timeout = 50000, // TODO Make KCONFIG
@@ -91,6 +91,9 @@ const static struct modbus_iface_param client_param = {
 bool modbus_service_setup(void)
 {
 #if DT_NODE_HAS_COMPAT(DT_PARENT(MODBUS_NODE), zephyr_cdc_acm_uart)
+    LOG_INF("Waiting for Modbus RTU Master connection on %s...",
+            DEVICE_DT_NAME(DT_PARENT(MODBUS_NODE)));
+
     const struct device *const dev = DEVICE_DT_GET(DT_PARENT(MODBUS_NODE));
     uint32_t dtr = 0;
 
