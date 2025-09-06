@@ -16,7 +16,8 @@ LOG_MODULE_REGISTER(sx128x_device, CONFIG_LORA_SX128X_LOG_LEVEL);
 
 #define DT_DRV_COMPAT zephyr_fake_sx128x
 
-static struct sx1280_data {
+static struct sx1280_data
+{
     const struct device *dev;
     void (*rx_callback)(uint8_t *, uint16_t);
 } dev_data;
@@ -29,6 +30,18 @@ const struct device *fake_sx128x_get_device()
 bool fake_sx128x_is_rx_callback_set()
 {
     return dev_data.rx_callback != NULL;
+}
+
+void fake_sx128x_rf_reception(const uint8_t *bfr, const size_t size)
+{
+    if (dev_data.rx_callback == NULL)
+    {
+        LOG_WRN("No callback defined");
+        return;
+    }
+
+    LOG_DBG("Calling reception callback");
+    dev_data.rx_callback(bfr, size);
 }
 
 static int sx128x_init(const struct device *dev)

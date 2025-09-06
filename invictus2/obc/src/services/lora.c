@@ -1,5 +1,7 @@
+#include "radio_commands.h"
 #include "services/lora.h"
 #include "invictus2/drivers/sx128x_context.h"
+#include "radio_commands.h"
 
 #include "syscalls/kernel.h"
 #include "zephyr/kernel/thread_stack.h"
@@ -21,6 +23,7 @@ static void lora_on_recv_data(uint8_t *payload, uint16_t size)
 {
     // 1. copy payload to ringbuffer
     ctx->rx_size = ring_buf_get_claim(&ctx->rx_rb, &payload, size);
+    ring_buf_get_finish(&ctx->rx_rb, ctx->rx_size);
 
     // 2. trigger semaphore
     k_sem_give(&ctx->data_available);
@@ -32,7 +35,8 @@ bool lora_service_setup(lora_context_t *context)
     ctx = context;
 
     const struct device *dev = DEVICE_DT_GET(DT_ALIAS(lora0));
-    if (dev == NULL) {
+    if (dev == NULL)
+    {
         LOG_ERR("failed to find loRa device");
         return false;
     }
@@ -44,26 +48,51 @@ bool lora_service_setup(lora_context_t *context)
     return true;
 }
 
+void lora_handle_incoming_packet()
+{
+    if (ctx == NULL)
+    {
+        LOG_ERR("Invalid context");
+        k_oops();
+    }
+
+    if (ctx->rx_size == 0)
+    {
+        LOG_DBG("No packet to process");
+        return;
+    }
+
+    int number_of_packets_read = 0;
+    // radio command unpack util buffer empty
+    /* const struct fill_N2_params_s *const params = */
+    /*     (const struct fill_N2_params_s *const)cmd->payload.params; */
+}
+
 void lora_thread_entry(void *p1, void *p2, void *p3)
 {
     ARG_UNUSED(p1);
     ARG_UNUSED(p2);
     ARG_UNUSED(p3);
 
-    if (ctx == NULL) {
+    if (ctx == NULL)
+    {
         LOG_ERR("Lora service has not been properly configured");
         return;
     }
 
     LOG_INF("LoRa thread starting");
     const uint32_t c_sleep_time_ms = 80;
-    while (*ctx->stop_signal != 1) {
+    while (*ctx->stop_signal != 1)
+    {
         LOG_INF("LoRa thread");
 
         // handle lora reception
-        if (k_sem_take(&ctx->data_available, K_MSEC(c_sleep_time_ms)) == 0) {
+        if (k_sem_take(&ctx->data_available, K_NO_WAIT) == 0)
+        {
             LOG_INF("read %u bytes", ctx->rx_size);
-        } else {
+        }
+        else
+        {
             LOG_DBG("LoRa timeout");
         }
 
