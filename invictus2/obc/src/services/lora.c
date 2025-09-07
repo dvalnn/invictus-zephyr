@@ -22,8 +22,7 @@ static uint8_t lora_rx_buffer[253 * 5];
 static void lora_on_recv_data(uint8_t *payload, uint16_t size)
 {
     // 1. copy payload to ringbuffer
-    ctx->rx_size = ring_buf_get_claim(&ctx->rx_rb, &payload, size);
-    ring_buf_get_finish(&ctx->rx_rb, ctx->rx_size);
+    ctx->rx_size += ring_buf_put(&ctx->rx_rb, payload, size);
 
     // 2. trigger semaphore
     k_sem_give(&ctx->data_available);
@@ -56,6 +55,7 @@ bool lora_service_setup(lora_context_t *context)
 
     k_sem_init(&ctx->data_available, 0, 1);
     ring_buf_init(&ctx->rx_rb, sizeof(lora_rx_buffer), lora_rx_buffer);
+    ctx->rx_size = 0;
 
     sx128x_register_recv_callback(&lora_on_recv_data);
     LOG_INF("initialized loRa service thread");
