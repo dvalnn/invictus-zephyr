@@ -87,3 +87,23 @@ class UARTListener:
             logging.error(f"UART send error: {e}")
 
         return False
+
+    def send_bytes(self, packet: bytes) -> bool:
+        """Send raw bytes via UART."""
+        try:
+            if self.serial_connection and self.serial_connection.is_open:
+                written = self.serial_connection.write(packet)
+                self.serial_connection.flush()
+                self.bytes_sent += written
+                self.add_message(
+                    f"TX: {written} bytes ({packet[:16].hex()}...)"
+                    if len(packet) > 16
+                    else f"TX: {packet.hex()}"
+                )
+                return written == len(packet)
+
+        except Exception as e:
+            self.add_message(f"Send Error: {e}")
+            logging.error(f"UART send error: {e}")
+
+        return False
