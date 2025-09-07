@@ -12,8 +12,8 @@
 #include "zephyr/zbus/zbus.h"
 #include <stdint.h>
 
-LOG_MODULE_REGISTER(lora_thread, LOG_LEVEL_DBG);
-ZBUS_CHAN_DECLARE(lora_cmd_chan);
+LOG_MODULE_REGISTER(lora_integration, LOG_LEVEL_DBG);
+ZBUS_CHAN_DECLARE(chan_radio_cmds);
 
 static lora_context_t *ctx = NULL;
 // TODO fine tune size
@@ -76,9 +76,13 @@ void lora_handle_incoming_packet()
         return;
     }
 
-    // radio command unpack util buffer empty
-    /* const struct fill_N2_params_s *const params = */
-    /*     (const struct fill_N2_params_s *const)cmd->payload.params; */
+    // TODO handle _all_ incoming packets
+    uint8_t *raw_msg = NULL;
+    ring_buf_get_claim(&ctx->rx_rb, &raw_msg, sizeof(struct radio_generic_cmd_s));
+
+    struct radio_generic_cmd_s *msg = (struct radio_generic_cmd_s *)raw_msg;
+    zbus_chan_pub(&chan_radio_cmds, (const void *)msg, K_NO_WAIT);
+    ring_buf_get_finish(&ctx->rx_rb, sizeof(struct radio_generic_cmd_s));
 }
 
 void lora_thread_entry(void *p1, void *p2, void *p3)
@@ -103,10 +107,7 @@ void lora_thread_entry(void *p1, void *p2, void *p3)
         if (k_sem_take(&ctx->data_available, K_NO_WAIT) == 0)
         {
             LOG_INF("read %u bytes", ctx->rx_size);
-        }
-        else
-        {
-            LOG_DBG("LoRa timeout");
+            lora_handle_incoming_packet();
         }
 
         // handle zbus reception
