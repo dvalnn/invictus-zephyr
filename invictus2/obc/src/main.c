@@ -119,6 +119,7 @@ bool setup_services(atomic_t *stop_signal)
     if (ret < 0) {
         return 0;
     }
+
     LOG_INF("Setting up threads...");
     lora_context.stop_signal = stop_signal;
 
@@ -140,6 +141,7 @@ bool setup_services(atomic_t *stop_signal)
         LOG_ERR("LoRa thread setup failed");
         return false;
     }
+
     LOG_INF("done...");
     return true;
 }
@@ -159,8 +161,7 @@ int main(void)
     modbus_service_start();
     lora_service_start();
 
-    LOG_INF("Services started. Sleeping main thread.");
-
+    LOG_INF("Services started.");
     while (1) {
         ret = gpio_pin_toggle_dt(&led);
         if (ret < 0) {
