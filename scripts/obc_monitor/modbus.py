@@ -200,24 +200,25 @@ class ModbusSlaveSimulator:
     def get_slave_info(self) -> Dict[int, Dict[str, Any]]:
         """Get information about all configured slaves."""
         info = {}
-        for slave_id in [1, 2]:  # UF and LF Hydra
-            if slave_id in self.context:
-                slave_context = self.context[slave_id]
-                slave_name = "UF Hydra" if slave_id == 1 else "LF Hydra"
+        for slave_id, slave_name in zip(list(range(1, 6)), ["UF Hydra", "LF Hydra", "FS Hydra", "Rocket Lift", "FS Lift"]):
+            if slave_id not in self.context:
+                continue
 
-                info[slave_id] = {
-                    "name": slave_name,
-                    "coils": slave_context.store["c"] is not None,
-                    "discrete_inputs": slave_context.store["d"] is not None,
-                    "holding_registers": slave_context.store["h"] is not None,
-                    "input_registers": slave_context.store["i"] is not None,
-                }
+            slave_context = self.context[slave_id]
 
-                # Get counts if available
-                if slave_context.store["c"] is not None:
-                    info[slave_id]["coil_count"] = len(slave_context.store["c"].values)
-                if slave_context.store["i"] is not None:
-                    info[slave_id]["ir_count"] = len(slave_context.store["i"].values)
+            info[slave_id] = {
+                "name": slave_name,
+                "coils": slave_context.store["c"] is not None,
+                "discrete_inputs": slave_context.store["d"] is not None,
+                "holding_registers": slave_context.store["h"] is not None,
+                "input_registers": slave_context.store["i"] is not None,
+            }
+
+            # Get counts if available
+            if slave_context.store["c"] is not None:
+                info[slave_id]["coil_count"] = len(slave_context.store["c"].values)
+            if slave_context.store["i"] is not None:
+                info[slave_id]["ir_count"] = len(slave_context.store["i"].values)
 
         return info
 

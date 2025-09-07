@@ -193,17 +193,15 @@ class OBCMonitorTUI:
         )
 
         # Modbus status panel - show both slaves
-
         tables = []
-        for slave_id in range(1, 5):
-            slave_info = self.modbus_simulator.get_slave_info()
+        slave_info = self.modbus_simulator.get_slave_info()
+        for slave_id in range(1, 6):
             if slave_id not in slave_info:
                 continue
 
             slave_name = slave_info[slave_id]["name"]
 
             modbus_table = Table(title=slave_name)
-            # modbus_table.add_column("Slave", style="yellow", no_wrap=True)
             modbus_table.add_column("Register", style="cyan", no_wrap=True)
             modbus_table.add_column("Value", style="white")
 
@@ -212,7 +210,6 @@ class OBCMonitorTUI:
                 modbus_table.add_row("No data", "-")
             else:
                 for reg_name, value in registers.items():
-                    # display_name = slave_name if first_row else ""
                     modbus_table.add_row(reg_name, str(value))
 
             tables.append(modbus_table)
@@ -224,24 +221,6 @@ class OBCMonitorTUI:
                 border_style="magenta",
             )
         )
-
-        # for slave_id in [1, 2]:
-        #     if slave_id in slave_info:
-        #         slave_name = slave_info[slave_id]["name"]
-        #         registers = self.modbus_simulator.get_register_values(slave_id, 0, 5)
-
-        #         if not registers:
-        #             modbus_table.add_row(slave_name, "No data", "-")
-        #         else:
-        #             first_row = True
-        #             for reg_name, value in registers.items():
-        #                 display_name = slave_name if first_row else ""
-        #                 modbus_table.add_row(display_name, reg_name, str(value))
-        #                 first_row = False
-
-        # self.layout["modbus_status"].update(
-        #     Panel(modbus_table, title="Modbus Status", border_style="magenta")
-        # )
 
     def process_command(self, command: str):
         """Process a command and update the log."""
