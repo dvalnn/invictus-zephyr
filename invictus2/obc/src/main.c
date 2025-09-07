@@ -129,11 +129,11 @@ bool setup_services(atomic_t *stop_signal)
     }
 
     /* Initialize the modbus thread */
-    /* LOG_INF("  * modbus..."); */
-    /* if (!modbus_service_setup()) { */
-    /*     LOG_ERR("Modbus RTU master setup failed"); */
-    /*     return false; */
-    /* } */
+    LOG_INF("  * modbus...");
+    if (!modbus_service_setup()) {
+        LOG_ERR("Modbus RTU master setup failed");
+        return false;
+    }
 
     LOG_INF("  * lora...");
     if (!lora_service_setup(&lora_context)) {
