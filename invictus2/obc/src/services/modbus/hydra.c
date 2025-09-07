@@ -60,7 +60,7 @@ void hydra_boards_read_irs(const int client_iface, struct hydra_boards *const hb
     modbus_slave_check_connection(lf_rc, &hb->lf.meta, "LF hydra sensors");
 
     if (fs_disabled) {
-        LOG_DBG("Filling Station is disconnected, skipping read.");
+        LOG_WRN_ONCE("Filling Station is disconnected, skipping read.");
         return;
     }
 

@@ -156,7 +156,7 @@ int main(void)
     }
 
     rocket_state_service_start();
-    /* modbus_service_start(); */
+    modbus_service_start();
     lora_service_start();
 
     LOG_INF("Services started. Sleeping main thread.");
