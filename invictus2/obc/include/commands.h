@@ -150,7 +150,7 @@ struct ack_s {
 // -----------------------------------------------------------------------------
 // Command IDs
 // -----------------------------------------------------------------------------
-enum command_e {
+typedef enum {
     _CMD_NONE = 0,
 
     // FROM GROUND STATION to OBC
@@ -176,7 +176,7 @@ enum command_e {
     CMD_ACK,
 
     _CMD_MAX
-};
+} command_t;
 
 // -----------------------------------------------------------------------------
 // Individual Command Definitions

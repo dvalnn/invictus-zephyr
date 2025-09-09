@@ -106,17 +106,26 @@ struct rocket_state_s {
     uint8_t minor; // Values from enum rocket_state_flight_e or enum rocket_state_fill_e
 };
 
-enum rocket_state_e {
-    _ROCKET_STATE_NONE = 0,
+struct full_system_data_s {
+    struct rocket_state_s rocket_state;
+    union pressures_u pressures;
+    union thermocouples_u thermocouples;
+    union actuators_bitmap_u actuators;
+    union loadcell_weights_u loadcells;
+    struct navigator_sensors_s navigator;
+};
 
-    ROCKET_STATE_IDLE,
-    ROCKET_STATE_FUEL,
-    ROCKET_STATE_ABORT,
-    ROCKET_STATE_READY,
-    ROCKET_STATE_ARMED,
-    ROCKET_STATE_FLIGHT,
+enum state_e {
+    _RS_NONE = 0,
+    RS_ROOT,
+    RS_IDLE,
+    RS_FILLING,
+    RS_ABORT,
+    RS_READY,
+    RS_ARMED,
+    RS_FLIGHT,
 
-    _ROCKET_STATE_MAX
+    _RS_MAX
 };
 
 // Rocket Flight Substates
@@ -136,10 +145,6 @@ enum rocket_state_flight_e {
 // Rocket Filling Substates
 enum rocket_state_fill_e {
     _RS_FILL_NONE = 0,
-
-    RS_FILL_ROOT,
-    RS_FILL_IDLE,
-    RS_FILL_ABORT,
 
     RS_FILL_SAFE_PAUSE,
     RS_FILL_SAFE_PAUSE_IDLE,

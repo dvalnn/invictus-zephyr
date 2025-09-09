@@ -2,43 +2,12 @@
 #define _MAIN_SM_H_
 
 #include "zephyr/smf.h"
-
 #include "main_sm_config.h"
-
-#define CMD_OTHER_START  0x00010000
-#define CMD_IDLE_START   0x00000100
-#define CMD_GLOBAL_START 0x00000001
-
-#define CMD_OTHER_MASK  0x00FF0000
-#define CMD_IDLE_MASK   0x0000FF00
-#define CMD_GLOBAL_MASK 0x000000FF
-
-#define CMD_OTHER(x)  ((x) & CMD_OTHER_MASK)
-#define CMD_IDLE(x)   ((x) & CMD_IDLE_MASK)
-#define CMD_GLOBAL(x) ((x) & CMD_GLOBAL_MASK)
-
-enum cmd_global {
-    CMD_STOP = CMD_GLOBAL_START, // ANY -> IDLE
-    CMD_ABORT,                   // ANY -> ABORT
-    CMD_PAUSE,                   // ANY -> SAFE_PAUSE_IDLE
-};
-
-enum cmd_idle {
-    CMD_FILL_COPV = CMD_IDLE_START, // IDLE -> FILLING_COPV_IDLE
-    CMD_PRE_PRESSURIZE,             // IDLE -> PRE_PRESSURIZING_IDLE
-    CMD_FILL_N2O,                   // IDLE -> FILLING_N2O_IDLE
-    CMD_POST_PRESSURIZE,            // IDLE -> POST_PRESSURIZING_IDLE
-};
-
-enum cmd_other {
-    CMD_READY = CMD_OTHER_START, // ABORT -> IDLE
-    CMD_RESUME,                  // SAFE_PAUSE -> IDLE
-};
-
-typedef uint32_t cmd_t;
+#include "data_models.h"
+#include "commands.h"
 
 enum valves {
-    _VAlVE_NONE = 0,
+    _VALVE_NONE = 0,
 
     VALVE_N2O_FILL,
     VALVE_N2O_PURGE,
@@ -96,46 +65,22 @@ union filling_data {
 };
 
 /* User defined object */
-struct filling_sm_object {
+struct sm_object {
     /* This must be first */
     struct smf_ctx ctx;
 
-    cmd_t command;
-    union filling_data data;
+    command_t command;
 
-    union valve_states {
-        struct {
-            uint16_t n2o_fill: 1;
-            uint16_t n2o_purge: 1;
-            uint16_t n2_fill: 1;
-            uint16_t n_purge: 1;
-            uint16_t n2o_quick_dc: 1;
-            uint16_t n2_quick_dc: 1;
-            uint16_t pressurizing: 1;
-            uint16_t main: 1;
-            uint16_t vent: 1;
-            uint16_t abort: 1;
-            uint16_t reserved: 6;
-        }; // anonymous struct for individual valve states
-        uint16_t raw;
-    } valve_states;
+    struct full_system_data_s data;
 
-    struct filling_sm_config *config;
+    struct sm_config *config;
 };
 
 #ifdef UNIT_TEST
-extern const struct smf_state filling_states[];
+extern const struct smf_state states[];
 #endif
 
-void filling_sm_init(struct filling_sm_object *initial_s_obj);
-
-#define LOG_FILLING_DATA(fsm_data)                                                            \
-    do {                                                                                      \
-        LOG_INF("N2 Tank P: %u", (fsm_data).n2_tank_pressure);                                \
-        LOG_INF("N2O Tank P: %u", (fsm_data).n2o_tank_pressure);                              \
-        LOG_INF("N2O Tank W: %u", (fsm_data).n2o_tank_weight);                                \
-        LOG_INF("N2O Tank T: %u", (fsm_data).n2o_tank_temperature);                           \
-    } while (0)
+void sm_init(struct sm_object *initial_s_obj);
 
 #define DEFAULT_FSM_CONFIG(name)                                                              \
     struct filling_sm_config name = {                                                         \
