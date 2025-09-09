@@ -1,27 +1,27 @@
-#ifndef _MAIN_SM_H_
-#define _MAIN_SM_H_
+#ifndef _FILLING_SM_CONFIG_H_
+#define _FILLING_SM_CONFIG_H_
 
-#include "zephyr/smf.h"
-#include "main_sm_config.h"
-#include "data_models.h"
-#include "commands.h"
+#include <stdint.h>
 
-enum valves {
-    _VALVE_NONE = 0,
+// NOTE: Pressures in bar
+//       weights in kg
+//       temperatures in ºC
 
-    VALVE_N2O_FILL,
-    VALVE_N2O_PURGE,
-    VALVE_N_FILL,
-    VALVE_N_PURGE,
-    VALVE_N2O_QUICK_DC,
-    VALVE_N2_QUICK_DC,
-    VALVE_PRESSURIZING,
-    VALVE_MAIN,
-    VALVE_VENT,
-    VALVE_ABORT,
+#define SAFE_PAUSE_TARGET_N2O_TANK_P  50
+#define SAFE_PAUSE_TRIGGER_N2O_TANK_P 52
 
-    _VALVE_COUNT,
-};
+#define FILLING_COPV_TARGET_N2_TANK_P 200
+
+#define PRE_PRESSURIZING_TARGET_N2O_TANK_P  5
+#define PRE_PRESSURIZING_TRIGGER_N2O_TANK_P 7
+
+#define FILLING_N2O_TARGET_N2O_TANK_P  35
+#define FILLING_N2O_TARGET_N2O_TANK_W  7
+#define FILLING_N2O_TRIGGER_N2O_TANK_P 38
+#define FILLING_N2O_TRIGGER_N2O_TANK_T 2
+
+#define POST_PRESSURIZING_TARGET_N2O_TANK_P  50
+#define POST_PRESSURIZING_TRIGGER_N2O_TANK_P 52
 
 struct filling_sm_config {
     struct safe_pause {
@@ -54,35 +54,7 @@ struct filling_sm_config {
     } post_p;
 };
 
-union filling_data {
-    struct {
-        uint16_t n2_tank_pressure; // This value is from the N2 line (Filling Station)
-        uint16_t n2o_tank_pressure;
-        uint16_t n2o_tank_weight;
-        uint16_t n2o_tank_temperature; // Temperature of the N2O tank
-    }; // anonymous struct
-    uint16_t raw[4];
-};
-
-/* User defined object */
-struct sm_object {
-    /* This must be first */
-    struct smf_ctx ctx;
-
-    command_t command;
-
-    struct full_system_data_s data;
-
-    struct sm_config *config;
-};
-
-#ifdef UNIT_TEST
-extern const struct smf_state states[];
-#endif
-
-void sm_init(struct sm_object *initial_s_obj);
-
-#define DEFAULT_FSM_CONFIG(name)                                                              \
+#define DEFAULT_FILLING_SM_CONFIG(name)                                                              \
     struct filling_sm_config name = {                                                         \
         .safe_pause =                                                                         \
             {                                                                                 \
@@ -112,4 +84,4 @@ void sm_init(struct sm_object *initial_s_obj);
             },                                                                                \
     }
 
-#endif // _FILLING_SM_H_
+#endif // _FILLING_SM_CONFIG_H_

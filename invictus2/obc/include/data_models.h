@@ -3,6 +3,77 @@
 
 #include <stdint.h>
 
+#include "services/state_machine/main_sm.h"
+
+typedef enum main_state_e {
+    ROOT,
+    IDLE,
+    FILLING,
+    READY,
+    ARMED,
+    FLIGHT,
+    ABORT,
+} main_state_t;
+
+// Filling Substates
+typedef enum filling_state_e {
+    FILL_SAFE_PAUSE,
+    FILL_SAFE_PAUSE_IDLE,
+    FILL_SAFE_PAUSE_VENT,
+
+    FILL_FILLING_N2,
+    FILL_FILLING_N2_IDLE,
+    FILL_FILLING_N2_FILL,
+
+    FILL_PRE_PRESS,
+    FILL_PRE_PRESS_IDLE,
+    FILL_PRE_PRESS_VENT,
+    FILL_PRE_PRESS_FILL_N2,
+
+    FILL_FILLING_N2O,
+    FILL_FILLING_N2O_IDLE,
+    FILL_FILLING_N2O_FILL,
+    FILL_FILLING_N2O_VENT,
+
+    FILL_POST_PRESS,
+    FILL_POST_PRESS_IDLE,
+    FILL_POST_PRESS_VENT,
+    FILL_POST_PRESS_FILL_N2,
+
+    _FILL_MAX
+} filling_state_t;
+
+
+// Flight Substates
+typedef enum flight_state_e {
+    FLIGHT_LAUNCH,
+    FLIGHT_ASCENT,
+    FLIGHT_APOGEE,
+    FLIGHT_DROGUE_CHUTE,
+    FLIGHT_MAIN_CHUTE,
+    FLIGHT_TOUCHDOWN,
+
+    _FLIGHT_MAX
+} flight_state_t;
+
+typedef enum valve_e {
+    _VALVE_NONE = 0,
+
+    VALVE_N2O_FILL,
+    VALVE_N2O_PURGE,
+    VALVE_N2_FILL,
+    VALVE_N2_PURGE,
+    VALVE_N2O_QUICK_DC,
+    VALVE_N2_QUICK_DC,
+    VALVE_PRESSURIZING,
+    VALVE_MAIN,
+    VALVE_VENT,
+    VALVE_ABORT,
+
+    _VALVE_COUNT,
+} valve_t;
+
+
 // Structures and unions for various sensor data and actuator states
 // Used across the ZBUS channels.
 
@@ -101,75 +172,20 @@ struct navigator_sensors_s {
     int16_t kalman_quat[4];
 };
 
-struct rocket_state_s {
-    uint8_t major; // Values from enum rocket_state_e
-    uint8_t minor; // Values from enum rocket_state_flight_e or enum rocket_state_fill_e
-};
+typedef struct state_data_s {
+    main_state_t main_state;
+    filling_state_t filling_state;
+    flight_state_t flight_state;
+    sm_state_t sm_state;
+} state_data_t;
 
 struct full_system_data_s {
-    struct rocket_state_s rocket_state;
+    state_data_t state;
     union pressures_u pressures;
     union thermocouples_u thermocouples;
     union actuators_bitmap_u actuators;
     union loadcell_weights_u loadcells;
     struct navigator_sensors_s navigator;
-};
-
-enum state_e {
-    _RS_NONE = 0,
-    RS_ROOT,
-    RS_IDLE,
-    RS_FILLING,
-    RS_ABORT,
-    RS_READY,
-    RS_ARMED,
-    RS_FLIGHT,
-
-    _RS_MAX
-};
-
-// Rocket Flight Substates
-enum rocket_state_flight_e {
-    _RS_FLIGHT_NONE = 0,
-
-    RS_FLIGHT_LAUNCH,
-    RS_FLIGHT_ASCENT,
-    RS_FLIGHT_APOGEE,
-    RS_FLIGHT_DROGE_CHUTE,
-    RS_FLIGHT_MAIN_CHUTE,
-    RS_FLIGHT_TOUCHDOWN,
-
-    _RS_FLIGHT_MAX
-};
-
-// Rocket Filling Substates
-enum rocket_state_fill_e {
-    _RS_FILL_NONE = 0,
-
-    RS_FILL_SAFE_PAUSE,
-    RS_FILL_SAFE_PAUSE_IDLE,
-    RS_FILL_SAFE_PAUSE_VENT,
-
-    RS_FILL_FILLING_N2,
-    RS_FILL_FILLING_N2_IDLE,
-    RS_FILL_FILLING_N2_FILL,
-
-    RS_FILL_PRE_PRESS,
-    RS_FILL_PRE_PRESS_IDLE,
-    RS_FILL_PRE_PRESS_VENT,
-    RS_FILL_PRE_PRESS_FILL_N2,
-
-    RS_FILL_FILLING_N2O,
-    RS_FILL_FILLING_N2O_IDLE,
-    RS_FILL_FILLING_N2O_FILL,
-    RS_FILL_FILLING_N2O_VENT,
-
-    RS_FILL_POST_PRESS,
-    RS_FILL_POST_PRESS_IDLE,
-    RS_FILL_POST_PRESS_VENT,
-    RS_FILL_POST_PRESS_FILL_N2,
-
-    _RS_FILL_MAX
 };
 
 #endif // DATA_MODELS_H_

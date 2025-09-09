@@ -123,9 +123,9 @@ bool setup_services(atomic_t *stop_signal)
     LOG_INF("Setting up threads...");
     lora_context.stop_signal = stop_signal;
 
-    LOG_INF("  * rocket state...");
-    if (!rocket_state_service_setup()) {
-        LOG_ERR("Rocket state service setup failed");
+    LOG_INF("  * state machine...");
+    if (!state_machine_service_setup()) {
+        LOG_ERR("State machine service setup failed");
         return false;
     }
 
@@ -157,7 +157,7 @@ int main(void)
         return -1;
     }
 
-    rocket_state_service_start();
+    state_machine_service_start();
     modbus_service_start();
     lora_service_start();
 

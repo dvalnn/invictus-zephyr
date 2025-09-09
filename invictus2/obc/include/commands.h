@@ -150,7 +150,7 @@ struct ack_s {
 // -----------------------------------------------------------------------------
 // Command IDs
 // -----------------------------------------------------------------------------
-typedef enum {
+typedef enum cmd_e {
     _CMD_NONE = 0,
 
     // FROM GROUND STATION to OBC
@@ -162,8 +162,9 @@ typedef enum {
     CMD_ARM,
     CMD_FIRE,
     CMD_LAUNCH_OVERRIDE,
-    CMD_FILL_STOP,
-    CMD_FILL_RESUME,
+    CMD_STOP,
+    CMD_SAFE_PAUSE,
+    CMD_RESUME,
     CMD_MANUAL_TOGGLE,
 
     // Commands with payload data
@@ -177,6 +178,14 @@ typedef enum {
 
     _CMD_MAX
 } command_t;
+
+typedef enum fill_cmd_e {
+    CMD_FILL_NONE = 0,
+    CMD_FILL_N2,
+    CMD_FILL_PRE_PRESS,
+    CMD_FILL_N2O,
+    CMD_FILL_POST_PRESS,
+} fill_command_t;   
 
 // -----------------------------------------------------------------------------
 // Individual Command Definitions

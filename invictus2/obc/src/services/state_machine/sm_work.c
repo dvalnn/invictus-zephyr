@@ -1,4 +1,4 @@
-#include "services/rocket_state.h"
+#include "services/rocket_state/main_sm.h"
 
 #include "zephyr/kernel.h"
 #include "zephyr/zbus/zbus.h"
@@ -87,4 +87,58 @@ bool rocket_state_service_setup(void)
 void rocket_state_service_start(void)
 {
     LOG_WRN_ONCE("Service is not implemented.");
+}
+
+// State Machine Work Helper
+void toggle_valve(struct sm_object *s, enum valves valve, bool open)
+{
+    switch (valve) {
+        case VALVE_N2O_FILL:
+            s->data.actuators.v_n2o_fill = open ? 1 : 0;
+            break;
+        case VALVE_N2O_PURGE:
+            s->data.actuators.v_n2o_purge = open ? 1 : 0;
+            break;
+        case VALVE_N2_FILL:
+            s->data.actuators.v_n2_fill = open ? 1 : 0;
+            break;
+        case VALVE_N2_PURGE:
+            s->data.actuators.v_n2_purge = open ? 1 : 0;
+            break;
+        case VALVE_N2O_QUICK_DC:
+            s->data.actuators.v_n2o_quick_dc = open ? 1 : 0;
+            break;
+        case VALVE_N2_QUICK_DC:
+            s->data.actuators.v_n2_quick_dc = open ? 1 : 0;
+            break;
+        case VALVE_PRESSURIZING:
+            s->data.actuators.v_pressurizing = open ? 1 : 0
+            break;
+        case VALVE_MAIN:
+            s->data.actuators.v_main = open ? 1 : 0;
+            break;
+        case VALVE_VENT:
+            s->data.actuators.v_venting = open ? 1 : 0
+            break;
+        case VALVE_ABORT:
+            s->data.actuators.v_abort = open ? 1 : 0;
+            break;
+        default:
+            LOG_ERR("Invalid valve ID: %d", valve);
+            break;
+    }
+}
+
+void close_all_valves(struct sm_object *s)
+{
+    for (valve_t v = VALVE_N2O_FILL; v < _VALVE_COUNT; v++) {
+        toggle_valve(s, v, false);
+    }
+}
+
+// closes all valves except the one specified
+void open_single_valve(struct sm_object *s, enum valves valve)
+{
+    close_all_valves(s);
+    toggle_valve(s, valve, true);
 }
