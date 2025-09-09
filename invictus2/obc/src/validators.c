@@ -1,7 +1,7 @@
 #include "validators.h"
 
 #include "data_models.h"
-#include "radio_commands.h"
+#include "commands.h"
 
 bool validate_fill_exec_cmd(const struct cmd_fill_exec_s *const cmd)
 {
@@ -61,7 +61,7 @@ bool validate_manual_exec_cmd(const struct cmd_manual_exec_s *const cmd)
 
 bool radio_cmd_validator(const void *msg, size_t msg_size)
 {
-    const struct radio_generic_cmd_s *const cmd = msg;
+    const struct generic_cmd_s *const cmd = msg;
 
     // FIXME: Compare sender ID to Ground Station ID and receiver ID to Rocket ID
     bool is_supported_and_from_gs_to_obc =
@@ -74,26 +74,26 @@ bool radio_cmd_validator(const void *msg, size_t msg_size)
     }
 
     // Switch on the command ID to validate command-specific fields
-    switch ((enum radio_command_e)cmd->header.command_id) {
-    case RCMD_STATUS_REQ:
-    case RCMD_ABORT:
-    case RCMD_READY:
-    case RCMD_ARM:
-    case RCMD_FIRE:
-    case RCMD_LAUNCH_OVERRIDE:
-    case RCMD_FILL_STOP:
-    case RCMD_FILL_RESUME:
-    case RCMD_MANUAL_TOGGLE:
+    switch ((enum command_e)cmd->header.command_id) {
+    case CMD_STATUS_REQ:
+    case CMD_ABORT:
+    case CMD_READY:
+    case CMD_ARM:
+    case CMD_FIRE:
+    case CMD_LAUNCH_OVERRIDE:
+    case CMD_FILL_STOP:
+    case CMD_FILL_RESUME:
+    case CMD_MANUAL_TOGGLE:
         return true; // No payload data, just reserved bytes
 
-    case RCMD_FILL_EXEC:
+    case CMD_FILL_EXEC:
         return validate_fill_exec_cmd((const struct cmd_fill_exec_s *const)cmd);
 
-    case RCMD_MANUAL_EXEC:
+    case CMD_MANUAL_EXEC:
         return validate_manual_exec_cmd((const struct cmd_manual_exec_s *const)cmd);
 
-    case RCMD_STATUS_REP: // Should not be received
-    case RCMD_ACK:        // Should not be received
+    case CMD_STATUS_REP: // Should not be received
+    case CMD_ACK:        // Should not be received
     default:
         return false;
     }

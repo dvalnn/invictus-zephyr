@@ -8,7 +8,7 @@
 
 #include "data_models.h"
 #include "validators.h"
-#include "radio_commands.h"
+#include "commands.h"
 
 #include "services/lora.h"
 #include "services/modbus.h"
@@ -88,7 +88,7 @@ ZBUS_CHAN_DEFINE(chan_actuators,           /* Channel Name */
 
 // --- Radio Commands from Ground Station ---
 ZBUS_CHAN_DEFINE(chan_radio_cmds,            /* Channel Name */
-                 struct radio_generic_cmd_s, /* Message Type */
+                 struct generic_cmd_s,       /* Message Type */
                  radio_cmd_validator,        /* Validator Func */
                  NULL,                       /* User Data */
                  ZBUS_OBSERVERS_EMPTY,       /* Observers */

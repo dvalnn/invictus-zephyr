@@ -4,7 +4,7 @@
 #include "zephyr/kernel.h"
 #include "zephyr/logging/log.h"
 #include "zephyr/zbus/zbus.h"
-#include "radio_commands.h"
+#include "commands.h"
 #include "services/lora.h"
 #include "zephyr/drivers/uart.h"
 

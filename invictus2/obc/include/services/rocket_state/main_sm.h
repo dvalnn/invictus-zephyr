@@ -1,9 +1,9 @@
-#ifndef _FILLING_SM_H_
-#define _FILLING_SM_H_
+#ifndef _MAIN_SM_H_
+#define _MAIN_SM_H_
 
 #include "zephyr/smf.h"
 
-#include "filling_sm_config.h"
+#include "main_sm_config.h"
 
 #define CMD_OTHER_START  0x00010000
 #define CMD_IDLE_START   0x00000100

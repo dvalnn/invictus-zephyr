@@ -1,8 +1,4 @@
-#include "zephyr/logging/log.h"
-#include "zephyr/zbus/zbus.h"
 #include "services/fake_lora.h"
-
-#include "radio_commands.h"
 
 ZBUS_CHAN_DECLARE(chan_radio_cmds);
 LOG_MODULE_REGISTER(lora_backend_testing, LOG_LEVEL_DBG);
@@ -103,17 +99,17 @@ void fake_lora_backend()
 {
     LOG_INF("Fake LoRa backend (UART) started");
     uart_irq_rx_enable(uart_dev);
-    struct radio_generic_cmd_s cmd = {0};
+    struct generic_cmd_s cmd = {0};
 
     // indefinitely wait for input from the user
     while (k_msgq_get(&uart_msgq, &rx_buf, K_FOREVER) == 0) {
-        if (sizeof(rx_buf) != RADIO_CMD_SIZE) {
-            LOG_ERR("Invalid command size: %d (expected %d)", sizeof(rx_buf), RADIO_CMD_SIZE);
+        if (sizeof(rx_buf) != CMD_SIZE) {
+            LOG_ERR("Invalid command size: %d (expected %d)", sizeof(rx_buf), CMD_SIZE);
             LOG_HEXDUMP_WRN(rx_buf, sizeof(rx_buf), "Invalid command hex dump");
             continue;
         }
 
-        int err = radio_cmd_unpack((const uint8_t *const)rx_buf, sizeof(rx_buf), &cmd);
+        int err = cmd_unpack((const uint8_t *const)rx_buf, sizeof(rx_buf), &cmd);
         if (err != PACK_ERROR_NONE) {
             LOG_ERR("Failed to unpack command: %d", err);
             LOG_HEXDUMP_WRN(rx_buf, sizeof(rx_buf), "Invalid command hex dump");

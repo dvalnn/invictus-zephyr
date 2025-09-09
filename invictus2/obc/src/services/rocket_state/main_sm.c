@@ -1,4 +1,4 @@
-#include "services/rocket_state/filling_sm.h"
+#include "services/rocket_state/main_sm.h"
 
 #include "data_models.h"
 #include "zephyr/smf.h"

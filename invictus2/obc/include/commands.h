@@ -1,5 +1,5 @@
-#ifndef RADIO_COMMANDS_H_
-#define RADIO_COMMANDS_H_
+#ifndef COMMANDS_H_
+#define COMMANDS_H_
 
 #include "zephyr/toolchain.h"
 
@@ -28,14 +28,14 @@ struct cmd_header_s {
 // Generic Command Structure
 // -----------------------------------------------------------------------------
 
-#define RADIO_CMD_SIZE          128u
-#define RADIO_CMD_HEADER_BYTES  ((uint8_t)sizeof(struct cmd_header_s))
-#define RADIO_CMD_PAYLOAD_BYTES (RADIO_CMD_SIZE - RADIO_CMD_HEADER_BYTES)
+#define CMD_SIZE          128u
+#define CMD_HEADER_BYTES  ((uint8_t)sizeof(struct cmd_header_s))
+#define CMD_PAYLOAD_BYTES (CMD_SIZE - CMD_HEADER_BYTES)
 
 // NOTE: Generic commands structure, cast to a specific command type to access payloads.
-struct radio_generic_cmd_s {
+struct generic_cmd_s {
     struct cmd_header_s header;
-    uint8_t _reserved[RADIO_CMD_PAYLOAD_BYTES];
+    uint8_t _reserved[CMD_PAYLOAD_BYTES];
 };
 
 // -----------------------------------------------------------------------------
@@ -82,7 +82,7 @@ struct fill_press_params_s {
     uint16_t trigger_tank_deci_bar; // optional: set to 0xFFFF if unused
 };
 
-struct fill_N20_params_s {
+struct fill_N2O_params_s {
     uint16_t target_weight_grams;
     int16_t trigger_temp_deci_c;
 };
@@ -90,7 +90,7 @@ struct fill_N20_params_s {
 // Fill exec generic envelope
 struct fill_exec_s {
     uint8_t program_id;                          // values from enum fill_program_e
-    uint8_t params[RADIO_CMD_PAYLOAD_BYTES - 1]; // 1 byte for program_id, rest for params
+    uint8_t params[CMD_PAYLOAD_BYTES - 1]; // 1 byte for program_id, rest for params
 };
 
 #define FILL_N2_PARAM_BYTES       (sizeof(struct fill_N2_params_s))
@@ -132,7 +132,7 @@ struct manual_tare_s {
 // same logic as struct fill_exec_s
 struct manual_exec_s {
     uint8_t manual_cmd_id;
-    uint8_t params[RADIO_CMD_PAYLOAD_BYTES - 1];
+    uint8_t params[CMD_PAYLOAD_BYTES - 1];
 };
 
 // -----------------------------------------------------------------------------
@@ -142,40 +142,40 @@ struct manual_exec_s {
 // Define a compact representation.
 
 struct ack_s {
-    uint8_t ack_cmd_id;  // radio_command_t that is acknowledged
+    uint8_t ack_cmd_id;  // command_t that is acknowledged
     uint8_t status_code; // 0 = OK, non-zero = error
-    uint8_t params[RADIO_CMD_PAYLOAD_BYTES - 2];
+    uint8_t params[CMD_PAYLOAD_BYTES - 2];
 };
 
 // -----------------------------------------------------------------------------
 // Command IDs
 // -----------------------------------------------------------------------------
-enum radio_command_e {
-    _RCMD_NONE = 0,
+enum command_e {
+    _CMD_NONE = 0,
 
     // FROM GROUND STATION to OBC
     //
     // No payload data, just reserved bytes
-    RCMD_STATUS_REQ = 1,
-    RCMD_ABORT,
-    RCMD_READY,
-    RCMD_ARM,
-    RCMD_FIRE,
-    RCMD_LAUNCH_OVERRIDE,
-    RCMD_FILL_STOP,
-    RCMD_FILL_RESUME,
-    RCMD_MANUAL_TOGGLE,
+    CMD_STATUS_REQ = 1,
+    CMD_ABORT,
+    CMD_READY,
+    CMD_ARM,
+    CMD_FIRE,
+    CMD_LAUNCH_OVERRIDE,
+    CMD_FILL_STOP,
+    CMD_FILL_RESUME,
+    CMD_MANUAL_TOGGLE,
 
     // Commands with payload data
-    RCMD_FILL_EXEC,
-    RCMD_MANUAL_EXEC,
+    CMD_FILL_EXEC,
+    CMD_MANUAL_EXEC,
 
     // FROM OBC to GROUND STATION
     //
-    RCMD_STATUS_REP,
-    RCMD_ACK,
+    CMD_STATUS_REP,
+    CMD_ACK,
 
-    _RCMD_MAX
+    _CMD_MAX
 };
 
 // -----------------------------------------------------------------------------
@@ -192,18 +192,18 @@ enum radio_command_e {
 //       into wire format for transmission over the radio.
 // -----------------------------------------------------------------------------
 
-#define _PAD_SIZE(partial_s) (RADIO_CMD_PAYLOAD_BYTES - sizeof(partial_s))
+#define _PAD_SIZE(partial_s) (CMD_PAYLOAD_BYTES - sizeof(partial_s))
 
 #define _COMMAND_NAME(name) cmd_##name##_s
 
 #define _ASSERT_CMD_SIZE(name)                                                                \
-    BUILD_ASSERT(sizeof(struct _COMMAND_NAME(name)) == RADIO_CMD_SIZE, #name " size error")
+    BUILD_ASSERT(sizeof(struct _COMMAND_NAME(name)) == CMD_SIZE, #name " size error")
 
 // Command with no payload data (all reserved)
 #define MAKE_CMD(name)                                                                        \
     struct _COMMAND_NAME(name) {                                                              \
         struct cmd_header_s hdr;                                                              \
-        uint8_t _reserved[RADIO_CMD_PAYLOAD_BYTES];                                           \
+        uint8_t _reserved[CMD_PAYLOAD_BYTES];                                           \
     };                                                                                        \
     _ASSERT_CMD_SIZE(name)
 
@@ -250,10 +250,10 @@ enum pack_error_e {
     PACK_ERROR_INVALID_CMD_ID,
 };
 
-enum pack_error_e radio_cmd_pack(const struct radio_generic_cmd_s *const cmd,
+enum pack_error_e cmd_pack(const struct generic_cmd_s *const cmd,
                                  uint8_t *const out_buf, const size_t out_buf_size);
 
-enum pack_error_e radio_cmd_unpack(const uint8_t *const in_buf, const size_t in_buf_size,
-                                   struct radio_generic_cmd_s *const cmd);
+enum pack_error_e cmd_unpack(const uint8_t *const in_buf, const size_t in_buf_size,
+                                   struct generic_cmd_s *const cmd);
 
-#endif // RADIO_COMMANDS_H_
+#endif // COMMANDS_H_
