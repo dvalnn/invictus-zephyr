@@ -6,10 +6,10 @@ LOG_MODULE_REGISTER(lora_backend_testing, LOG_LEVEL_DBG);
 #define UART_DEVICE_NODE DT_CHOSEN(zephyr_shell_uart)
 #define MSG_SIZE         32
 
-K_MSGQ_DEFINE(uart_msgq, MSG_SIZE, 10, 4);
+K_MSGQ_DEFINE(uart_msgq, RADIO_CMD_SIZE, 10, 4);
 static const struct device *const uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
 
-static char rx_buf[MSG_SIZE];
+static char rx_buf[RADIO_CMD_SIZE];
 static int rx_buf_pos;
 
 static void serial_cb(const struct device *dev, void *user_data)
@@ -35,34 +35,16 @@ static void serial_cb(const struct device *dev, void *user_data)
         return;
     }
 
-    // read until FIFO empty
+    // read a full command or until the buffer is full
     uint8_t c;
     while (uart_fifo_read(uart_dev, &c, 1) == 1) {
-        if ((c == '\n' || c == '\r') && rx_buf_pos > 0) {
-            // terminate string
-            rx_buf[rx_buf_pos] = '\0';
-
-            // if queue is full, message is silently dropped
+        if (rx_buf_pos == (RADIO_CMD_SIZE - 1)) {
             k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
-
-            // reset the buffer (it was copied to the msgq)
             rx_buf_pos = 0;
         } else if (rx_buf_pos < (sizeof(rx_buf) - 1)) {
             rx_buf[rx_buf_pos++] = c;
         }
         // else: characters beyond buffer size are dropped
-    }
-}
-
-/*
- * Print a null-terminated string character by character to the UART interface
- */
-void print_uart(char *buf)
-{
-    int msg_len = strlen(buf);
-
-    for (int i = 0; i < msg_len; i++) {
-        uart_poll_out(uart_dev, buf[i]);
     }
 }
 
@@ -72,6 +54,7 @@ bool fake_lora_setup(void)
         LOG_ERR("UART device not found!");
         return 0;
     }
+
     LOG_INF("UART device found: %s", uart_dev->name);
     if (!device_is_ready(uart_dev)) {
         LOG_ERR("UART device not found!");
