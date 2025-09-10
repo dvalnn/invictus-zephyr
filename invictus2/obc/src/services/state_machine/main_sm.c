@@ -9,18 +9,6 @@
 
 LOG_MODULE_REGISTER(state_machine_service, LOG_LEVEL_DBG);
 
-bool rocket_state_service_setup(void)
-{
-    LOG_WRN("Service setup is not implemented");
-    return true;
-}
-
-void rocket_state_service_start(void)
-{
-    LOG_WRN("Service is not implemented.");
-    return;
-}
-
 // State Machine Helper
 void toggle_valve(struct sm_object *s, valve_t valve, bool open)
 {
