@@ -9,6 +9,9 @@
 struct flight_sm_config {
     uint16_t min_chamber_launch_temp; // Minimum chamber temperature in Celsius for launch
     uint16_t main_chute_deploy_altitude; // Altitude in meters for main chute deployment
+    uint16_t touchdown_altitude;
+    uint16_t coast_vertical_speed;
+    uint16_t boost_vertical_speed;
 };
 
 #define DEFAULT_FLIGHT_SM_CONFIG(name)                                                              \

@@ -50,12 +50,12 @@ struct generic_cmd_s {
 //       and compiler, so we can safely use memcpy to serialize and deserialize.
 //
 struct status_rep_s {
-    struct rocket_state_s rocket_state;
-    union pressures_u pressures;
-    union thermocouples_u thermocouples;
-    union actuators_bitmap_u actuators;
-    union loadcell_weights_u loadcells;
-    struct navigator_sensors_s navigator;
+    state_data_t state_data;
+    pressures_t pressures;
+    thermocouples_t thermocouples;
+    actuators_bitmap_t actuators;
+    loadcell_weights_t loadcells;
+    navigator_sensors_t navigator;
 };
 
 // -----------------------------------------------------------------------------

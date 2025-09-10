@@ -57,7 +57,7 @@ void lift_boards_read_irs(const int client_iface, struct lift_boards *const lb,
 }
 
 inline void lift_boards_irs_to_zbus_rep(const struct lift_boards *const lb,
-                                        union loadcell_weights_u *const weights,
+                                        loadcell_weights_t *const weights,
                                         const bool fs_disabled)
 {
     if (!lb || !weights) {

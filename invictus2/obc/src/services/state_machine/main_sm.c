@@ -5,27 +5,81 @@
 #include "data_models.h"
 #include "zephyr/smf.h"
 
-#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(state_machine_service, LOG_LEVEL_DBG);
 
-LOG_MODULE_REGISTER(main_sm, LOG_LEVEL_DBG);
+bool rocket_state_service_setup(void)
+{
+    LOG_WRN("Service setup is not implemented");
+    return true;
+}
 
-#ifndef UNIT_TEST
-/* Forward declaration of state table.
- * If unittesting, the state table is exported from the header file instead.
- */
-static const struct smf_state states[];
-#endif
+void rocket_state_service_start(void)
+{
+    LOG_WRN("Service is not implemented.");
+    return;
+}
+
+// State Machine Helper
+void toggle_valve(struct sm_object *s, valve_t valve, bool open)
+{
+    switch (valve) {
+        case VALVE_N2O_FILL:
+            s->data.actuators.v_n2o_fill = open ? 1 : 0;
+            break;
+        case VALVE_N2O_PURGE:
+            s->data.actuators.v_n2o_purge = open ? 1 : 0;
+            break;
+        case VALVE_N2_FILL:
+            s->data.actuators.v_n2_fill = open ? 1 : 0;
+            break;
+        case VALVE_N2_PURGE:
+            s->data.actuators.v_n2_purge = open ? 1 : 0;
+            break;
+        case VALVE_N2O_QUICK_DC:
+            s->data.actuators.v_n2o_quick_dc = open ? 1 : 0;
+            break;
+        case VALVE_N2_QUICK_DC:
+            s->data.actuators.v_n2_quick_dc = open ? 1 : 0;
+            break;
+        case VALVE_PRESSURIZING:
+            s->data.actuators.v_pressurizing = open ? 1 : 0;
+            break;
+        case VALVE_MAIN:
+            s->data.actuators.v_main = open ? 1 : 0;
+            break;
+        case VALVE_VENT:
+            s->data.actuators.v_venting = open ? 1 : 0;
+            break;
+        case VALVE_ABORT:
+            s->data.actuators.v_abort = open ? 1 : 0;
+            break;
+        default:
+            break;
+    }
+}
+
+void close_all_valves(struct sm_object *s)
+{
+    for (valve_t v = VALVE_N2O_FILL; v < _VALVE_COUNT; v++) {
+        toggle_valve(s, v, false);
+    }
+}
+
+// closes all valves except the one specified
+void open_single_valve(struct sm_object *s, valve_t valve)
+{
+    close_all_valves(s);
+    toggle_valve(s, valve, true);
+}
 
 static void root_entry(void *o)
 {
     ARG_UNUSED(o);
-    LOG_DBG("Entered ROOT state");
 }
 
 static void root_run(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
-    LOG_DBG("Running ROOT state");
 
     command_t cmd = s->command;
     if (!cmd) {
@@ -34,25 +88,23 @@ static void root_run(void *o)
 
     switch (cmd) {
         case CMD_STOP:
-            LOG_DBG("Global transition: CMD_STOP -> IDLE");
-            smf_set_state(SMF_CTX(s), &states[SM_IDLE]);
+            smf_set_state(SMF_CTX(s), &states[IDLE]);
             break;
 
         case CMD_ABORT:
-            LOG_DBG("Global transition: CMD_ABORT -> ABORT");
-            smf_set_state(SMF_CTX(s), &states[SM_ABORT]);
+            smf_set_state(SMF_CTX(s), &states[ABORT]);
             break;
         default:
-            LOG_ERR("Unknown global command: %d", cmd);
+            // Unknown global command
+            ;
     }
 
-    cmd = 0; // Clear command
+    cmd = 0;
 }
 
-root_exit(void *o)
+static void root_exit(void *o)
 {
     ARG_UNUSED(o);
-    LOG_DBG("Exiting ROOT state");
 }
 
 
@@ -61,15 +113,12 @@ root_exit(void *o)
 static void idle_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
-    LOG_DBG("Entered IDLE state");
-
     close_all_valves(s);
 }
 
 static void idle_run(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
-    LOG_DBG("Running IDLE state");
 
     command_t cmd = s->command;
     if (!cmd) {
@@ -78,87 +127,71 @@ static void idle_run(void *o)
 
     switch (cmd) {
         case CMD_FILL_EXEC:
-            LOG_DBG("IDLE: FILL_EXEC -> FILL");
-            smf_set_state(SMF_CTX(s), &states[SM_FILL]);
+            smf_set_state(SMF_CTX(s), &states[FILLING]);
             break;
         case CMD_READY:
-            smf_set_state(SMF_CTX(s), &states[SM_READY]);
+            smf_set_state(SMF_CTX(s), &states[READY]);
             break;
         default:
-            LOG_ERR("Can't transition from idle to: %d", cmd);
             smf_set_handled(SMF_CTX(s));
     }
 
-    cmd = 0; // Clear command
+    cmd = 0;
 }
 
 static void idle_exit(void *o)
 {
     ARG_UNUSED(o);
-    LOG_DBG("Exiting IDLE state");
 }
 
 static void filling_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
-    LOG_DBG("Entered FILL state");
-    // Prepare for filling sequence, e.g., ensure safe valve states
     close_all_valves(s);
 }
 
 static void filling_run(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
-    LOG_DBG("Running RS_FILLING state");
 
-    filling_command_t cmd = s->fill_command;
+    fill_command_t cmd = s->fill_command;
     if (!cmd) {
-        LOG_WRN("No filling command");
         return;
     }
 
     switch (cmd) {
         case CMD_FILL_N2:
-            LOG_DBG("RS_FILLING: CMD_FILL_N2 -> RS_FILL_FILL_N2_FILL");
-            smf_set_state(SMF_CTX(s), &states[SM_FILL_FILL_N2]);
+            smf_set_state(SMF_CTX(s), &states[FILL_N2]);
             break;
         case CMD_FILL_PRE_PRESS:
-            LOG_DBG("RS_FILLING: CMD_FILL_PRE_PRESS -> RS_FILL_FILL_PRE_PRESS");
-            smf_set_state(SMF_CTX(s), &states[SM_FILL_PRE_PRESS]);
+            smf_set_state(SMF_CTX(s), &states[PRE_PRESS]);
             break;
         case CMD_FILL_N2O:
-            LOG_DBG("RS_FILLING: CMD_FILL_N2O -> RS_FILL_FILL_N2O");
-            smf_set_state(SMF_CTX(s), &states[SM_FILL_FILL_N2O]);
+            smf_set_state(SMF_CTX(s), &states[FILL_N2O]);
             break;
         case CMD_FILL_POST_PRESS:
-            LOG_DBG("RS_FILLING: CMD_FILL_POST_PRESS -> RS_FILL_POST_PRESS");
-            smf_set_state(SMF_CTX(s), &states[SM_FILL_POST_PRESS]);
+            smf_set_state(SMF_CTX(s), &states[POST_PRESS]);
             break;
         default:
-            LOG_ERR("Unknown filling command in RS_FILLING: %d", cmd);
             smf_set_handled(SMF_CTX(s));
     }
 
-    cmd = 0; // Clear command
+    cmd = 0;
 }
 
 static void filling_exit(void *o)
 {
     ARG_UNUSED(o);
-    LOG_DBG("Exiting RS_FILLING state");
 }
 
 static void ready_entry(void *o)
 {
-    struct sm_object *s = (struct sm_object *)o;
-    LOG_DBG("Entered RS_READY state");
-    // Prepare system for arming, e.g., verify sensors
+    ARG_UNUSED(o);
 }
 
 static void ready_run(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
-    LOG_DBG("Running RS_READY state");
 
     command_t cmd = s->command;
     if (!cmd) {
@@ -167,38 +200,31 @@ static void ready_run(void *o)
 
     switch (cmd) {
         case CMD_ARM:
-            LOG_DBG("RS_READY: CMD_ARM -> RS_ARMED");
-            smf_set_state(SMF_CTX(s), &states[RS_ARMED]);
+            smf_set_state(SMF_CTX(s), &states[ARMED]);
             break;
         case CMD_ABORT:
-            LOG_DBG("RS_READY: CMD_ABORT -> RS_ABORT");
-            smf_set_state(SMF_CTX(s), &states[RS_ABORT]);
+            smf_set_state(SMF_CTX(s), &states[ABORT]);
             break;
         default:
-            LOG_ERR("Unknown command in RS_READY: %d", cmd);
             smf_set_handled(SMF_CTX(s));
     }
 
-    cmd = 0; // Clear command
+    cmd = 0;
 }
 
 static void ready_exit(void *o)
 {
     ARG_UNUSED(o);
-    LOG_DBG("Exiting RS_READY state");
 }
 
 static void armed_entry(void *o)
 {
-    struct sm_object *s = (struct sm_object *)o;
-    LOG_DBG("Entered RS_ARMED state");
-    // System is armed, prepare for launch
+    ARG_UNUSED(o);
 }
 
 static void armed_run(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
-    LOG_DBG("Running RS_ARMED state");
 
     command_t cmd = s->command;
     if (!cmd) {
@@ -207,50 +233,51 @@ static void armed_run(void *o)
 
     switch (cmd) {
         case CMD_FIRE:
-            LOG_DBG("RS_ARMED: CMD_FIRE -> RS_FLIGHT");
             if(s->data.thermocouples.chamber_thermo > s->config->flight_sm_config.min_chamber_launch_temp){
-                LOG_DBG("Chamber temperature is above minimum, proceeding to FLIGHT");
+                // Chamber temperature is above minimum
             } else {
-                LOG_ERR("Chamber temperature too low for launch: %d", s->data.thermocouples.chamber_thermo);
                 smf_set_handled(SMF_CTX(s));
                 break;
             }
-            smf_set_state(SMF_CTX(s), &states[RS_FLIGHT]);
+            smf_set_state(SMF_CTX(s), &states[FLIGHT]);
             break;
         default:
-            LOG_ERR("Unknown command in RS_ARMED: %d", cmd);
             smf_set_handled(SMF_CTX(s));
     }
 
-    cmd = 0; // Clear command
+    cmd = 0;
 }
 
 static void armed_exit(void *o)
 {
     ARG_UNUSED(o);
-    LOG_DBG("Exiting RS_ARMED state");
 }
 
 static void flight_entry(void *o)
 {
-    struct sm_object *s = (struct sm_object *)o;
-    LOG_DBG("Entered FLIGHT state");
+    ARG_UNUSED(o);
 }
 
 static void flight_run(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
-    LOG_DBG("Running FLIGHT state");
-
-    // handle in flight sub-state machine
-
-    cmd = 0; // Clear command
+    command_t cmd = s->command;
+    if (!cmd) return;
+    switch (cmd) {
+        case CMD_LAUNCH_OVERRIDE:
+            // Handle launch override if necessary
+            break;
+        case CMD_ABORT:
+            smf_set_state(SMF_CTX(s), &states[ABORT]);
+            break;
+        default:
+            smf_set_handled(SMF_CTX(s));
+    }
 }
 
 static void flight_exit(void *o)
 {
     ARG_UNUSED(o);
-    LOG_DBG("Exiting FLIGHT state");
 }
 
 
@@ -258,79 +285,84 @@ static void flight_exit(void *o)
 static void abort_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
-    (void)s; // unused
-    LOG_DBG("Entered ABORT state");
+    (void)s;
     close_all_valves(s);
     toggle_valve(s, VALVE_ABORT, true);
-    // TODO: wait x seconds for main tank to purge
     toggle_valve(s, VALVE_PRESSURIZING, true);
 }
 
 static void abort_run(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
-    LOG_DBG("Running ABORT state");
 
-    enum cmd_other cmd = CMD_OTHER(s->command);
+    command_t cmd = s->command;
     if (!cmd) {
         return;
     }
 
     switch (cmd) {
     case CMD_READY:
-        LOG_DBG("ABORT state: CMD_READY -> IDLE");
-        smf_set_state(SMF_CTX(s), &states[RS_IDLE]);
+        smf_set_state(SMF_CTX(s), &states[IDLE]);
         break;
     case CMD_STOP:
-        LOG_DBG("ABORT state: CMD_STOP -> IDLE");
-        smf_set_state(SMF_CTX(s), &states[RS_IDLE]);
+        smf_set_state(SMF_CTX(s), &states[IDLE]);
         break;
     default:
-        LOG_ERR("Unknown OTHER command: %d", cmd);
         smf_set_handled(SMF_CTX(s));
     }
 
-    cmd = 0; // Clear command
+    cmd = 0;
 }
 
 static void abort_exit(void *o)
 {
     ARG_UNUSED(o);
-    LOG_DBG("Exiting RS_FILL_ABORT state");
 }
 
 
-#ifdef UNIT_TEST
+
 const struct smf_state states[] = {
-#else
-static const struct smf_state states[] = {
-#endif
     // clang-format off
-    // SMF_CREATE_STATE(s_entry_cb, s_run_cb, s_exit_cb, s_parent, s_initial_o),
-    [SM_ROOT]      = SMF_CREATE_STATE(NULL, root_run, NULL, NULL, &states[SM_IDLE]),
+    [ROOT]      = SMF_CREATE_STATE(root_entry, root_run, root_exit, NULL, &states[IDLE]),
 
-    [SM_IDLE]      = SMF_CREATE_STATE(idle_entry, idle_run, idle_exit, &states[SM_ROOT], NULL),
-    [SM_ABORT]     = SMF_CREATE_STATE(abort_entry, abort_run, abort_exit,&states[SM_ROOT], NULL),
+    [IDLE]      = SMF_CREATE_STATE(idle_entry, idle_run, idle_exit, &states[ROOT], NULL),
+    [ABORT]     = SMF_CREATE_STATE(abort_entry, abort_run, abort_exit,&states[ROOT], NULL),
 
-    [SM_FILL]   = SMF_CREATE_STATE(filling_entry, filling_run, filling_exit, &states[SM_ROOT], NULL),
-    
-    // filling sub-states
-    [SM_FILL_SAFE_PAUSE] = SMF_CREATE_STATE(filling_safe_pause_entry, filling_safe_pause_run, filling_safe_pause_exit, &states[SM_FILL], NULL),
-    [SM_FILL_FILL_N2] = SMF_CREATE_STATE(filling_fill_n2_entry, filling_fill_n2_run, filling_fill_n2_exit, &states[SM_FILL], NULL),
-    [SM_FILL_PRE_PRESS] = SMF_CREATE_STATE(filling_pre_press_entry, filling_pre_press_run, filling_pre_press_exit, &states[SM_FILL], NULL),
-    [SM_FILL_FILL_N2O] = SMF_CREATE_STATE(filling_fill_n2o_entry, filling_fill_n2o_run, filling_fill_n2o_exit, &states[SM_FILL], NULL),
-    [SM_FILL_POST_PRESS] = SMF_CREATE_STATE(filling_post_press_entry, filling_post_press_run, filling_post_press_exit, &states[SM_FILL], NULL),
+    [FILLING]   = SMF_CREATE_STATE(filling_entry, filling_run, filling_exit, &states[ROOT], NULL),
 
-    [SM_READY]      = SMF_CREATE_STATE(ready_entry, ready_run, ready_exit, &states[SM_ROOT], NULL),
-    [SM_ARMED]      = SMF_CREATE_STATE(armed_entry, armed_run, armed_exit, &states[SM_ROOT], NULL),
-    [SM_FLIGHT]     = SMF_CREATE_STATE(flight_entry, flight_run, flight_exit, &states[SM_ROOT], NULL),
+    [SAFE_PAUSE] = SMF_CREATE_STATE(safe_pause_entry, safe_pause_run, safe_pause_exit, &states[FILLING], NULL),
+    [SAFE_PAUSE_IDLE] = SMF_CREATE_STATE(safe_pause_idle_entry, safe_pause_idle_run, safe_pause_idle_exit, &states[SAFE_PAUSE], NULL),
+    [SAFE_PAUSE_VENT] = SMF_CREATE_STATE(safe_pause_vent_entry, safe_pause_vent_run, safe_pause_vent_exit, &states[SAFE_PAUSE], NULL),
 
-    [SM_FLIGHT]     = SMF_CREATE_STATE(flight_entry, flight_run, flight_exit, &states[SM_FLIGHT], NULL),
+    [FILL_N2] = SMF_CREATE_STATE(fill_n2_entry, fill_n2_run, fill_n2_exit, &states[FILLING], NULL),
+    [FILL_N2_IDLE] = SMF_CREATE_STATE(fill_n2_idle_entry, fill_n2_idle_run, fill_n2_idle_exit, &states[FILL_N2], NULL),
+    [FILL_N2_FILL] = SMF_CREATE_STATE(fill_n2_fill_entry, fill_n2_fill_run, fill_n2_fill_exit, &states[FILL_N2], NULL),
+    [FILL_N2_VENT] = SMF_CREATE_STATE(fill_n2_vent_entry, fill_n2_vent_run, fill_n2_vent_exit, &states[FILL_N2], NULL),
+
+    [PRE_PRESS] = SMF_CREATE_STATE(pre_press_entry, pre_press_run, pre_press_exit, &states[FILLING], NULL),
+    [PRE_PRESS_IDLE] = SMF_CREATE_STATE(pre_press_idle_entry, pre_press_idle_run, pre_press_idle_exit, &states[PRE_PRESS], NULL),
+    [PRE_PRESS_FILL_N2] = SMF_CREATE_STATE(pre_press_fill_entry, pre_press_fill_run, pre_press_fill_exit, &states[PRE_PRESS], NULL),
+    [PRE_PRESS_VENT] = SMF_CREATE_STATE(pre_press_vent_entry, pre_press_vent_run, pre_press_vent_exit, &states[PRE_PRESS], NULL),
+
+    [FILL_N2O] = SMF_CREATE_STATE(fill_n2o_entry, fill_n2o_run, fill_n2o_exit, &states[FILLING], NULL),
+    [FILL_N2O_IDLE] = SMF_CREATE_STATE(fill_n2o_idle_entry, fill_n2o_idle_run, fill_n2o_idle_exit, &states[FILL_N2O], NULL),
+    [FILL_N2O_FILL] = SMF_CREATE_STATE(fill_n2o_fill_entry, fill_n2o_fill_run, fill_n2o_fill_exit, &states[FILL_N2O], NULL),
+    [FILL_N2O_VENT] = SMF_CREATE_STATE(fill_n2o_vent_entry, fill_n2o_vent_run, fill_n2o_vent_exit, &states[FILL_N2O], NULL),
+
+    [POST_PRESS] = SMF_CREATE_STATE(post_press_entry, post_press_run, post_press_exit, &states[FILLING], NULL),
+    [POST_PRESS_IDLE] = SMF_CREATE_STATE(post_press_idle_entry, post_press_idle_run, post_press_idle_exit, &states[POST_PRESS], NULL),
+    [POST_PRESS_FILL_N2] = SMF_CREATE_STATE(post_press_fill_entry, post_press_fill_run, post_press_fill_exit, &states[POST_PRESS], NULL),
+    [POST_PRESS_VENT] = SMF_CREATE_STATE(post_press_vent_entry, post_press_vent_run, post_press_vent_exit, &states[POST_PRESS], NULL),
+
+    [READY]      = SMF_CREATE_STATE(ready_entry, ready_run, ready_exit, &states[ROOT], NULL),
+    [ARMED]      = SMF_CREATE_STATE(armed_entry, armed_run, armed_exit, &states[ROOT], NULL),
+
+    [FLIGHT]     = SMF_CREATE_STATE(flight_entry, flight_run, flight_exit, &states[ROOT], NULL),
+
     // clang-format on
 };
 
 void sm_init(struct sm_object *initial_s_obj)
 {
-    LOG_DBG("Initializing state machine: setting initial state to RS_IDLE");
-    smf_set_initial(SMF_CTX(initial_s_obj), &states[RS_IDLE]);
+    smf_set_initial(SMF_CTX(initial_s_obj), &states[IDLE]);
 }

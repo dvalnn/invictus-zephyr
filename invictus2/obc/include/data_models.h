@@ -3,9 +3,7 @@
 
 #include <stdint.h>
 
-#include "services/state_machine/main_sm.h"
-
-typedef enum main_state_e {
+typedef enum {
     ROOT,
     IDLE,
     FILLING,
@@ -16,47 +14,47 @@ typedef enum main_state_e {
 } main_state_t;
 
 // Filling Substates
-typedef enum filling_state_e {
-    FILL_SAFE_PAUSE,
-    FILL_SAFE_PAUSE_IDLE,
-    FILL_SAFE_PAUSE_VENT,
+typedef enum {
+    SAFE_PAUSE = ABORT + 1,
+    SAFE_PAUSE_IDLE,
+    SAFE_PAUSE_VENT,
 
-    FILL_FILLING_N2,
-    FILL_FILLING_N2_IDLE,
-    FILL_FILLING_N2_FILL,
+    FILL_N2,
+    FILL_N2_IDLE,
+    FILL_N2_FILL,
+    FILL_N2_VENT,
 
-    FILL_PRE_PRESS,
-    FILL_PRE_PRESS_IDLE,
-    FILL_PRE_PRESS_VENT,
-    FILL_PRE_PRESS_FILL_N2,
+    PRE_PRESS,
+    PRE_PRESS_IDLE,
+    PRE_PRESS_VENT,
+    PRE_PRESS_FILL_N2,
 
-    FILL_FILLING_N2O,
-    FILL_FILLING_N2O_IDLE,
-    FILL_FILLING_N2O_FILL,
-    FILL_FILLING_N2O_VENT,
+    FILL_N2O,
+    FILL_N2O_IDLE,
+    FILL_N2O_FILL,
+    FILL_N2O_VENT,
 
-    FILL_POST_PRESS,
-    FILL_POST_PRESS_IDLE,
-    FILL_POST_PRESS_VENT,
-    FILL_POST_PRESS_FILL_N2,
-
-    _FILL_MAX
+    POST_PRESS,
+    POST_PRESS_IDLE,
+    POST_PRESS_VENT,
+    POST_PRESS_FILL_N2,
 } filling_state_t;
 
 
 // Flight Substates
-typedef enum flight_state_e {
-    FLIGHT_LAUNCH,
-    FLIGHT_ASCENT,
-    FLIGHT_APOGEE,
-    FLIGHT_DROGUE_CHUTE,
-    FLIGHT_MAIN_CHUTE,
-    FLIGHT_TOUCHDOWN,
-
-    _FLIGHT_MAX
+typedef enum {
+    IGNITION = POST_PRESS_FILL_N2 + 1,
+    BOOST,
+    COAST,
+    APOGEE,
+    DROGUE_CHUTE,
+    MAIN_CHUTE,
+    TOUCHDOWN,
 } flight_state_t;
 
-typedef enum valve_e {
+#define STATE_COUNT (TOUCHDOWN + 1)
+
+typedef enum {
     _VALVE_NONE = 0,
 
     VALVE_N2O_FILL,
@@ -78,7 +76,7 @@ typedef enum valve_e {
 // Used across the ZBUS channels.
 
 // Actuators bitfield definition (13 bits -> store in 2 bytes)
-union actuators_bitmap_u {
+typedef union {
     struct {
         // Rocket valves
         uint16_t v_pressurizing: 1;
@@ -108,9 +106,9 @@ union actuators_bitmap_u {
         uint16_t reserved: 3;
     };
     uint16_t raw;
-};
+} actuators_bitmap_t;
 
-union thermocouples_u {
+typedef union {
     struct {
         int16_t n2o_tank_uf_t1;
         int16_t n2o_tank_uf_t2;
@@ -123,9 +121,9 @@ union thermocouples_u {
         int16_t n2_line_thermo;
     };
     int16_t raw[8];
-};
+} thermocouples_t;
 
-union pressures_u {
+typedef union {
     struct {
         uint16_t n2o_tank_pressure;
         uint16_t chamber_pressure;
@@ -134,9 +132,9 @@ union pressures_u {
         uint16_t quick_dc_pressure;
     };
     uint16_t raw[6];
-};
+} pressures_t;
 
-union loadcell_weights_u {
+typedef union {
     struct {
         uint16_t n2o_loadcell;  // N2O bottle loadcell
         uint16_t rail_loadcell; // Only used during competition to measure rocket weight
@@ -147,9 +145,10 @@ union loadcell_weights_u {
         uint16_t thrust_loadcell3;
     };
     uint16_t raw[5];
-};
+} loadcell_weights_t;
 
-struct navigator_sensors_s {
+typedef struct {
+    // GPS:
     uint32_t gps_latitude_u32;  // reinterpret-casted float bits
     uint32_t gps_longitude_u32; // reinterpret-casted float bits
     uint16_t gps_altitude;      // altitude in meters
@@ -157,35 +156,37 @@ struct navigator_sensors_s {
     uint8_t gps_sats;           // gps number of satelites
     uint8_t _reserved;          // extra byte for alignment
 
-    // NAV Sensors:
-    uint16_t baro_altitude[2]; // Bar Altitude
-    int16_t mag[3];            // Mag XYZ
-    int16_t imu_gyr[3];        // IMU Gyr XYZ
-    int16_t imu_accel[3];      // IMU Accel XYZ sensors/samples
+    // Barometers:
+    uint16_t baro1, baro2;
 
-    // Kalman NAV (16 bytes total): vel_z, accel_z, alt, max_alt (each int16),
-    // then 4 quaternions as int16 each
-    int16_t kalman_vel_z;
-    int16_t kalman_accel_z;
-    int16_t kalman_alt;
-    int16_t kalman_max_alt;
-    int16_t kalman_quat[4];
-};
+    // IMU:
+    int16_t mag_x, mag_y, mag_z; // Magnetometer
+    int16_t gyro_x, gyro_y, gyro_z; // Gyroscope
+    int16_t accel_x, accel_y, accel_z; // Accelerometer
+} navigator_sensors_t;
+
+typedef struct {
+    int16_t vertical_speed;
+    int16_t vertical_acceleration;
+    int16_t altitude;
+    int16_t max_altitude;
+    int16_t quaternions[4];
+} kalman_data_t;
 
 typedef struct state_data_s {
     main_state_t main_state;
     filling_state_t filling_state;
     flight_state_t flight_state;
-    sm_state_t sm_state;
 } state_data_t;
 
-struct full_system_data_s {
+typedef struct {
     state_data_t state;
-    union pressures_u pressures;
-    union thermocouples_u thermocouples;
-    union actuators_bitmap_u actuators;
-    union loadcell_weights_u loadcells;
-    struct navigator_sensors_s navigator;
-};
+    pressures_t pressures;
+    thermocouples_t thermocouples;
+    actuators_bitmap_t actuators;
+    loadcell_weights_t loadcells;
+    navigator_sensors_t navigator;
+    kalman_data_t kalman;
+} system_data_t;
 
 #endif // DATA_MODELS_H_

@@ -128,7 +128,7 @@ void hydra_boards_read_irs(const int client_iface, struct hydra_boards *const hb
                            const bool fs_disabled);
 
 void hydra_boards_irs_to_zbus_rep(const struct hydra_boards *const hb,
-                                  union thermocouples_u *const thermocouples,
-                                  union pressures_u *const pressures, const bool fs_disabled);
+                                  thermocouples_t *const thermocouples,
+                                  pressures_t *const pressures, const bool fs_disabled);
 
 #endif // HYDRA_H_

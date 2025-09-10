@@ -6,10 +6,10 @@ LOG_MODULE_REGISTER(lora_backend_testing, LOG_LEVEL_DBG);
 #define UART_DEVICE_NODE DT_CHOSEN(zephyr_shell_uart)
 #define MSG_SIZE         32
 
-K_MSGQ_DEFINE(uart_msgq, RADIO_CMD_SIZE, 10, 4);
+K_MSGQ_DEFINE(uart_msgq, CMD_SIZE, 10, 4);
 static const struct device *const uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
 
-static char rx_buf[RADIO_CMD_SIZE];
+static char rx_buf[CMD_SIZE];
 static int rx_buf_pos;
 
 static void serial_cb(const struct device *dev, void *user_data)
@@ -38,7 +38,7 @@ static void serial_cb(const struct device *dev, void *user_data)
     // read a full command or until the buffer is full
     uint8_t c;
     while (uart_fifo_read(uart_dev, &c, 1) == 1) {
-        if (rx_buf_pos == (RADIO_CMD_SIZE - 1)) {
+        if (rx_buf_pos == (CMD_SIZE - 1)) {
             k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
             rx_buf_pos = 0;
         } else if (rx_buf_pos < (sizeof(rx_buf) - 1)) {

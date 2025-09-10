@@ -1,9 +1,9 @@
-#include "zephyr/kernel.h"
-#include "zephyr/logging/log.h"
-#include "zephyr/sys/atomic.h"
-#include "zephyr/sys/atomic_types.h"
-#include "zephyr/zbus/zbus.h"
+#include <zephyr/kernel.h>
+#include <zephyr/sys/atomic.h>
+#include <zephyr/sys/atomic_types.h>
+#include <zephyr/zbus/zbus.h>
 
+#include <zephyr/logging/log.h>
 #include <zephyr/drivers/gpio.h>
 
 #include "data_models.h"
@@ -12,7 +12,7 @@
 
 #include "services/lora.h"
 #include "services/modbus.h"
-#include "services/rocket_state.h"
+#include "services/state_machine/main_sm.h"
 
 /* The devicetree node identifier for the "led0" alias. */
 #define LED0_NODE DT_ALIAS(led0)
@@ -46,63 +46,63 @@ LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 //
 // --- Sensor Channels ---
 ZBUS_CHAN_DEFINE(chan_thermo_sensors,   /* Channel Name */
-                 union thermocouples_u, /* Message Type */
+                 thermocouples_t,       /* Message Type */
                  NULL,                  /* Validator Func */
                  NULL,                  /* User Data */
                  ZBUS_OBSERVERS_EMPTY,  /* Observers */
                  ZBUS_MSG_INIT(0)       /* Initial Value */
-)
+);
 
 ZBUS_CHAN_DEFINE(chan_pressure_sensors, /* Channel Name */
-                 union pressures_u,     /* Message Type */
+                 pressures_t,           /* Message Type */
                  NULL,                  /* Validator Func */
                  NULL,                  /* User Data */
                  ZBUS_OBSERVERS_EMPTY,  /* Observers */
                  ZBUS_MSG_INIT(0)       /* Initial Value */
-)
+);
 
 ZBUS_CHAN_DEFINE(chan_weight_sensors,      /* Channel Name */
-                 union loadcell_weights_u, /* Message Type */
+                 loadcell_weights_t,       /* Message Type */
                  NULL,                     /* Validator Func */
                  NULL,                     /* User Data */
                  ZBUS_OBSERVERS_EMPTY,     /* Observers */
                  ZBUS_MSG_INIT(0)          /* Initial Value */
-)
+);
 
 ZBUS_CHAN_DEFINE(chan_navigator_sensors,     /* Channel Name */
-                 struct navigator_sensors_s, /* Message Type */
+                 navigator_sensors_t, /* Message Type */
                  NULL,                       /* Validator Func */
                  NULL,                       /* User Data */
                  ZBUS_OBSERVERS_EMPTY,       /* Observers */
                  ZBUS_MSG_INIT(0)            /* Initial Value */
-)
+);
 
 // --- Mobdus Actuator Write Channel ---
 ZBUS_CHAN_DEFINE(chan_actuators,           /* Channel Name */
-                 union actuators_bitmap_u, /* Message Type */
+                 actuators_bitmap_t, /* Message Type */
                  NULL,                     /* Validator Func */
                  NULL,                     /* User Data */
                  ZBUS_OBSERVERS_EMPTY,     /* Observers */
                  ZBUS_MSG_INIT(0)          /* Initial Value */
-)
+);
 
 // --- Radio Commands from Ground Station ---
 ZBUS_CHAN_DEFINE(chan_radio_cmds,            /* Channel Name */
                  struct generic_cmd_s,       /* Message Type */
-                 radio_cmd_validator,        /* Validator Func */
+                 NULL,        /* Validator Func */
                  NULL,                       /* User Data */
                  ZBUS_OBSERVERS_EMPTY,       /* Observers */
                  ZBUS_MSG_INIT(0)            /* Initial Value */
-)
+);
 
 // --- Rocket State ---
 ZBUS_CHAN_DEFINE(chan_rocket_state,      /* Channel Name */
-                 struct rocket_state_s,  /* Message Type */
-                 rocket_state_validator, /* Validator Func */
+                 state_data_t,  /* Message Type */
+                 NULL, /* Validator Func */
                  NULL,                   /* User Data */
                  ZBUS_OBSERVERS_EMPTY,   /* Observers */
                  ZBUS_MSG_INIT(0)        /* Initial Value */
-)
+);
 
 static lora_context_t lora_context;
 

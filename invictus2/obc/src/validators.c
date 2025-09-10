@@ -1,3 +1,5 @@
+/* NEED TO UPDATE TO NEW STATE MACHINE
+
 #include "validators.h"
 
 #include "data_models.h"
@@ -11,23 +13,23 @@ bool validate_fill_exec_cmd(const struct cmd_fill_exec_s *const cmd)
         return true;
 
         // REVIEW: test if this kind of cast works as expected. Same for the ones below.
-        /* const struct fill_N2_params_s *const params = */
-        /*     (const struct fill_N2_params_s *const)cmd->payload.params; */
+        // const struct fill_N2_params_s *const params = 
+        //     (const struct fill_N2_params_s *const)cmd->payload.params; 
     }
 
     case FILL_PROGRAM_N2O: {
         return true;
 
-        /* const struct fill_N2O_params_s *const params = */
-        /*     (const struct fill_N2O_params_s *const)cmd->payload.params; */
+        // const struct fill_N2O_params_s *const params = 
+        //     (const struct fill_N2O_params_s *const)cmd->payload.params; 
     }
 
     case FILL_PROGRAM_PRE_PRESS:
     case FILL_PROGRAM_POST_PRESS: {
         return true;
 
-        /* const struct fill_press_params_s *const params =
-         * (const struct fill_press_params_s *const) cmd->payload.params; */
+        // const struct fill_press_params_s *const params =
+        // (const struct fill_press_params_s *const) cmd->payload.params; 
     }
 
     case _FILL_PROGRAM_NONE:
@@ -121,9 +123,11 @@ bool rocket_state_validator(const void *msg, size_t msg_size)
         return (state->minor > _RS_FILL_NONE) && (state->minor < _RS_FILL_MAX);
 
     case ROCKET_STATE_FLIGHT:
-        return (state->minor > _RS_FLIGHT_NONE) && (state->minor < _RS_FLIGHT_MAX);
+        return (state->minor > _FLIGHT_NONE) && (state->minor < _RS_FLIGHT_MAX);
 
     default:
         return false;
     }
 }
+
+*/

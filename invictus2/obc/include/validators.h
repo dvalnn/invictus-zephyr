@@ -1,3 +1,5 @@
+/* NEED TO UPDATE TO NEW STATE MACHINE
+
 #ifndef ZBUS_VALIDATORS_H_
 #define ZBUS_VALIDATORS_H_
 
@@ -8,3 +10,4 @@ bool radio_cmd_validator(const void *msg, size_t msg_size);
 bool rocket_state_validator(const void *msg, size_t msg_size);
 
 #endif // ZBUS_VALIDATORS_H_
+*/

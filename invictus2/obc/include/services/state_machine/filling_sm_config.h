@@ -11,6 +11,7 @@
 #define SAFE_PAUSE_TRIGGER_N2O_TANK_P 52
 
 #define FILLING_COPV_TARGET_N2_TANK_P 200
+#define FILLING_COPV_TRIGGER_N2_TANK_P 210
 
 #define PRE_PRESSURIZING_TARGET_N2O_TANK_P  5
 #define PRE_PRESSURIZING_TRIGGER_N2O_TANK_P 7
@@ -31,9 +32,8 @@ struct filling_sm_config {
 
     // State Machine Configuration
     struct filling_copv {
-        uint16_t
-            target_n2_tank_pressure; // NOTE: this is the pressure on the n2 line before the
-                                     // tank, as there is no pressure sensor on the n2 tank.
+        uint16_t target_n2_tank_pressure;
+        uint16_t trigger_n2_tank_pressure;
     } f_copv;
 
     struct pre_pressurizing {
@@ -64,6 +64,7 @@ struct filling_sm_config {
         .f_copv =                                                                             \
             {                                                                                 \
                 .target_n2_tank_pressure = FILLING_COPV_TARGET_N2_TANK_P,                     \
+                .trigger_n2_tank_pressure = FILLING_COPV_TRIGGER_N2_TANK_P,                     \
             },                                                                                \
         .pre_p =                                                                              \
             {                                                                                 \

@@ -125,8 +125,8 @@ static void hydra_read_ir_work_handler(struct k_work *work)
     k_work_schedule_for_queue(&modbus_work_q, &hydra_sample_work,
                               K_MSEC(CONFIG_MODBUS_HYDRA_SAMPLE_INTERVAL_MSEC));
 
-    union thermocouples_u temperatures = {0};
-    union pressures_u pressures = {0};
+    thermocouples_t temperatures = {0};
+    pressures_t pressures = {0};
     hydra_boards_read_irs(client_iface, &hydras, (bool)atomic_get(&fs_disabled));
     hydra_boards_irs_to_zbus_rep(&hydras, &temperatures, &pressures,
                                  (bool)atomic_get(&fs_disabled));
@@ -140,7 +140,7 @@ static void lift_read_ir_work_handler(struct k_work *work)
     k_work_schedule_for_queue(&modbus_work_q, &lift_sample_work,
                               K_MSEC(CONFIG_MODBUS_LIFT_SAMPLE_INTERVAL_MSEC));
 
-    union loadcell_weights_u weights = {0};
+    loadcell_weights_t weights = {0};
     lift_boards_read_irs(client_iface, &lifts, (bool)atomic_get(&fs_disabled));
     lift_boards_irs_to_zbus_rep(&lifts, &weights, (bool)atomic_get(&fs_disabled));
 
@@ -159,13 +159,7 @@ static void radio_cmd_work_handler(struct k_work *work)
 
 static void rocket_state_work_handler(struct k_work *work)
 {
-    struct rocket_state_s state = {0};
-    zbus_chan_read(&chan_rocket_state, &state, K_NO_WAIT); // REVIEW: consider const msg ref
-    if ((enum rocket_state_e)state.major == ROCKET_STATE_ARMED) {
-        LOG_INF("Rocket is ARMED, disabling filling station reads.");
-        atomic_set(&fs_disabled, true);
-        return;
-    }
+    k_oops(); // FIXME: implement function
 }
 
 void modbus_service_start(void)
