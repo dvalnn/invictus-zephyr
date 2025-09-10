@@ -21,11 +21,11 @@ static void lift_read_ir_work_handler(struct k_work *work);
 static void hydra_read_ir_work_handler(struct k_work *work);
 
 static void actuator_work_handler(struct k_work *work);
-static void radio_cmd_work_handler(struct k_work *work);
+static void command_work_handler(struct k_work *work);
 static void rocket_state_work_handler(struct k_work *work);
 
 static K_WORK_DEFINE(actuator_work, actuator_work_handler);
-static K_WORK_DEFINE(radio_cmd_work, radio_cmd_work_handler);
+static K_WORK_DEFINE(command_work, command_work_handler);
 static K_WORK_DEFINE(rocket_state_work, rocket_state_work_handler);
 
 static K_WORK_DELAYABLE_DEFINE(lift_sample_work, lift_read_ir_work_handler);
@@ -38,13 +38,13 @@ static struct k_work_q modbus_work_q;
 ZBUS_CHAN_DECLARE(chan_thermo_sensors, chan_pressure_sensors, chan_weight_sensors);
 
 // Subscribed channels
-ZBUS_CHAN_DECLARE(chan_actuators, chan_radio_cmds, chan_rocket_state);
+ZBUS_CHAN_DECLARE(chan_actuators, chan_packets, chan_rocket_state);
 
 static void modbus_listener_cb(const struct zbus_channel *chan);
 
 ZBUS_LISTENER_DEFINE(modbus_listener, modbus_listener_cb);
 ZBUS_CHAN_ADD_OBS(chan_actuators, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
-ZBUS_CHAN_ADD_OBS(chan_radio_cmds, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
+ZBUS_CHAN_ADD_OBS(chan_packets, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
 ZBUS_CHAN_ADD_OBS(chan_rocket_state, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
 
 // Static Variables
@@ -63,8 +63,8 @@ static void modbus_listener_cb(const struct zbus_channel *chan)
         return;
     }
 
-    if (chan == &chan_radio_cmds) {
-        k_work_submit_to_queue(&modbus_work_q, &radio_cmd_work);
+    if (chan == &chan_packets) {
+        k_work_submit_to_queue(&modbus_work_q, &command_work);
         return;
     }
 
@@ -152,7 +152,7 @@ static void actuator_work_handler(struct k_work *work)
     k_oops(); // FIXME: implement function
 }
 
-static void radio_cmd_work_handler(struct k_work *work)
+static void command_work_handler(struct k_work *work)
 {
     k_oops(); // FIXME: implement function
 }

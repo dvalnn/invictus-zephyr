@@ -4,7 +4,7 @@
 #include "zephyr/smf.h"
 #include "services/state_machine/main_sm_config.h"
 #include "data_models.h"
-#include "commands.h"
+#include "packets.h"
 
 bool state_machine_service_setup(void);
 void state_machine_service_start(void);

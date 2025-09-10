@@ -1,5 +1,5 @@
-#ifndef COMMANDS_H_
-#define COMMANDS_H_
+#ifndef PACKETS_H_
+#define PACKETS_H_
 
 #include "zephyr/toolchain.h"
 
@@ -17,25 +17,25 @@
 // -----------------------------------------------------------------------------
 
 // Always 1 byte fields, packed for on-the-wire transmission.
-struct cmd_header_s {
+typedef struct packet_header_s {
     uint8_t packet_version;
     uint8_t sender_id;
     uint8_t target_id;
     uint8_t command_id; // use values from enum radio_command_e
-};
+} packet_header_t;
 
 // -----------------------------------------------------------------------------
-// Generic Command Structure
+// Generic Packet Structure
 // -----------------------------------------------------------------------------
 
-#define CMD_SIZE          128u
-#define CMD_HEADER_BYTES  ((uint8_t)sizeof(struct cmd_header_s))
-#define CMD_PAYLOAD_BYTES (CMD_SIZE - CMD_HEADER_BYTES)
+#define PACKET_SIZE          128u
+#define PACKET_HEADER_BYTES  ((uint8_t)sizeof(struct packet_header_s))
+#define PACKET_PAYLOAD_BYTES (PACKET_SIZE - PACKET_HEADER_BYTES)
 
-// NOTE: Generic commands structure, cast to a specific command type to access payloads.
-struct generic_cmd_s {
-    struct cmd_header_s header;
-    uint8_t _reserved[CMD_PAYLOAD_BYTES];
+// NOTE: Generic packet structure, cast to a specific packet type to access values by name.
+struct generic_packet_s {
+    struct packet_header_s header;
+    uint8_t payload[PACKET_PAYLOAD_BYTES];
 };
 
 // -----------------------------------------------------------------------------
@@ -75,6 +75,7 @@ enum fill_program_e {
 
 struct fill_N2_params_s {
     uint16_t target_N2_deci_bar;
+    uint16_t trigger_N2_deci_bar;
 };
 
 struct fill_press_params_s {
@@ -90,12 +91,12 @@ struct fill_N2O_params_s {
 // Fill exec generic envelope
 struct fill_exec_s {
     uint8_t program_id;                          // values from enum fill_program_e
-    uint8_t params[CMD_PAYLOAD_BYTES - 1]; // 1 byte for program_id, rest for params
+    uint8_t params[PACKET_PAYLOAD_BYTES - 1]; // 1 byte for program_id, rest for params
 };
 
 #define FILL_N2_PARAM_BYTES       (sizeof(struct fill_N2_params_s))
 #define FILL_PRESSURE_PARAM_BYTES (sizeof(struct fill_pressure_params_s))
-#define FILL_N2O_EXTRA_BYTES      (sizeof(struct fill_n2o_extra_s))
+#define FILL_N2O_EXTRA_BYTES      (sizeof(struct fill_N2O_extra_s))
 
 // -----------------------------------------------------------------------------
 // Manual Commands
@@ -132,7 +133,7 @@ struct manual_tare_s {
 // same logic as struct fill_exec_s
 struct manual_exec_s {
     uint8_t manual_cmd_id;
-    uint8_t params[CMD_PAYLOAD_BYTES - 1];
+    uint8_t params[PACKET_PAYLOAD_BYTES - 1];
 };
 
 // -----------------------------------------------------------------------------
@@ -144,7 +145,7 @@ struct manual_exec_s {
 struct ack_s {
     uint8_t ack_cmd_id;  // command_t that is acknowledged
     uint8_t status_code; // 0 = OK, non-zero = error
-    uint8_t params[CMD_PAYLOAD_BYTES - 2];
+    uint8_t params[PACKET_PAYLOAD_BYTES - 2];
 };
 
 // -----------------------------------------------------------------------------
@@ -187,11 +188,17 @@ typedef enum fill_cmd_e {
     CMD_FILL_POST_PRESS,
 } fill_command_t;   
 
+typedef struct {
+    struct packet_header_s header;
+    command_t cmd;
+
+} packet_t;
+
 // -----------------------------------------------------------------------------
 // Individual Command Definitions
 // -----------------------------------------------------------------------------
 // NOTE: These definitions should be safe to cast to and from the generic
-//       radio_generic_cmd_s structure as they all have the same header structure
+//       radio_generic_packet_s structure as they all have the same header structure
 //       and align to the same size.
 //
 //       Prefer to use these definitions across the codebase to ensure type
@@ -201,51 +208,51 @@ typedef enum fill_cmd_e {
 //       into wire format for transmission over the radio.
 // -----------------------------------------------------------------------------
 
-#define _PAD_SIZE(partial_s) (CMD_PAYLOAD_BYTES - sizeof(partial_s))
+#define _PAD_SIZE(partial_s) (PACKET_PAYLOAD_BYTES - sizeof(partial_s))
 
 #define _COMMAND_NAME(name) cmd_##name##_s
 
-#define _ASSERT_CMD_SIZE(name)                                                                \
-    BUILD_ASSERT(sizeof(struct _COMMAND_NAME(name)) == CMD_SIZE, #name " size error")
+#define _ASSERT_PACKET_SIZE(name)                                                                \
+    BUILD_ASSERT(sizeof(struct _COMMAND_NAME(name)) == PACKET_SIZE, #name " size error")
 
-// Command with no payload data (all reserved)
-#define MAKE_CMD(name)                                                                        \
+// Packet with no payload data (all reserved)
+#define MAKE_PACKET(name)                                                                        \
     struct _COMMAND_NAME(name) {                                                              \
-        struct cmd_header_s hdr;                                                              \
-        uint8_t _reserved[CMD_PAYLOAD_BYTES];                                           \
+        struct packet_header_s hdr;                                                              \
+        uint8_t _reserved[PACKET_PAYLOAD_BYTES];                                           \
     };                                                                                        \
-    _ASSERT_CMD_SIZE(name)
+    _ASSERT_PACKET_SIZE(name)
 
-// Command with defined payload data
-#define MAKE_CMD_WITH_PAYLOAD(name, partial_s)                                                \
+// Packet with defined payload data
+#define MAKE_PACKET_WITH_PAYLOAD(name, partial_s)                                                \
     struct _COMMAND_NAME(name) {                                                              \
-        struct cmd_header_s hdr;                                                              \
+        struct packet_header_s hdr;                                                              \
         partial_s payload;                                                                    \
         uint8_t _reserved[_PAD_SIZE(partial_s)];                                              \
     };                                                                                        \
-    _ASSERT_CMD_SIZE(name)
+    _ASSERT_PACKET_SIZE(name)
 
-MAKE_CMD(status_req);
-MAKE_CMD(abort);
-MAKE_CMD(ready);
-MAKE_CMD(arm);
-MAKE_CMD(fire);
-MAKE_CMD(launch_override);
-MAKE_CMD(fill_stop);
-MAKE_CMD(fill_resume);
-MAKE_CMD(manual_toggle);
+MAKE_PACKET(status_req);
+MAKE_PACKET(abort);
+MAKE_PACKET(ready);
+MAKE_PACKET(arm);
+MAKE_PACKET(fire);
+MAKE_PACKET(launch_override);
+MAKE_PACKET(fill_stop);
+MAKE_PACKET(fill_resume);
+MAKE_PACKET(manual_toggle);
 
-MAKE_CMD_WITH_PAYLOAD(ack, struct ack_s);
-MAKE_CMD_WITH_PAYLOAD(fill_exec, struct fill_exec_s);
-MAKE_CMD_WITH_PAYLOAD(status_rep, struct status_rep_s);
-MAKE_CMD_WITH_PAYLOAD(manual_exec, struct manual_exec_s);
+MAKE_PACKET_WITH_PAYLOAD(ack, struct ack_s);
+MAKE_PACKET_WITH_PAYLOAD(fill_exec, struct fill_exec_s);
+MAKE_PACKET_WITH_PAYLOAD(status_rep, struct status_rep_s);
+MAKE_PACKET_WITH_PAYLOAD(manual_exec, struct manual_exec_s);
 
 #undef _PAD_SIZE
 #undef _COMMAND_NAME
-#undef _ASSERT_CMD_SIZE
+#undef _ASSERT_PACKET_SIZE
 
-#undef MAKE_CMD
-#undef MAKE_CMD_WITH_PAYLOAD
+#undef MAKE_PACKET
+#undef MAKE_PACKET_WITH_PAYLOAD
 
 // -----------------------------------------------------------------------------
 // Serialization helpers (declarations)
@@ -259,10 +266,10 @@ enum pack_error_e {
     PACK_ERROR_INVALID_CMD_ID,
 };
 
-enum pack_error_e cmd_pack(const struct generic_cmd_s *const cmd,
+enum pack_error_e packet_pack(const struct generic_packet_s *const packet,
                                  uint8_t *const out_buf, const size_t out_buf_size);
 
-enum pack_error_e cmd_unpack(const uint8_t *const in_buf, const size_t in_buf_size,
-                                   struct generic_cmd_s *const cmd);
+enum pack_error_e packet_unpack(const uint8_t *const in_buf, const size_t in_buf_size,
+                                   struct generic_packet_s *const packet);
 
 #endif // COMMANDS_H_

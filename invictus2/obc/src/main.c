@@ -8,7 +8,7 @@
 
 #include "data_models.h"
 #include "validators.h"
-#include "commands.h"
+#include "packets.h"
 
 #include "services/lora.h"
 #include "services/modbus.h"
@@ -86,9 +86,9 @@ ZBUS_CHAN_DEFINE(chan_actuators,           /* Channel Name */
                  ZBUS_MSG_INIT(0)          /* Initial Value */
 );
 
-// --- Radio Commands from Ground Station ---
-ZBUS_CHAN_DEFINE(chan_radio_cmds,            /* Channel Name */
-                 struct generic_cmd_s,       /* Message Type */
+// --- Packets from Ground Station ---
+ZBUS_CHAN_DEFINE(chan_packets,            /* Channel Name */
+                 struct generic_packet_s,       /* Message Type */
                  NULL,        /* Validator Func */
                  NULL,                       /* User Data */
                  ZBUS_OBSERVERS_EMPTY,       /* Observers */
@@ -159,9 +159,9 @@ int main(void)
         return -1;
     }
 
+    lora_service_start();
     state_machine_service_start();
     //modbus_service_start();
-    lora_service_start();
 
     LOG_INF("Services started.");
     while (1) {

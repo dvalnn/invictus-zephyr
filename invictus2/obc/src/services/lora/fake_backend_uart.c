@@ -1,15 +1,15 @@
 #include "services/fake_lora.h"
 
-ZBUS_CHAN_DECLARE(chan_radio_cmds);
+ZBUS_CHAN_DECLARE(chan_packets);
 LOG_MODULE_REGISTER(lora_backend_testing, LOG_LEVEL_DBG);
 
 #define UART_DEVICE_NODE DT_CHOSEN(zephyr_shell_uart)
 #define MSG_SIZE         32
 
-K_MSGQ_DEFINE(uart_msgq, CMD_SIZE, 10, 4);
+K_MSGQ_DEFINE(uart_msgq, PACKET_SIZE, 10, 4);
 static const struct device *const uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
 
-static char rx_buf[CMD_SIZE];
+static char rx_buf[PACKET_SIZE];
 static int rx_buf_pos;
 
 static void serial_cb(const struct device *dev, void *user_data)
@@ -38,7 +38,7 @@ static void serial_cb(const struct device *dev, void *user_data)
     // read a full command or until the buffer is full
     uint8_t c;
     while (uart_fifo_read(uart_dev, &c, 1) == 1) {
-        if (rx_buf_pos == (CMD_SIZE - 1)) {
+        if (rx_buf_pos == (PACKET_SIZE - 1)) {
             k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
             rx_buf_pos = 0;
         } else if (rx_buf_pos < (sizeof(rx_buf) - 1)) {
@@ -82,30 +82,30 @@ void fake_lora_backend()
 {
     LOG_INF("Fake LoRa backend (UART) started");
     uart_irq_rx_enable(uart_dev);
-    struct generic_cmd_s cmd = {0};
+    struct generic_packet_s packet = {0};
 
     // indefinitely wait for input from the user
     while (k_msgq_get(&uart_msgq, &rx_buf, K_FOREVER) == 0) {
-        if (sizeof(rx_buf) != CMD_SIZE) {
-            LOG_ERR("Invalid command size: %d (expected %d)", sizeof(rx_buf), CMD_SIZE);
+        if (sizeof(rx_buf) != PACKET_SIZE) {
+            LOG_ERR("Invalid command size: %d (expected %d)", sizeof(rx_buf), PACKET_SIZE);
             LOG_HEXDUMP_WRN(rx_buf, sizeof(rx_buf), "Invalid command hex dump");
             continue;
         }
 
-        int err = cmd_unpack((const uint8_t *const)rx_buf, sizeof(rx_buf), &cmd);
+        int err = packet_unpack((const uint8_t *const)rx_buf, sizeof(rx_buf), &packet);
         if (err != PACK_ERROR_NONE) {
             LOG_ERR("Failed to unpack command: %d", err);
             LOG_HEXDUMP_WRN(rx_buf, sizeof(rx_buf), "Invalid command hex dump");
             continue;
         }
 
-        int rc = zbus_chan_pub(&chan_radio_cmds, (const void *)&cmd, K_NO_WAIT);
+        int rc = zbus_chan_pub(&chan_packets, (const void *)&packet, K_NO_WAIT);
         if (rc != 0) {
-            LOG_ERR("Failed to publish command to channel: %d", rc);
+            LOG_ERR("Failed to publish packet to channel: %d", rc);
             continue;
         }
 
-        LOG_INF("Published command ID %d to cmd channel", cmd.header.command_id);
+        LOG_INF("Published packet with cmd ID %d to packet channel", packet.header.command_id);
     }
 
     k_oops(); // unreachable

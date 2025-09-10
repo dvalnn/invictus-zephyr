@@ -72,28 +72,28 @@ void safe_pause_vent_exit(void *o) {
 /* ======================================================================== */
 /* fill/filling_n2: COPV filling sequence. */
 /* ======================================================================== */
-void filling_copv_entry(void *o) {
+void fill_n2_entry(void *o) {
     struct sm_object *s = (struct sm_object *)o;
     close_all_valves(s);
 }
 
-void filling_copv_run(void *o) {
+void fill_n2_run(void *o) {
     ARG_UNUSED(o);
 }
 
-void filling_copv_exit(void *o) {
+void fill_n2_exit(void *o) {
     ARG_UNUSED(o);
 }
 
 /* ======================================================================== */
-/* fill/filling_n2/idle: Idle during COPV filling. */
+/* fill/fill_n2/idle: Idle during COPV filling. */
 /* ======================================================================== */
-void filling_copv_idle_entry(void *o) {
+void fill_n2_idle_entry(void *o) {
     struct sm_object *s = (struct sm_object *)o;
     close_all_valves(s);
 }
 
-void filling_copv_idle_run(void *o) {
+void fill_n2_idle_run(void *o) {
     // Transition to fill when pressure is below target.
     struct sm_object *s = (struct sm_object *)o;
 
@@ -104,19 +104,19 @@ void filling_copv_idle_run(void *o) {
     }
 }
 
-void filling_copv_idle_exit(void *o) {
+void fill_n2_idle_exit(void *o) {
     ARG_UNUSED(o);
 }
 
 /* ======================================================================== */
 /* fill/fill_n2/fill: Filling COPV with N2. */
 /* ======================================================================== */
-void filling_copv_fill_entry(void *o) {
+void fill_n2_fill_entry(void *o) {
     struct sm_object *s = (struct sm_object *)o;
     open_single_valve(s, VALVE_N2_FILL);
 }
 
-void filling_copv_fill_run(void *o) {
+void fill_n2_fill_run(void *o) {
     // Transition to idle when pressure reaches target.
     struct sm_object *s = (struct sm_object *)o;
 
@@ -126,7 +126,7 @@ void filling_copv_fill_run(void *o) {
 
 }
 
-void filling_copv_fill_exit(void *o) {
+void fill_n2_fill_exit(void *o) {
     ARG_UNUSED(o);
 }
 
@@ -235,7 +235,7 @@ void pre_press_fill_exit(void *o) {
 }
 
 /* ======================================================================== */
-/* fill/filling_n2o: N2O filling sequence. */
+/* fill/fill_n2o: N2O filling sequence. */
 /* ======================================================================== */
 void fill_n2o_entry(void *o) {
     struct sm_object *s = (struct sm_object *)o;
@@ -295,7 +295,7 @@ void fill_n2o_fill_run(void *o) {
     }
 }
 
-void filling_n2o_fill_exit(void *o) {
+void fill_n2o_fill_exit(void *o) {
     ARG_UNUSED(o);
 }
 

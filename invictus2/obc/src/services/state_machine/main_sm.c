@@ -3,9 +3,10 @@
 #include "services/state_machine/flight_sm.h"
 
 #include "data_models.h"
-#include "zephyr/logging/log.h"
-#include "zephyr/smf.h"
+#include <zephyr/logging/log.h>
+#include <zephyr/smf.h>
 #include <stdbool.h>
+#include <zephyr/zbus/zbus.h>
 
 LOG_MODULE_REGISTER(state_machine_service, LOG_LEVEL_DBG);
 
@@ -355,13 +356,7 @@ void sm_init(struct sm_object *initial_s_obj)
     smf_set_initial(SMF_CTX(initial_s_obj), &states[IDLE]);
 }
 
-bool state_machine_service_setup(void)
-{
-    LOG_WRN_ONCE("state_machine_service_setup NOT IMPLEMENTED");
-    return true;
-}
 
-void state_machine_service_start(void)
-{
-    LOG_WRN_ONCE("state_machine_service_start NOT IMPLEMENTED");
-}
+
+
+
