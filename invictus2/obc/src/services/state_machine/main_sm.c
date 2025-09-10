@@ -3,7 +3,9 @@
 #include "services/state_machine/flight_sm.h"
 
 #include "data_models.h"
+#include "zephyr/logging/log.h"
 #include "zephyr/smf.h"
+#include <stdbool.h>
 
 LOG_MODULE_REGISTER(state_machine_service, LOG_LEVEL_DBG);
 
@@ -23,38 +25,38 @@ void rocket_state_service_start(void)
 void toggle_valve(struct sm_object *s, valve_t valve, bool open)
 {
     switch (valve) {
-        case VALVE_N2O_FILL:
-            s->data.actuators.v_n2o_fill = open ? 1 : 0;
-            break;
-        case VALVE_N2O_PURGE:
-            s->data.actuators.v_n2o_purge = open ? 1 : 0;
-            break;
-        case VALVE_N2_FILL:
-            s->data.actuators.v_n2_fill = open ? 1 : 0;
-            break;
-        case VALVE_N2_PURGE:
-            s->data.actuators.v_n2_purge = open ? 1 : 0;
-            break;
-        case VALVE_N2O_QUICK_DC:
-            s->data.actuators.v_n2o_quick_dc = open ? 1 : 0;
-            break;
-        case VALVE_N2_QUICK_DC:
-            s->data.actuators.v_n2_quick_dc = open ? 1 : 0;
-            break;
-        case VALVE_PRESSURIZING:
-            s->data.actuators.v_pressurizing = open ? 1 : 0;
-            break;
-        case VALVE_MAIN:
-            s->data.actuators.v_main = open ? 1 : 0;
-            break;
-        case VALVE_VENT:
-            s->data.actuators.v_venting = open ? 1 : 0;
-            break;
-        case VALVE_ABORT:
-            s->data.actuators.v_abort = open ? 1 : 0;
-            break;
-        default:
-            break;
+    case VALVE_N2O_FILL:
+        s->data.actuators.v_n2o_fill = open ? 1 : 0;
+        break;
+    case VALVE_N2O_PURGE:
+        s->data.actuators.v_n2o_purge = open ? 1 : 0;
+        break;
+    case VALVE_N2_FILL:
+        s->data.actuators.v_n2_fill = open ? 1 : 0;
+        break;
+    case VALVE_N2_PURGE:
+        s->data.actuators.v_n2_purge = open ? 1 : 0;
+        break;
+    case VALVE_N2O_QUICK_DC:
+        s->data.actuators.v_n2o_quick_dc = open ? 1 : 0;
+        break;
+    case VALVE_N2_QUICK_DC:
+        s->data.actuators.v_n2_quick_dc = open ? 1 : 0;
+        break;
+    case VALVE_PRESSURIZING:
+        s->data.actuators.v_pressurizing = open ? 1 : 0;
+        break;
+    case VALVE_MAIN:
+        s->data.actuators.v_main = open ? 1 : 0;
+        break;
+    case VALVE_VENT:
+        s->data.actuators.v_venting = open ? 1 : 0;
+        break;
+    case VALVE_ABORT:
+        s->data.actuators.v_abort = open ? 1 : 0;
+        break;
+    default:
+        break;
     }
 }
 
@@ -87,16 +89,16 @@ static void root_run(void *o)
     }
 
     switch (cmd) {
-        case CMD_STOP:
-            smf_set_state(SMF_CTX(s), &states[IDLE]);
-            break;
+    case CMD_STOP:
+        smf_set_state(SMF_CTX(s), &states[IDLE]);
+        break;
 
-        case CMD_ABORT:
-            smf_set_state(SMF_CTX(s), &states[ABORT]);
-            break;
-        default:
-            // Unknown global command
-            ;
+    case CMD_ABORT:
+        smf_set_state(SMF_CTX(s), &states[ABORT]);
+        break;
+    default:
+        // Unknown global command
+        ;
     }
 
     cmd = 0;
@@ -106,7 +108,6 @@ static void root_exit(void *o)
 {
     ARG_UNUSED(o);
 }
-
 
 /* State Callbacks */
 
@@ -126,14 +127,14 @@ static void idle_run(void *o)
     }
 
     switch (cmd) {
-        case CMD_FILL_EXEC:
-            smf_set_state(SMF_CTX(s), &states[FILLING]);
-            break;
-        case CMD_READY:
-            smf_set_state(SMF_CTX(s), &states[READY]);
-            break;
-        default:
-            smf_set_handled(SMF_CTX(s));
+    case CMD_FILL_EXEC:
+        smf_set_state(SMF_CTX(s), &states[FILLING]);
+        break;
+    case CMD_READY:
+        smf_set_state(SMF_CTX(s), &states[READY]);
+        break;
+    default:
+        smf_set_handled(SMF_CTX(s));
     }
 
     cmd = 0;
@@ -160,20 +161,20 @@ static void filling_run(void *o)
     }
 
     switch (cmd) {
-        case CMD_FILL_N2:
-            smf_set_state(SMF_CTX(s), &states[FILL_N2]);
-            break;
-        case CMD_FILL_PRE_PRESS:
-            smf_set_state(SMF_CTX(s), &states[PRE_PRESS]);
-            break;
-        case CMD_FILL_N2O:
-            smf_set_state(SMF_CTX(s), &states[FILL_N2O]);
-            break;
-        case CMD_FILL_POST_PRESS:
-            smf_set_state(SMF_CTX(s), &states[POST_PRESS]);
-            break;
-        default:
-            smf_set_handled(SMF_CTX(s));
+    case CMD_FILL_N2:
+        smf_set_state(SMF_CTX(s), &states[FILL_N2]);
+        break;
+    case CMD_FILL_PRE_PRESS:
+        smf_set_state(SMF_CTX(s), &states[PRE_PRESS]);
+        break;
+    case CMD_FILL_N2O:
+        smf_set_state(SMF_CTX(s), &states[FILL_N2O]);
+        break;
+    case CMD_FILL_POST_PRESS:
+        smf_set_state(SMF_CTX(s), &states[POST_PRESS]);
+        break;
+    default:
+        smf_set_handled(SMF_CTX(s));
     }
 
     cmd = 0;
@@ -199,14 +200,14 @@ static void ready_run(void *o)
     }
 
     switch (cmd) {
-        case CMD_ARM:
-            smf_set_state(SMF_CTX(s), &states[ARMED]);
-            break;
-        case CMD_ABORT:
-            smf_set_state(SMF_CTX(s), &states[ABORT]);
-            break;
-        default:
-            smf_set_handled(SMF_CTX(s));
+    case CMD_ARM:
+        smf_set_state(SMF_CTX(s), &states[ARMED]);
+        break;
+    case CMD_ABORT:
+        smf_set_state(SMF_CTX(s), &states[ABORT]);
+        break;
+    default:
+        smf_set_handled(SMF_CTX(s));
     }
 
     cmd = 0;
@@ -232,17 +233,18 @@ static void armed_run(void *o)
     }
 
     switch (cmd) {
-        case CMD_FIRE:
-            if(s->data.thermocouples.chamber_thermo > s->config->flight_sm_config.min_chamber_launch_temp){
-                // Chamber temperature is above minimum
-            } else {
-                smf_set_handled(SMF_CTX(s));
-                break;
-            }
-            smf_set_state(SMF_CTX(s), &states[FLIGHT]);
-            break;
-        default:
+    case CMD_FIRE:
+        if (s->data.thermocouples.chamber_thermo >
+            s->config->flight_sm_config.min_chamber_launch_temp) {
+            // Chamber temperature is above minimum
+        } else {
             smf_set_handled(SMF_CTX(s));
+            break;
+        }
+        smf_set_state(SMF_CTX(s), &states[FLIGHT]);
+        break;
+    default:
+        smf_set_handled(SMF_CTX(s));
     }
 
     cmd = 0;
@@ -262,16 +264,18 @@ static void flight_run(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
     command_t cmd = s->command;
-    if (!cmd) return;
+    if (!cmd) {
+        return;
+    }
     switch (cmd) {
-        case CMD_LAUNCH_OVERRIDE:
-            // Handle launch override if necessary
-            break;
-        case CMD_ABORT:
-            smf_set_state(SMF_CTX(s), &states[ABORT]);
-            break;
-        default:
-            smf_set_handled(SMF_CTX(s));
+    case CMD_LAUNCH_OVERRIDE:
+        // Handle launch override if necessary
+        break;
+    case CMD_ABORT:
+        smf_set_state(SMF_CTX(s), &states[ABORT]);
+        break;
+    default:
+        smf_set_handled(SMF_CTX(s));
     }
 }
 
@@ -279,8 +283,6 @@ static void flight_exit(void *o)
 {
     ARG_UNUSED(o);
 }
-
-
 
 static void abort_entry(void *o)
 {
@@ -318,8 +320,6 @@ static void abort_exit(void *o)
 {
     ARG_UNUSED(o);
 }
-
-
 
 const struct smf_state states[] = {
     // clang-format off
@@ -365,4 +365,15 @@ const struct smf_state states[] = {
 void sm_init(struct sm_object *initial_s_obj)
 {
     smf_set_initial(SMF_CTX(initial_s_obj), &states[IDLE]);
+}
+
+bool state_machine_service_setup(void)
+{
+    LOG_WRN_ONCE("state_machine_service_setup NOT IMPLEMENTED");
+    return true;
+}
+
+void state_machine_service_start(void)
+{
+    LOG_WRN_ONCE("state_machine_service_start NOT IMPLEMENTED");
 }

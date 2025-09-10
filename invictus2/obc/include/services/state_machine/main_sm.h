@@ -2,13 +2,9 @@
 #define _MAIN_SM_H_
 
 #include "zephyr/smf.h"
-#include "zephyr/logging/log.h"
-#include "zephyr/kernel.h"
 #include "services/state_machine/main_sm_config.h"
 #include "data_models.h"
 #include "commands.h"
-
-LOG_MODULE_REGISTER(lora_thread, LOG_LEVEL_DBG);
 
 bool state_machine_service_setup(void);
 void state_machine_service_start(void);
@@ -32,6 +28,5 @@ void close_all_valves(struct sm_object *s);
 void open_single_valve(struct sm_object *s, valve_t valve);
 
 void sm_init(struct sm_object *initial_s_obj);
-
 
 #endif // _MAIN_SM_H_

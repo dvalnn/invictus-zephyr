@@ -4,7 +4,7 @@
 #include "zephyr/zbus/zbus.h"
 #include "zephyr/logging/log.h"
 
-LOG_MODULE_REGISTER(state_machine_service, LOG_LEVEL_DBG);
+LOG_MODULE_DECLARE(state_machine_service);
 
 //* K_THREAD_STACK_DEFINE(rocket_state_work_q_stack, CONFIG_ROCKET_STATE_WORK_Q_STACK); */
 K_THREAD_STACK_DEFINE(rocket_state_work_q_stack, 1024); // FIXME: Make KConfig
