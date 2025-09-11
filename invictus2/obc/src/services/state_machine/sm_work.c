@@ -103,7 +103,7 @@ void sm_thread_entry(void *p1, void *p2, void *p3)
         // TODO: handle zbus stuff
         // read cmd bus
 
-        
+        //LOG_INF("SM doing stuff");
 
         smf_run_state(SMF_CTX(&sm_obj));
 

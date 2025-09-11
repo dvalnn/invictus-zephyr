@@ -166,6 +166,7 @@ int main(void)
     LOG_INF("Services started.");
     while (1) {
         ret = gpio_pin_toggle_dt(&led);
+        LOG_INF("Heartbeat");
         if (ret < 0) {
             return 0;
         }

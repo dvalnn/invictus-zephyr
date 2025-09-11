@@ -14,6 +14,8 @@ static int rx_buf_pos;
 
 static void serial_cb(const struct device *dev, void *user_data)
 {
+    LOG_INF("UART callback");
+
     if (dev == NULL) {
         LOG_ERR("UART device is NULL");
         return;
@@ -38,13 +40,13 @@ static void serial_cb(const struct device *dev, void *user_data)
     // read a full command or until the buffer is full
     uint8_t c;
     while (uart_fifo_read(uart_dev, &c, 1) == 1) {
+        LOG_INF("Reading fifo");
         if (rx_buf_pos == (PACKET_SIZE - 1)) {
             k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
             rx_buf_pos = 0;
         } else if (rx_buf_pos < (sizeof(rx_buf) - 1)) {
             rx_buf[rx_buf_pos++] = c;
         }
-        // else: characters beyond buffer size are dropped
     }
 }
 
@@ -86,6 +88,8 @@ void fake_lora_backend()
 
     // indefinitely wait for input from the user
     while (k_msgq_get(&uart_msgq, &rx_buf, K_FOREVER) == 0) {
+        LOG_INF("Received something");
+
         if (sizeof(rx_buf) != PACKET_SIZE) {
             LOG_ERR("Invalid command size: %d (expected %d)", sizeof(rx_buf), PACKET_SIZE);
             LOG_HEXDUMP_WRN(rx_buf, sizeof(rx_buf), "Invalid command hex dump");
