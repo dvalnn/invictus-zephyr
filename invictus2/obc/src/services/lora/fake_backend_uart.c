@@ -6,7 +6,7 @@ LOG_MODULE_REGISTER(lora_backend_testing, LOG_LEVEL_DBG);
 #define UART_DEVICE_NODE DT_CHOSEN(zephyr_shell_uart)
 #define MSG_SIZE         PACKET_SIZE
 
-K_MSGQ_DEFINE(uart_msgq, PACKET_SIZE, 1, 1);
+K_MSGQ_DEFINE(uart_msgq, PACKET_SIZE, 10, 4);
 static const struct device *const uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
 
 static char rx_buf[PACKET_SIZE];
@@ -14,14 +14,13 @@ static int rx_buf_pos = 0;
 
 static void serial_cb(const struct device *dev, void *user_data)
 {
-    LOG_INF("UART callback");
-
     if (dev == NULL) {
         LOG_ERR("UART device is NULL");
         return;
     }
 
     if (!uart_irq_update(uart_dev)) {
+        LOG_ERR("Didn't update uart irq");
         return;
     }
 
@@ -38,20 +37,30 @@ static void serial_cb(const struct device *dev, void *user_data)
     }
 
     // read a full command or until the buffer is full
-    uint8_t c;
-    rx_buf_pos = 0;
+    //uint8_t c[32];
+    //rx_buf_pos = 0;
+    /*
     while (uart_fifo_read(uart_dev, &c, 1) == 1) {
+        //LOG_INF("Fifo read");
         if (rx_buf_pos == (PACKET_SIZE - 1)) {
             LOG_INF("Sent message to queue");
             k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
             rx_buf_pos = 0;
         } else if (rx_buf_pos < (sizeof(rx_buf) - 1)) {
-            LOG_INF("Increased pointer to %d", rx_buf_pos);
+            LOG_INF("%d: %d", rx_buf_pos, c);
             rx_buf[rx_buf_pos++] = c;
         } else {
             LOG_INF("Dropped byte");
         }
     }
+    */
+   int bytes_read = 0;
+   bytes_read += uart_fifo_read(uart_dev, &rx_buf[rx_buf_pos], 32);
+   rx_buf_pos += bytes_read;
+   if(rx_buf_pos == (PACKET_SIZE)) {
+    k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
+    rx_buf_pos = 0;
+   }
 }
 
 bool fake_lora_setup(void)

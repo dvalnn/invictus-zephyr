@@ -6,6 +6,8 @@ import serial
 from datetime import datetime
 from typing import Optional
 
+import time
+
 
 class UARTListener:
     def __init__(self, port: str, baudrate: int, max_messages: int = 100):
@@ -66,7 +68,7 @@ class UARTListener:
                     )
                     if data:
                         self.bytes_received += len(data)
-                        self.add_message(f"RX: {data}")
+                        self.add_message(f"RX: {data} len: {len(data)}")
             except Exception as e:
                 self.connection_status = "Error"
                 self.add_message(f"UART Error: {e}")
@@ -79,9 +81,10 @@ class UARTListener:
             if self.serial_connection and self.serial_connection.is_open:
                 message = command + "\n"
                 self.serial_connection.write(message.encode())
+                self.add_message(f"test")
                 self.bytes_sent += len(message)
                 self.add_message(f"TX: {command}")
-                return True
+                return False
         except Exception as e:
             self.add_message(f"Send Error: {e}")
             logging.error(f"UART send error: {e}")
@@ -92,7 +95,17 @@ class UARTListener:
         """Send raw bytes via UART."""
         try:
             if self.serial_connection and self.serial_connection.is_open:
-                written = self.serial_connection.write(packet)
+                
+                written = self.serial_connection.write(packet[:32])
+                self.serial_connection.flush()
+                time.sleep(.1)
+                written += self.serial_connection.write(packet[32:64])
+                self.serial_connection.flush()
+                time.sleep(.1)
+                written += self.serial_connection.write(packet[64:96])
+                self.serial_connection.flush()
+                time.sleep(.1)
+                written += self.serial_connection.write(packet[96:])
                 self.serial_connection.flush()
                 self.bytes_sent += written
                 self.add_message(
