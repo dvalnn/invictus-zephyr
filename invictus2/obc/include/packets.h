@@ -62,17 +62,6 @@ struct status_rep_s {
 // Fill Exec payloads
 // -----------------------------------------------------------------------------
 
-enum fill_program_e {
-    _FILL_PROGRAM_NONE = 0,
-
-    FILL_PROGRAM_N2 = 1,
-    FILL_PROGRAM_PRE_PRESS,
-    FILL_PROGRAM_N2O,
-    FILL_PROGRAM_POST_PRESS,
-
-    _FILL_PROGRAM_MAX
-};
-
 struct fill_N2_params_s {
     uint16_t target_N2_deci_bar;
     uint16_t trigger_N2_deci_bar;

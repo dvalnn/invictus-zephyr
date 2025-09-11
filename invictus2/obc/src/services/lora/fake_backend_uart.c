@@ -4,13 +4,13 @@ ZBUS_CHAN_DECLARE(chan_packets);
 LOG_MODULE_REGISTER(lora_backend_testing, LOG_LEVEL_DBG);
 
 #define UART_DEVICE_NODE DT_CHOSEN(zephyr_shell_uart)
-#define MSG_SIZE         32
+#define MSG_SIZE         PACKET_SIZE
 
-K_MSGQ_DEFINE(uart_msgq, PACKET_SIZE, 10, 4);
+K_MSGQ_DEFINE(uart_msgq, PACKET_SIZE, 1, 1);
 static const struct device *const uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
 
 static char rx_buf[PACKET_SIZE];
-static int rx_buf_pos;
+static int rx_buf_pos = 0;
 
 static void serial_cb(const struct device *dev, void *user_data)
 {
@@ -39,13 +39,17 @@ static void serial_cb(const struct device *dev, void *user_data)
 
     // read a full command or until the buffer is full
     uint8_t c;
+    rx_buf_pos = 0;
     while (uart_fifo_read(uart_dev, &c, 1) == 1) {
-        LOG_INF("Reading fifo");
         if (rx_buf_pos == (PACKET_SIZE - 1)) {
+            LOG_INF("Sent message to queue");
             k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
             rx_buf_pos = 0;
         } else if (rx_buf_pos < (sizeof(rx_buf) - 1)) {
+            LOG_INF("Increased pointer to %d", rx_buf_pos);
             rx_buf[rx_buf_pos++] = c;
+        } else {
+            LOG_INF("Dropped byte");
         }
     }
 }
@@ -84,6 +88,8 @@ void fake_lora_backend()
 {
     LOG_INF("Fake LoRa backend (UART) started");
     uart_irq_rx_enable(uart_dev);
+    LOG_INF("Enabled UART RX IRQ");
+    
     struct generic_packet_s packet = {0};
 
     // indefinitely wait for input from the user

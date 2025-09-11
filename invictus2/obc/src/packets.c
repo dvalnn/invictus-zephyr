@@ -1,13 +1,17 @@
 #include "packets.h"
-
+#include <zephyr/logging/log.h>
 #include <string.h>
+
+LOG_MODULE_REGISTER(packet, LOG_LEVEL_INF);
 
 #define CHECK_ARGS(packet, buf, buf_size)                                                        \
     do {                                                                                      \
         if (!packet || !buf) {                                                                   \
+            LOG_INF("Pack err inv arg");                                                        \
             return PACK_ERROR_INVALID_ARG;                                                    \
         }                                                                                     \
         if (buf_size < PACKET_SIZE) {                                                      \
+            LOG_INF("Buffer too small");                                                    \
             return PACK_ERROR_BUFFER_TOO_SMALL;                                               \
         }                                                                                     \
     } while (0)
@@ -15,9 +19,11 @@
 #define CHECK_PACKET(packet)                                                                        \
     do {                                                                                      \
         if (packet->header.packet_version != SUPPORTED_PACKET_VERSION) {                         \
+            LOG_INF("Unsupported pack version: %d", packet->header.packet_version);                                                \
             return PACK_ERROR_UNSUPPORTED_VERSION;                                            \
         }                                                                                     \
-    if (packet->header.command_id <= _CMD_NONE || packet->header.command_id >= _CMD_MAX) {    \
+        if (packet->header.command_id <= _CMD_NONE || packet->header.command_id >= _CMD_MAX) {    \
+            LOG_INF("Invalid cmd ID");                                                          \
             return PACK_ERROR_INVALID_CMD_ID;                                                 \
         }                                                                                     \
     } while (0)

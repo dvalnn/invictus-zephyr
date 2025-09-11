@@ -89,7 +89,7 @@ ZBUS_CHAN_DEFINE(chan_actuators,           /* Channel Name */
 // --- Packets from Ground Station ---
 ZBUS_CHAN_DEFINE(chan_packets,            /* Channel Name */
                  struct generic_packet_s,       /* Message Type */
-                 NULL,        /* Validator Func */
+                 packet_validator,        /* Validator Func */
                  NULL,                       /* User Data */
                  ZBUS_OBSERVERS_EMPTY,       /* Observers */
                  ZBUS_MSG_INIT(0)            /* Initial Value */
@@ -166,7 +166,7 @@ int main(void)
     LOG_INF("Services started.");
     while (1) {
         ret = gpio_pin_toggle_dt(&led);
-        LOG_INF("Heartbeat");
+        //LOG_INF("Heartbeat");
         if (ret < 0) {
             return 0;
         }
