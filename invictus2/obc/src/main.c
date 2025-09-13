@@ -45,12 +45,12 @@ LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 //
 //
 // --- Sensor Channels ---
-ZBUS_CHAN_DEFINE(chan_thermo_sensors,   /* Channel Name */
-                 thermocouples_t,       /* Message Type */
-                 NULL,                  /* Validator Func */
-                 NULL,                  /* User Data */
-                 ZBUS_OBSERVERS_EMPTY,  /* Observers */
-                 ZBUS_MSG_INIT(0)       /* Initial Value */
+ZBUS_CHAN_DEFINE(chan_thermo_sensors,  /* Channel Name */
+                 thermocouples_t,      /* Message Type */
+                 NULL,                 /* Validator Func */
+                 NULL,                 /* User Data */
+                 ZBUS_OBSERVERS_EMPTY, /* Observers */
+                 ZBUS_MSG_INIT(0)      /* Initial Value */
 );
 
 ZBUS_CHAN_DEFINE(chan_pressure_sensors, /* Channel Name */
@@ -61,55 +61,55 @@ ZBUS_CHAN_DEFINE(chan_pressure_sensors, /* Channel Name */
                  ZBUS_MSG_INIT(0)       /* Initial Value */
 );
 
-ZBUS_CHAN_DEFINE(chan_weight_sensors,      /* Channel Name */
-                 loadcell_weights_t,       /* Message Type */
-                 NULL,                     /* Validator Func */
-                 NULL,                     /* User Data */
-                 ZBUS_OBSERVERS_EMPTY,     /* Observers */
-                 ZBUS_MSG_INIT(0)          /* Initial Value */
+ZBUS_CHAN_DEFINE(chan_weight_sensors,  /* Channel Name */
+                 loadcell_weights_t,   /* Message Type */
+                 NULL,                 /* Validator Func */
+                 NULL,                 /* User Data */
+                 ZBUS_OBSERVERS_EMPTY, /* Observers */
+                 ZBUS_MSG_INIT(0)      /* Initial Value */
 );
 
-ZBUS_CHAN_DEFINE(chan_navigator_sensors,     /* Channel Name */
-                 navigator_sensors_t,        /* Message Type */
-                 NULL,                       /* Validator Func */
-                 NULL,                       /* User Data */
-                 ZBUS_OBSERVERS_EMPTY,       /* Observers */
-                 ZBUS_MSG_INIT(0)            /* Initial Value */
-);
-
-ZBUS_CHAN_DEFINE(chan_kalman_data,           /* Channel Name */
-                 kalman_data_t,              /* Message Type */
-                 NULL,                       /* Validator Func */
-                 NULL,                       /* User Data */
-                 ZBUS_OBSERVERS_EMPTY,       /* Observers */
-                 ZBUS_MSG_INIT(0)            /* Initial Value */
-);
-
-// --- Mobdus Actuator Write Channel ---
-ZBUS_CHAN_DEFINE(chan_actuators,           /* Channel Name */
-                 actuators_bitmap_t,       /* Message Type */
-                 NULL,                     /* Validator Func */
-                 NULL,                     /* User Data */
-                 ZBUS_OBSERVERS_EMPTY,     /* Observers */
-                 ZBUS_MSG_INIT(0)          /* Initial Value */
-);
-
-// --- Packets from Ground Station ---
-ZBUS_CHAN_DEFINE(chan_packets,               /* Channel Name */
-                 struct generic_packet_s,    /* Message Type */
-                 packet_validator,           /* Validator Func */
-                 NULL,                       /* User Data */
-                 ZBUS_OBSERVERS_EMPTY,       /* Observers */
-                 ZBUS_MSG_INIT(0)            /* Initial Value */
-);
-
-// --- Rocket State ---
-ZBUS_CHAN_DEFINE(chan_rocket_state,      /* Channel Name */
-                 state_data_t,           /* Message Type */
+ZBUS_CHAN_DEFINE(chan_navigator_sensors, /* Channel Name */
+                 navigator_sensors_t,    /* Message Type */
                  NULL,                   /* Validator Func */
                  NULL,                   /* User Data */
                  ZBUS_OBSERVERS_EMPTY,   /* Observers */
                  ZBUS_MSG_INIT(0)        /* Initial Value */
+);
+
+ZBUS_CHAN_DEFINE(chan_kalman_data,     /* Channel Name */
+                 kalman_data_t,        /* Message Type */
+                 NULL,                 /* Validator Func */
+                 NULL,                 /* User Data */
+                 ZBUS_OBSERVERS_EMPTY, /* Observers */
+                 ZBUS_MSG_INIT(0)      /* Initial Value */
+);
+
+// --- Mobdus Actuator Write Channel ---
+ZBUS_CHAN_DEFINE(chan_actuators,       /* Channel Name */
+                 actuators_bitmap_t,   /* Message Type */
+                 NULL,                 /* Validator Func */
+                 NULL,                 /* User Data */
+                 ZBUS_OBSERVERS_EMPTY, /* Observers */
+                 ZBUS_MSG_INIT(0)      /* Initial Value */
+);
+
+// --- Packets from Ground Station ---
+ZBUS_CHAN_DEFINE(chan_packets,            /* Channel Name */
+                 struct generic_packet_s, /* Message Type */
+                 packet_validator,        /* Validator Func */
+                 NULL,                    /* User Data */
+                 ZBUS_OBSERVERS_EMPTY,    /* Observers */
+                 ZBUS_MSG_INIT(0)         /* Initial Value */
+);
+
+// --- Rocket State ---
+ZBUS_CHAN_DEFINE(chan_rocket_state,    /* Channel Name */
+                 state_data_t,         /* Message Type */
+                 NULL,                 /* Validator Func */
+                 NULL,                 /* User Data */
+                 ZBUS_OBSERVERS_EMPTY, /* Observers */
+                 ZBUS_MSG_INIT(0)      /* Initial Value */
 );
 
 static lora_context_t lora_context;
@@ -120,22 +120,24 @@ int ret;
 bool setup_services(atomic_t *stop_signal)
 {
     if (!gpio_is_ready_dt(&led)) {
+        LOG_ERR("AAAAAAAAAAAAAAAAAAAAAA");
         return 0;
     }
 
     ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
     if (ret < 0) {
+        LOG_ERR("AAAAAAAAAAAAAAAAAAAAAA 2222");
         return 0;
     }
 
-    LOG_INF("Setting up threads...");
-    lora_context.stop_signal = stop_signal;
+    /* LOG_INF("Setting up threads..."); */
+    /* lora_context.stop_signal = stop_signal; */
 
-    LOG_INF("  * state machine...");
-    if (!state_machine_service_setup()) {
-        LOG_ERR("State machine service setup failed");
-        return false;
-    }
+    /* LOG_INF("  * state machine..."); */
+    /* if (!state_machine_service_setup()) { */
+    /*     LOG_ERR("State machine service setup failed"); */
+    /*     return false; */
+    /* } */
 
     /*
     // Initialize the modbus thread
@@ -146,13 +148,13 @@ bool setup_services(atomic_t *stop_signal)
     }
     */
 
-    LOG_INF("  * lora...");
-    if (!lora_service_setup(&lora_context)) {
-        LOG_ERR("LoRa thread setup failed");
-        return false;
-    }
+    /* LOG_INF("  * lora..."); */
+    /* if (!lora_service_setup(&lora_context)) { */
+    /*     LOG_ERR("LoRa thread setup failed"); */
+    /*     return false; */
+    /* } */
 
-    LOG_INF("done...");
+    /* LOG_INF("done..."); */
     return true;
 }
 
@@ -164,17 +166,17 @@ int main(void)
 
     if (!setup_services(&stop_signal)) {
         LOG_ERR("Failed to setup services");
-        return -1;
+        k_oops();
     }
 
-    lora_service_start();
-    state_machine_service_start();
-    //modbus_service_start();
+    /* lora_service_start(); */
+    /* state_machine_service_start(); */
+    // modbus_service_start();
 
     LOG_INF("Services started.");
     while (1) {
         ret = gpio_pin_toggle_dt(&led);
-        //LOG_INF("Heartbeat");
+        LOG_INF("Heartbeat");
         if (ret < 0) {
             return 0;
         }
