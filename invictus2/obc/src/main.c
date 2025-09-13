@@ -5,6 +5,7 @@
 
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/pwm.h>
 
 #include "data_models.h"
 #include "validators.h"
@@ -15,13 +16,14 @@
 #include "services/state_machine/main_sm.h"
 
 /* The devicetree node identifier for the "led0" alias. */
-#define LED0_NODE DT_ALIAS(led0)
+#define LED_GREEN DT_NODELABEL(led_green_0)
+#define LED_RED   DT_NODELABEL(led_red_0)
 
-/*
- * A build error on this line means your board is unsupported.
- * See the sample documentation for information on how to fix this.
- */
-static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
+static const struct gpio_dt_spec led_green = GPIO_DT_SPEC_GET(LED_GREEN, gpios);
+static const struct gpio_dt_spec led_red = GPIO_DT_SPEC_GET(LED_RED, gpios);
+
+#define BUZZER DT_NODELABEL(buzzer)
+static const struct pwm_dt_spec pwm = PWM_DT_SPEC_GET(BUZZER);
 
 // FIXME: remove, it's just to make sure linker is working
 #include "invictus2/drivers/sx128x_hal.h"
@@ -115,22 +117,29 @@ ZBUS_CHAN_DEFINE(chan_rocket_state,    /* Channel Name */
 static lora_context_t lora_context;
 
 // --- Thread Spawning ---
-int ret;
+
+bool setup_peripherals()
+{
+    if (!gpio_is_ready_dt(&led_green) || !gpio_is_ready_dt(&led_red)) {
+        return false;
+    }
+
+    int ret = gpio_pin_configure_dt(&led_green, GPIO_OUTPUT_ACTIVE);
+    int ret2 = gpio_pin_configure_dt(&led_red, GPIO_OUTPUT_ACTIVE);
+    if (ret < 0 || ret2 < 0) {
+        return false;
+    }
+
+    if (!pwm_is_ready_dt(&pwm)) {
+        return false;
+    }
+
+    return true;
+}
 
 bool setup_services(atomic_t *stop_signal)
 {
-    if (!gpio_is_ready_dt(&led)) {
-        LOG_ERR("AAAAAAAAAAAAAAAAAAAAAA");
-        return 0;
-    }
-
-    ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
-    if (ret < 0) {
-        LOG_ERR("AAAAAAAAAAAAAAAAAAAAAA 2222");
-        return 0;
-    }
-
-    /* LOG_INF("Setting up threads..."); */
+    LOG_INF("Setting up threads...");
     /* lora_context.stop_signal = stop_signal; */
 
     /* LOG_INF("  * state machine..."); */
@@ -154,7 +163,7 @@ bool setup_services(atomic_t *stop_signal)
     /*     return false; */
     /* } */
 
-    /* LOG_INF("done..."); */
+    LOG_INF("done...");
     return true;
 }
 
@@ -162,27 +171,44 @@ bool setup_services(atomic_t *stop_signal)
 int main(void)
 {
     LOG_INF("Starting OBC main thread");
-    atomic_t stop_signal = ATOMIC_INIT(0);
 
-    if (!setup_services(&stop_signal)) {
-        LOG_ERR("Failed to setup services");
-        k_oops();
+    if (!setup_peripherals()) {
+        goto crash;
     }
+
+    /* atomic_t stop_signal = ATOMIC_INIT(0); */
+
+    /* if (!setup_services(&stop_signal)) { */
+    /*     LOG_ERR("Failed to setup services"); */
+    /*     k_oops(); */
+    /* } */
 
     /* lora_service_start(); */
     /* state_machine_service_start(); */
     // modbus_service_start();
 
     LOG_INF("Services started.");
+    bool beep = false;
+
     while (1) {
-        ret = gpio_pin_toggle_dt(&led);
-        LOG_INF("Heartbeat");
-        if (ret < 0) {
-            return 0;
+        int ret = gpio_pin_toggle_dt(&led_green);
+        int ret2 = gpio_pin_toggle_dt(&led_red);
+        if (ret < 0 || ret2 < 0) {
+            goto crash;
         }
+
+        if (beep) {
+            pwm_set_dt(&pwm, pwm.period, pwm.period / 2);
+        } else {
+            pwm_set_pulse_dt(&pwm, 0);
+        }
+
+        beep = !beep;
+        LOG_INF("Heartbeat");
+
         k_sleep(K_MSEC(1000));
     }
-    k_sleep(K_FOREVER);
 
+crash:
     k_oops(); // Should never reach here
 }

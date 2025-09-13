@@ -93,8 +93,11 @@
 };
 
 &pwm {
-	pinctrl-0 = <&pwm_ch4b_default>;
+  status = "okay";
+	pinctrl-0 = <&pwm_ch6b_default>;
 	pinctrl-names = "default";
+  divider-int-4 = <255>;
+  divider-frac-4 = <15>;
 };
 
 &vreg {
