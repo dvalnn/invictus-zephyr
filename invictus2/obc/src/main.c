@@ -70,7 +70,15 @@ ZBUS_CHAN_DEFINE(chan_weight_sensors,      /* Channel Name */
 );
 
 ZBUS_CHAN_DEFINE(chan_navigator_sensors,     /* Channel Name */
-                 navigator_sensors_t, /* Message Type */
+                 navigator_sensors_t,        /* Message Type */
+                 NULL,                       /* Validator Func */
+                 NULL,                       /* User Data */
+                 ZBUS_OBSERVERS_EMPTY,       /* Observers */
+                 ZBUS_MSG_INIT(0)            /* Initial Value */
+);
+
+ZBUS_CHAN_DEFINE(chan_kalman_data,           /* Channel Name */
+                 kalman_data_t,              /* Message Type */
                  NULL,                       /* Validator Func */
                  NULL,                       /* User Data */
                  ZBUS_OBSERVERS_EMPTY,       /* Observers */
@@ -79,7 +87,7 @@ ZBUS_CHAN_DEFINE(chan_navigator_sensors,     /* Channel Name */
 
 // --- Mobdus Actuator Write Channel ---
 ZBUS_CHAN_DEFINE(chan_actuators,           /* Channel Name */
-                 actuators_bitmap_t, /* Message Type */
+                 actuators_bitmap_t,       /* Message Type */
                  NULL,                     /* Validator Func */
                  NULL,                     /* User Data */
                  ZBUS_OBSERVERS_EMPTY,     /* Observers */
@@ -87,9 +95,9 @@ ZBUS_CHAN_DEFINE(chan_actuators,           /* Channel Name */
 );
 
 // --- Packets from Ground Station ---
-ZBUS_CHAN_DEFINE(chan_packets,            /* Channel Name */
-                 struct generic_packet_s,       /* Message Type */
-                 packet_validator,        /* Validator Func */
+ZBUS_CHAN_DEFINE(chan_packets,               /* Channel Name */
+                 struct generic_packet_s,    /* Message Type */
+                 packet_validator,           /* Validator Func */
                  NULL,                       /* User Data */
                  ZBUS_OBSERVERS_EMPTY,       /* Observers */
                  ZBUS_MSG_INIT(0)            /* Initial Value */
@@ -97,8 +105,8 @@ ZBUS_CHAN_DEFINE(chan_packets,            /* Channel Name */
 
 // --- Rocket State ---
 ZBUS_CHAN_DEFINE(chan_rocket_state,      /* Channel Name */
-                 state_data_t,  /* Message Type */
-                 NULL, /* Validator Func */
+                 state_data_t,           /* Message Type */
+                 NULL,                   /* Validator Func */
                  NULL,                   /* User Data */
                  ZBUS_OBSERVERS_EMPTY,   /* Observers */
                  ZBUS_MSG_INIT(0)        /* Initial Value */

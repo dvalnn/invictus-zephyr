@@ -11,6 +11,8 @@
 
 // REVIEW: make this KConfig param?
 #define SUPPORTED_PACKET_VERSION 1
+#define OBC_PACKET_ID 2
+#define GROUND_STATION_PACKET_ID 1
 
 // -----------------------------------------------------------------------------
 // Packet header
@@ -49,14 +51,7 @@ struct generic_packet_s {
 //       For our use case, however, both the sender and receiver are the same platform
 //       and compiler, so we can safely use memcpy to serialize and deserialize.
 //
-struct status_rep_s {
-    state_data_t state_data;
-    pressures_t pressures;
-    thermocouples_t thermocouples;
-    actuators_bitmap_t actuators;
-    loadcell_weights_t loadcells;
-    navigator_sensors_t navigator;
-};
+// For now status rep struct == system_data_t
 
 // -----------------------------------------------------------------------------
 // Fill Exec payloads
@@ -233,7 +228,7 @@ MAKE_PACKET(manual_toggle);
 
 MAKE_PACKET_WITH_PAYLOAD(ack, struct ack_s);
 MAKE_PACKET_WITH_PAYLOAD(fill_exec, struct fill_exec_s);
-MAKE_PACKET_WITH_PAYLOAD(status_rep, struct status_rep_s);
+MAKE_PACKET_WITH_PAYLOAD(status_rep, system_data_t);
 MAKE_PACKET_WITH_PAYLOAD(manual_exec, struct manual_exec_s);
 
 #undef _PAD_SIZE

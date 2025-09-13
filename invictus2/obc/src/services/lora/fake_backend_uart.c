@@ -1,4 +1,5 @@
 #include "services/fake_lora.h"
+#include "packets.h"
 
 ZBUS_CHAN_DECLARE(chan_packets);
 LOG_MODULE_REGISTER(lora_backend_testing, LOG_LEVEL_DBG);
@@ -93,6 +94,13 @@ bool fake_lora_setup(void)
     return true;
 }
 
+void uart_write(char *buf, int buf_size)
+{
+	for (int i = 0; i < buf_size; i++) {
+		uart_poll_out(uart_dev, buf[i]);
+	}
+}
+
 void fake_lora_backend()
 {
     LOG_INF("Fake LoRa backend (UART) started");
@@ -117,7 +125,7 @@ void fake_lora_backend()
             LOG_HEXDUMP_WRN(rx_buf, sizeof(rx_buf), "Invalid command hex dump");
             continue;
         }
-
+        
         int rc = zbus_chan_pub(&chan_packets, (const void *)&packet, K_NO_WAIT);
         if (rc != 0) {
             LOG_ERR("Failed to publish packet to channel: %d", rc);

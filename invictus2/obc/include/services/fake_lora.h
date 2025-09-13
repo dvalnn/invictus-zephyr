@@ -12,4 +12,6 @@
 bool fake_lora_setup(void);
 void fake_lora_backend(void);
 
+void print_uart(char *buf);
+
 #endif // SERVICES_FAKE_LORA_H
