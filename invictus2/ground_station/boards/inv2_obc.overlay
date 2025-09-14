@@ -1,17 +1,11 @@
-
-// disable hw flow control
-&uart0 {
-  /delete-property/ hw-flow-control;
-  status = "disabled";
-};
-
-
-// GS is not connected to rs485 bus
-&uart1 {
-  status = "disabled";
-  modbus_uart: modbus0{
-    status = "disabled";
+/ {
+  chosen {
+    zephyr,shell-uart = &cdc_acm_uart0;
   };
 };
 
-
+&zephyr_udc0 {
+  cdc_acm_uart0: cdc_acm_uart0 {
+    compatible = "zephyr,cdc-acm-uart";
+  };
+};
