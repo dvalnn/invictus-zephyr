@@ -1,0 +1,17 @@
+
+// disable hw flow control
+&uart0 {
+  /delete-property/ hw-flow-control;
+  status = "disabled";
+};
+
+
+// GS is not connected to rs485 bus
+&uart1 {
+  status = "disabled";
+  modbus_uart: modbus0{
+    status = "disabled";
+  };
+};
+
+

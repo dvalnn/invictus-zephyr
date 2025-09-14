@@ -23,11 +23,6 @@
     modbus-rtu = &modbus_uart;
   };
 
-  // special node to handle simple bindings
-  /* zephyr,user { */
-  /*     pwms = <&pwm 29 PWM_MSEC(1) PWM_POLARITY_NORMAL>; */
-  /* }; */
-
   leds {
     compatible = "gpio-leds";
     status = "okay";
