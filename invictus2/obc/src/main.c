@@ -167,6 +167,17 @@ bool setup_services(atomic_t *stop_signal)
     return true;
 }
 
+void healh_check(void)
+{
+    for (size_t i = 0; i < 2; ++i) {
+        pwm_set_dt(&pwm, pwm.period, pwm.period / 2);
+        k_sleep(K_MSEC(250));
+
+        pwm_set_pulse_dt(&pwm, 0);
+        k_sleep(K_MSEC(250));
+    }
+}
+
 // --- Main ---
 int main(void)
 {
@@ -188,7 +199,7 @@ int main(void)
     // modbus_service_start();
 
     LOG_INF("Services started.");
-    bool beep = false;
+    healh_check();
 
     while (1) {
         int ret = gpio_pin_toggle_dt(&led_green);
@@ -197,13 +208,6 @@ int main(void)
             goto crash;
         }
 
-        if (beep) {
-            pwm_set_dt(&pwm, pwm.period, pwm.period / 2);
-        } else {
-            pwm_set_pulse_dt(&pwm, 0);
-        }
-
-        beep = !beep;
         LOG_INF("Heartbeat");
 
         k_sleep(K_MSEC(1000));
