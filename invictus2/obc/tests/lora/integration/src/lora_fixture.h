@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
-#include "radio_commands.h"
+#include "packets.h"
 #include "zephyr/kernel.h"
 #include "zephyr/sys/atomic.h"
 #include "zephyr/ztest_assert.h"
@@ -15,17 +15,17 @@ struct lora_integration_test_fixture
 {
     atomic_t stop_signal;
     lora_context_t ctx;
-    struct radio_generic_cmd_s received_messages[100];
+    struct generic_packet_s received_messages[100];
     size_t number_of_received_messages;
 };
 
 // --- Radio Commands from Ground Station ---
-ZBUS_CHAN_DEFINE(chan_radio_cmds,            /* Channel Name */
-                 struct radio_generic_cmd_s, /* Message Type */
-                 NULL,                       /* Validator Func */
-                 NULL,                       /* User Data */
-                 ZBUS_OBSERVERS_EMPTY,       /* Observers */
-                 ZBUS_MSG_INIT(0)            /* Initial Value */
+ZBUS_CHAN_DEFINE(chan_radio_cmds,         /* Channel Name */
+                 struct generic_packet_s, /* Message Type */
+                 NULL,                    /* Validator Func */
+                 NULL,                    /* User Data */
+                 ZBUS_OBSERVERS_EMPTY,    /* Observers */
+                 ZBUS_MSG_INIT(0)         /* Initial Value */
 )
 
 // FIXME this should be in a proper header file
@@ -48,7 +48,7 @@ static void on_new_message(const struct zbus_channel *chan)
     }
 
     g_fixture->received_messages[g_fixture->number_of_received_messages] =
-        *(struct radio_generic_cmd_s *)zbus_chan_msg(&chan_radio_cmds);
+        *(struct generic_packet_s *)zbus_chan_msg(&chan_radio_cmds);
     g_fixture->number_of_received_messages++;
 }
 

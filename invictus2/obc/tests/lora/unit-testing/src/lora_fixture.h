@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
-#include "radio_commands.h"
+#include "packets.h"
 #include "zephyr/ztest_assert.h"
 #include <invictus2/drivers/sx128x_context.h>
 #include "services/lora.h"
@@ -13,7 +13,7 @@ struct fake_lora_device_test_fixture
     bool lora_rcv_callback_called;
     atomic_t stop_signal;
     lora_context_t ctx;
-    struct radio_generic_cmd_s *received_packet;
+    struct generic_packet_s *received_packet;
 };
 
 // Hack to access fixture on callbacks

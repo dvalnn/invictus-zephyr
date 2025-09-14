@@ -1,4 +1,4 @@
-#include "radio_commands.h"
+#include "packets.h"
 #include "zephyr/logging/log.h"
 #include "zephyr/toolchain.h"
 #include "zephyr/ztest_assert.h"
@@ -25,7 +25,7 @@ static void test_on_recv_data(uint8_t *payload, uint16_t size)
     g_fixture->ctx.rx_size = size;
     if (payload != NULL)
     {
-        g_fixture->received_packet = (struct radio_generic_cmd_s *)payload;
+        g_fixture->received_packet = (struct generic_packet_s *)payload;
     }
 
     g_fixture->lora_rcv_callback_called = true;
@@ -68,7 +68,7 @@ ZTEST_F(fake_lora_device_test, test_fake_device_data_callback_payload_valid_SUCC
     sx128x_register_recv_callback(&test_on_recv_data);
     zassert_true(fake_sx128x_is_rx_callback_set(), "No Rx callback set");
 
-    struct radio_generic_cmd_s cmd;
+    struct generic_packet_s cmd;
     cmd.header.packet_version = 0x12;
     cmd.header.sender_id = 0x02;
     cmd.header.target_id = 0x01;
@@ -80,7 +80,7 @@ ZTEST_F(fake_lora_device_test, test_fake_device_data_callback_payload_valid_SUCC
     zassert_true(fixture->lora_rcv_callback_called, "Callback was NOT called");
 
     // assert correct receive size
-    zassert_equal(fixture->ctx.rx_size, sizeof(struct radio_generic_cmd_s));
+    zassert_equal(fixture->ctx.rx_size, sizeof(struct generic_packet_s));
 
     // assert we're receiving valid packet
     zassert_not_null(fixture->received_packet);

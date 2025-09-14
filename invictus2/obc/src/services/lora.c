@@ -1,7 +1,6 @@
-#include "radio_commands.h"
+#include "packets.h"
 #include "services/lora.h"
 #include "invictus2/drivers/sx128x_context.h"
-#include "radio_commands.h"
 
 #include "syscalls/kernel.h"
 #include "zephyr/kernel/thread_stack.h"
@@ -78,11 +77,11 @@ void lora_handle_incoming_packet()
 
     // TODO handle _all_ incoming packets
     uint8_t *raw_msg = NULL;
-    ring_buf_get_claim(&ctx->rx_rb, &raw_msg, sizeof(struct radio_generic_cmd_s));
+    ring_buf_get_claim(&ctx->rx_rb, &raw_msg, sizeof(struct generic_packet_s));
 
-    struct radio_generic_cmd_s *msg = (struct radio_generic_cmd_s *)raw_msg;
+    struct generic_packet_s *msg = (struct generic_packet_s *)raw_msg;
     zbus_chan_pub(&chan_radio_cmds, (const void *)msg, K_NO_WAIT);
-    ring_buf_get_finish(&ctx->rx_rb, sizeof(struct radio_generic_cmd_s));
+    ring_buf_get_finish(&ctx->rx_rb, sizeof(struct generic_packet_s));
 }
 
 void lora_thread_entry(void *p1, void *p2, void *p3)
