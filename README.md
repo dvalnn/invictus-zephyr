@@ -44,6 +44,8 @@ west build -t run
 run tests:
 ```bash
 west twister -T test/ -G
+west twister -T invictus2/obc/tests/lora/unit-testing
+
 ```
 
 ## Contributing

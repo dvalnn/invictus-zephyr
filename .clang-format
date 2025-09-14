@@ -28,7 +28,7 @@ AttributeMacros:
   - __syscall_always_inline
   - __subsystem
 BitFieldColonSpacing: After
-BreakBeforeBraces: Linux
+BreakBeforeBraces: Allman
 ColumnLimit: 95
 ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4
