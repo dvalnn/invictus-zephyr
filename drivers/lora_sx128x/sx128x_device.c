@@ -21,50 +21,75 @@ LOG_MODULE_REGISTER(sx128x_device, CONFIG_LORA_SX128X_LOG_LEVEL);
 #define SX128X_SPI_OPERATION (SPI_WORD_SET(8) | SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB)
 
 // TODO make kconfig
-#define LORA_SX128X_USE_SPLIT_BUFFER  true
-// 256MB
-#define LORA_SX128X_BUFFER_SIZE_BYTES 256U
+#define LORA_SX128X_BUFFER_SIZE_BYTES 128U
 
 #define RETURN_ON_ERROR(status)                                                               \
-    if (status != SX128X_STATUS_OK) {                                                         \
+    if (status != SX128X_STATUS_OK)                                                           \
+    {                                                                                         \
+        LOG_ERR("Failed to send command");                                                    \
         return status;                                                                        \
     }
 
-static struct sx1280_data {
+static struct sx1280_data
+{
     const struct device *dev;
     void (*rx_callback)(uint8_t *, uint16_t);
 } dev_data;
 
+void sx128x_log_configuration(const struct device *dev)
+{
+    uint8_t status;
+    sx128x_status_t ret = sx128x_get_lora_pkt_len(dev, &status);
+    LOG_INF("pkt len: %d -> %d", (int)ret, (int)status);
+
+    sx128x_pkt_type_t pkt_type;
+    ret = sx128x_get_pkt_type(dev, &pkt_type);
+    LOG_INF("type: %d -> %d", (int)ret, (int)pkt_type);
+
+    sx128x_lora_pkt_len_modes_t pkt_len;
+    ret = sx128x_get_lora_pkt_len_mode(dev, &pkt_len);
+    LOG_INF("mode: %d -> %d", (int)ret, (int)pkt_len);
+}
+
 int _lora_config(const struct device *dev)
 {
-    LOG_INF("sx128x: init");
+    const struct sx128x_context_cfg *config = dev->config;
+
+    if (!spi_is_ready_dt(&config->spi))
+    {
+        LOG_INF("SPI device not ready");
+        return SX128X_STATUS_ERROR;
+    }
+
+    if (!spi_cs_is_gpio_dt(&config->spi))
+    {
+        LOG_INF("NSS NOT SET");
+    }
+
     // TODO: Implement the initialization of the device
     // NOTE: Followed datasheet section "14.4 Lora Operation"
     sx128x_status_t init_status;
 
     // 1. Set in standby mode if not already
-    LOG_DBG("setting standby mode");
+    LOG_INF("setting standby mode");
     init_status = sx128x_set_standby(dev, SX128X_STANDBY_CFG_RC);
     RETURN_ON_ERROR(init_status);
 
     // 2. Set packet type as lora
-    LOG_DBG("setting lora packet type");
+    LOG_INF("setting lora packet type");
     init_status = sx128x_set_pkt_type(dev, SX128X_PKT_TYPE_LORA);
     RETURN_ON_ERROR(init_status);
 
     // 3. Set rf frequency
-    LOG_DBG("setting 2.4GHz");
+    LOG_INF("setting 2.4GHz");
     init_status = sx128x_set_rf_freq(dev, 2400000000);
     RETURN_ON_ERROR(init_status);
 
     // 4. Set base adresses for Rx and Tx (Either full 256MB for both or 128MB each)
     const uint8_t tx_base = 0;
-    uint8_t rx_base = 0;
-    if (LORA_SX128X_USE_SPLIT_BUFFER) {
-        rx_base = tx_base + (LORA_SX128X_BUFFER_SIZE_BYTES / 2);
-    }
+    const uint8_t rx_base = tx_base + LORA_SX128X_BUFFER_SIZE_BYTES;
 
-    LOG_DBG("setting buffer addresses to Tx %u and Rx %u", tx_base, rx_base);
+    LOG_INF("setting buffer addresses to Tx %u and Rx %u", tx_base, rx_base);
     init_status = sx128x_set_buffer_base_address(dev, tx_base, rx_base);
     RETURN_ON_ERROR(init_status);
 
@@ -76,35 +101,43 @@ int _lora_config(const struct device *dev)
         .cr = SX128X_LORA_RANGING_CR_4_7,
     };
 
-    LOG_DBG("setting modulation parameters");
+    LOG_INF("setting modulation parameters");
     init_status = sx128x_set_lora_mod_params(dev, &mod_params);
     RETURN_ON_ERROR(init_status);
 
     // 6. Set packet parameters
     static const sx128x_pkt_params_lora_t params = {
-        .preamble_len = {12}, // recomended value. FIXME: exponent and mantissa
+        .preamble_len =
+            {
+                12,
+                .exp = 1,
+            }, // recomended value. FIXME: exponent and mantissa
         .header_type = SX128X_LORA_RANGING_PKT_IMPLICIT,
         // According to datasheet (DS_SX1280-1_V3.3) Table 14-52
         // this value should be 253 at most with CDC enabled
-        .pld_len_in_bytes = 253,
+        .pld_len_in_bytes = 126,
         .crc_is_on = true,
         .invert_iq_is_on = false};
 
-    LOG_DBG("configuring packets");
+    LOG_INF("configuring packets");
     init_status = sx128x_set_lora_pkt_params(dev, &params);
     RETURN_ON_ERROR(init_status);
+
+    LOG_INF("finished configuration");
+
+    sx128x_log_configuration(dev);
 
     // 7. Go back to sleep
     init_status = sx128x_set_sleep(dev_data.dev, true, true);
     RETURN_ON_ERROR(init_status);
 
-    LOG_INF("finished configuration");
     return SX128X_STATUS_OK;
 }
 
 static void _cb_on_recv_event(uint8_t *payload, size_t size)
 {
-    if (dev_data.rx_callback == NULL) {
+    if (dev_data.rx_callback == NULL)
+    {
         return;
     }
 
@@ -134,6 +167,7 @@ void sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
 static int sx128x_init(const struct device *dev)
 {
     dev_data.dev = dev;
+
     // TODO check SPI pins, etc
     return _lora_config(dev);
 }
@@ -143,7 +177,6 @@ static int sx128x_init(const struct device *dev)
                                                                                               \
     static const struct sx128x_context_cfg sx128x_config_##node_id = {                        \
         .spi = SPI_DT_SPEC_GET(node_id, SX128X_SPI_OPERATION, 0),                             \
-        .reset = GPIO_DT_SPEC_GET(node_id, reset_gpios),                                      \
         .busy = GPIO_DT_SPEC_GET(node_id, busy_gpios),                                        \
     };                                                                                        \
                                                                                               \
