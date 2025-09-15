@@ -1,7 +1,6 @@
-&uart0 {
-       modbus_uart: modbus0  {
-                compatible = "zephyr,modbus-serial";
-                status = "okay";
-       };
-       status = "okay";
+/ {
+    servo: servo {
+        compatible = "pwm-leds";
+        pwms = <&pwm 12 PWM_MSEC(1) PWM_POLARITY_NORMAL>;
+    };
 };
