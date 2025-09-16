@@ -30,6 +30,8 @@ LOG_MODULE_REGISTER(sx128x_device, CONFIG_LORA_SX128X_LOG_LEVEL);
         return status;                                                                        \
     }
 
+static struct gpio_callback dio3_cb_data;
+
 static struct sx1280_data
 {
     const struct device *dev;
@@ -40,15 +42,25 @@ void sx128x_log_configuration(const struct device *dev)
 {
     uint8_t status;
     sx128x_status_t ret = sx128x_get_lora_pkt_len(dev, &status);
-    LOG_INF("pkt len: %d -> %d", (int)ret, (int)status);
+    LOG_DBG("pkt len: %d -> %d", (int)ret, (int)status);
 
     sx128x_pkt_type_t pkt_type;
     ret = sx128x_get_pkt_type(dev, &pkt_type);
-    LOG_INF("type: %d -> %d", (int)ret, (int)pkt_type);
+    LOG_DBG("type: %d -> %d", (int)ret, (int)pkt_type);
 
     sx128x_lora_pkt_len_modes_t pkt_len;
     ret = sx128x_get_lora_pkt_len_mode(dev, &pkt_len);
-    LOG_INF("mode: %d -> %d", (int)ret, (int)pkt_len);
+    LOG_DBG("mode: %d -> %d", (int)ret, (int)pkt_len);
+}
+
+// Datasheet section 14.4.3 2. Rx Settings and Operations
+// periodBaseCount is set 0xFFFF, Rx Continuous mode, the device remains in Rx mode until the
+// host sends a command to change the operation mode. The device can receive several packets.
+// Each time a packet is received, a packet received indication is given to the host and the
+// device will continue to search for a new packet
+int _sx128x_set_continous_rx_mode(const struct device *dev)
+{
+    return sx128x_set_rx(dev_data.dev, SX128X_TICK_SIZE_1000_US, 0xFF);
 }
 
 int _lora_config(const struct device *dev)
@@ -57,13 +69,14 @@ int _lora_config(const struct device *dev)
 
     if (!spi_is_ready_dt(&config->spi))
     {
-        LOG_INF("SPI device not ready");
+        LOG_DBG("SPI device not ready");
         return SX128X_STATUS_ERROR;
     }
 
     if (!spi_cs_is_gpio_dt(&config->spi))
     {
-        LOG_INF("NSS NOT SET");
+        LOG_ERR("NSS NOT SET");
+        return SX128X_STATUS_ERROR;
     }
 
     // TODO: Implement the initialization of the device
@@ -71,17 +84,17 @@ int _lora_config(const struct device *dev)
     sx128x_status_t init_status;
 
     // 1. Set in standby mode if not already
-    LOG_INF("setting standby mode");
+    LOG_DBG("setting standby mode");
     init_status = sx128x_set_standby(dev, SX128X_STANDBY_CFG_RC);
     RETURN_ON_ERROR(init_status);
 
     // 2. Set packet type as lora
-    LOG_INF("setting lora packet type");
+    LOG_DBG("setting lora packet type");
     init_status = sx128x_set_pkt_type(dev, SX128X_PKT_TYPE_LORA);
     RETURN_ON_ERROR(init_status);
 
     // 3. Set rf frequency
-    LOG_INF("setting 2.4GHz");
+    LOG_DBG("setting 2.4GHz");
     init_status = sx128x_set_rf_freq(dev, 2400000000);
     RETURN_ON_ERROR(init_status);
 
@@ -89,7 +102,7 @@ int _lora_config(const struct device *dev)
     const uint8_t tx_base = 0;
     const uint8_t rx_base = tx_base + LORA_SX128X_BUFFER_SIZE_BYTES;
 
-    LOG_INF("setting buffer addresses to Tx %u and Rx %u", tx_base, rx_base);
+    LOG_DBG("setting buffer addresses to Tx %u and Rx %u", tx_base, rx_base);
     init_status = sx128x_set_buffer_base_address(dev, tx_base, rx_base);
     RETURN_ON_ERROR(init_status);
 
@@ -101,7 +114,7 @@ int _lora_config(const struct device *dev)
         .cr = SX128X_LORA_RANGING_CR_4_7,
     };
 
-    LOG_INF("setting modulation parameters");
+    LOG_DBG("setting modulation parameters");
     init_status = sx128x_set_lora_mod_params(dev, &mod_params);
     RETURN_ON_ERROR(init_status);
 
@@ -109,59 +122,122 @@ int _lora_config(const struct device *dev)
     static const sx128x_pkt_params_lora_t params = {
         .preamble_len =
             {
-                12,
+                .mant = 12,
                 .exp = 1,
-            }, // recomended value. FIXME: exponent and mantissa
+            },
         .header_type = SX128X_LORA_RANGING_PKT_IMPLICIT,
         // According to datasheet (DS_SX1280-1_V3.3) Table 14-52
-        // this value should be 253 at most with CDC enabled
+        // this value should be account for CRC (2 bytes)
         .pld_len_in_bytes = 126,
         .crc_is_on = true,
         .invert_iq_is_on = false};
 
-    LOG_INF("configuring packets");
+    LOG_DBG("configuring packets");
     init_status = sx128x_set_lora_pkt_params(dev, &params);
     RETURN_ON_ERROR(init_status);
 
-    LOG_INF("finished configuration");
+    LOG_DBG("finished configuration");
 
     sx128x_log_configuration(dev);
 
-    // 7. Go back to sleep
-    init_status = sx128x_set_sleep(dev_data.dev, true, true);
-    RETURN_ON_ERROR(init_status);
+    // TODO is it needed to sleep here?
+    // // 7. Go back to sleep
+    // init_status = sx128x_set_sleep(dev_data.dev, true, true);
+    // RETURN_ON_ERROR(init_status);
 
     return SX128X_STATUS_OK;
 }
 
-static void _cb_on_recv_event(uint8_t *payload, size_t size)
+static void _cb_on_recv_event(const struct device *dev, struct gpio_callback *cb,
+                              uint32_t pins)
 {
-    if (dev_data.rx_callback == NULL)
-    {
-        return;
-    }
-
-    dev_data.rx_callback(payload, size);
-
-    // start Rx again
-    sx128x_set_rx(dev_data.dev, 0, 0);
-
+    LOG_INF("@packet");
+    // if (dev_data.rx_callback == NULL)
+    // {
+    //     return;
+    // }
+    //
+    // dev_data.rx_callback(payload, size);
+    //
+    // // start Rx again
+    // sx128x_set_rx(dev_data.dev, 0, 0);
+    //
     // clear IRQ status
-    // sx128x_clear_irq_status(dev_data.dev, const sx128x_irq_mask_t irq_mask)
+    sx128x_status_t ret = sx128x_clear_irq_status(dev, SX128X_IRQ_RX_DONE);
+    if (ret != SX128X_STATUS_OK)
+    {
+        LOG_ERR("failed to clear RX IRQ status");
+    }
 }
 
-void sx1280x_write(uint8_t *payload, size_t size)
+void sx1280x_transmit(uint8_t *payload, size_t size)
 {
-    // TODO; implement
 }
 
-void sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
+bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
 {
+    LOG_INF("Setting up receive callback");
+    // configure
+    const struct device *dev = (const struct device *)dev_data.dev;
+    const struct sx128x_context_cfg *config = dev->config;
+
+    if (!gpio_is_ready_dt(&config->dio3))
+    {
+        LOG_ERR("DIO gpio is not ready");
+        return false;
+    }
+    LOG_INF("Valid DIO gpio");
+
+    int ret = gpio_pin_configure_dt(&config->dio3, GPIO_INPUT);
+    if (ret != 0)
+    {
+        LOG_ERR("Failed to configure DIO as input due to %d", ret);
+        return false;
+    }
+    LOG_INF("Configured DIO gpio");
+
     dev_data.rx_callback = rx_callback;
+    LOG_INF("Configured callback");
+
+    //  Configure IRQ to call _cb_on_recv_event
+    gpio_init_callback(&dio3_cb_data, _cb_on_recv_event, config->dio3.pin);
+    LOG_INF("Initialized DIO");
+
+    int callback_result = gpio_add_callback(config->dio3.port, &dio3_cb_data);
+    if (callback_result != 0)
+    {
+        LOG_ERR("Failed to set callback due to %d", callback_result);
+        return false;
+    }
+    LOG_INF("Configured DIO callback");
+
+    ret = sx128x_set_dio_irq_params(dev, SX128X_IRQ_RX_DONE, SX128X_IRQ_NONE, SX128X_IRQ_NONE,
+                                    SX128X_IRQ_RX_DONE);
+    if (ret != SX128X_STATUS_OK)
+    {
+        LOG_ERR("Failed to configure DIO3 IRQ");
+        return false;
+    }
+    LOG_INF("Configured DIO IRQ");
 
     // start reception
-    sx128x_set_rx(dev_data.dev, 0, 0);
-    //  Configure IRQ to call _cb_on_recv_event
+    int result = _sx128x_set_continous_rx_mode(dev);
+    if (result != 0)
+    {
+        LOG_ERR("Failed to set RX mode");
+        return false;
+    }
+
+    sx128x_chip_status_t radio_status;
+    sx128x_status_t status_ret = sx128x_get_status(dev, &radio_status);
+    if (status_ret != SX128X_STATUS_OK || radio_status.chip_mode != SX128X_CHIP_MODE_RX)
+    {
+        // TODO: verify because documentation is confusing
+        LOG_ERR("Radio not in RX mode: %d | %d | %d", status_ret, radio_status.cmd_status,
+                radio_status.chip_mode);
+    }
+    LOG_INF("Radio in RX mode");
+    return SX128X_STATUS_OK;
 }
 
 static int sx128x_init(const struct device *dev)
@@ -178,6 +254,7 @@ static int sx128x_init(const struct device *dev)
     static const struct sx128x_context_cfg sx128x_config_##node_id = {                        \
         .spi = SPI_DT_SPEC_GET(node_id, SX128X_SPI_OPERATION, 0),                             \
         .busy = GPIO_DT_SPEC_GET(node_id, busy_gpios),                                        \
+        .dio3 = GPIO_DT_SPEC_GET(node_id, dio3_gpios),                                        \
     };                                                                                        \
                                                                                               \
     DEVICE_DT_DEFINE(node_id, sx128x_init, NULL, &sx128x_data_##node_id,                      \
