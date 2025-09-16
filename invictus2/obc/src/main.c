@@ -4,29 +4,15 @@
 #include <zephyr/zbus/zbus.h>
 
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/pwm.h>
 
 #include "data_models.h"
 #include "validators.h"
 #include "packets.h"
+#include "peripherals.h"
 
 #include "services/lora.h"
 #include "services/modbus.h"
 #include "services/state_machine/main_sm.h"
-
-/* The devicetree node identifier for the "led0" alias. */
-#define LED_GREEN DT_NODELABEL(led_green_0)
-#define LED_RED   DT_NODELABEL(led_red_0)
-
-static const struct gpio_dt_spec led_green = GPIO_DT_SPEC_GET(LED_GREEN, gpios);
-static const struct gpio_dt_spec led_red = GPIO_DT_SPEC_GET(LED_RED, gpios);
-
-#define BUZZER DT_NODELABEL(buzzer)
-static const struct pwm_dt_spec pwm = PWM_DT_SPEC_GET(BUZZER);
-
-// FIXME: remove, it's just to make sure linker is working
-#include "invictus2/drivers/sx128x_hal.h"
 
 // THREADS:
 // - Main thread: LoRa communication. (for now just pipe everything to stdout).
@@ -120,20 +106,8 @@ static lora_context_t lora_context;
 
 bool setup_peripherals()
 {
-    if (!gpio_is_ready_dt(&led_green) || !gpio_is_ready_dt(&led_red)) {
-        return false;
-    }
-
-    int ret = gpio_pin_configure_dt(&led_green, GPIO_OUTPUT_ACTIVE);
-    int ret2 = gpio_pin_configure_dt(&led_red, GPIO_OUTPUT_ACTIVE);
-    if (ret < 0 || ret2 < 0) {
-        return false;
-    }
-
-    if (!pwm_is_ready_dt(&pwm)) {
-        return false;
-    }
-
+    LOG_INF("Setting up peripherals...");
+    pwm_init();
     return true;
 }
 
@@ -167,15 +141,10 @@ bool setup_services(atomic_t *stop_signal)
     return true;
 }
 
-void healh_check(void)
+void health_check(void)
 {
-    for (size_t i = 0; i < 2; ++i) {
-        pwm_set_dt(&pwm, pwm.period, pwm.period / 2);
-        k_sleep(K_MSEC(250));
-
-        pwm_set_pulse_dt(&pwm, 0);
-        k_sleep(K_MSEC(250));
-    }
+    LOG_INF("Performing health check...");
+    LOG_INF("Health check passed.");
 }
 
 // --- Main ---
@@ -184,7 +153,8 @@ int main(void)
     LOG_INF("Starting OBC main thread");
 
     if (!setup_peripherals()) {
-        goto crash;
+        LOG_ERR("Failed to setup peripherals");
+        k_oops();
     }
 
     /* atomic_t stop_signal = ATOMIC_INIT(0); */
@@ -199,20 +169,12 @@ int main(void)
     // modbus_service_start();
 
     LOG_INF("Services started.");
-    healh_check();
+    health_check();
 
     while (1) {
-        int ret = gpio_pin_toggle_dt(&led_green);
-        int ret2 = gpio_pin_toggle_dt(&led_red);
-        if (ret < 0 || ret2 < 0) {
-            goto crash;
-        }
-
         LOG_INF("Heartbeat");
-
         k_sleep(K_MSEC(1000));
     }
 
-crash:
     k_oops(); // Should never reach here
 }
