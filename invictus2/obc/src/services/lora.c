@@ -1,8 +1,10 @@
+#include "invictus2/drivers/sx128x.h"
 #include "packets.h"
 #include "services/lora.h"
 #include "invictus2/drivers/sx128x_context.h"
 
 #include "syscalls/kernel.h"
+#include "zephyr/device.h"
 #include "zephyr/kernel/thread_stack.h"
 #include "zephyr/logging/log.h"
 #include "zephyr/sys/ring_buffer.h"
@@ -12,7 +14,9 @@
 #include <stdint.h>
 
 LOG_MODULE_REGISTER(lora_integration, LOG_LEVEL_DBG);
-ZBUS_CHAN_DECLARE(chan_radio_cmds);
+ZBUS_CHAN_DECLARE(chan_packets);
+
+extern void healh_check(void);
 
 static lora_context_t *ctx = NULL;
 // TODO fine tune size
@@ -34,13 +38,13 @@ bool lora_service_setup(lora_context_t *context)
     if (context == NULL)
     {
         LOG_ERR("Invalid context object");
-        return false;
+        goto failed_initialization;
     }
 
     if (context->stop_signal == NULL)
     {
         LOG_ERR("Invalid stop source");
-        return false;
+        goto failed_initialization;
     }
 
     ctx = context;
@@ -49,16 +53,21 @@ bool lora_service_setup(lora_context_t *context)
     if (dev == NULL)
     {
         LOG_ERR("failed to find loRa device");
-        return false;
+        goto failed_initialization;
     }
 
     k_sem_init(&ctx->data_available, 0, 1);
     ring_buf_init(&ctx->rx_rb, sizeof(lora_rx_buffer), lora_rx_buffer);
     ctx->rx_size = 0;
+    ctx->device_valid = true;
 
     sx128x_register_recv_callback(&lora_on_recv_data);
     LOG_INF("initialized loRa service thread");
     return true;
+
+failed_initialization:
+    context->device_valid = false;
+    return false;
 }
 
 void lora_handle_incoming_packet()
@@ -80,7 +89,7 @@ void lora_handle_incoming_packet()
     ring_buf_get_claim(&ctx->rx_rb, &raw_msg, sizeof(struct generic_packet_s));
 
     struct generic_packet_s *msg = (struct generic_packet_s *)raw_msg;
-    zbus_chan_pub(&chan_radio_cmds, (const void *)msg, K_NO_WAIT);
+    zbus_chan_pub(&chan_packets, (const void *)msg, K_NO_WAIT);
     ring_buf_get_finish(&ctx->rx_rb, sizeof(struct generic_packet_s));
 }
 
@@ -96,17 +105,37 @@ void lora_thread_entry(void *p1, void *p2, void *p3)
         return;
     }
 
+    if (!ctx->device_valid)
+    {
+        LOG_ERR("device is not in a valid state");
+        return;
+    }
+
     LOG_INF("LoRa thread starting");
-    const uint32_t c_sleep_time_ms = 80;
+    const uint32_t c_sleep_time_ms = 1000;
     while (*ctx->stop_signal != 1)
     {
-        LOG_INF("LoRa thread");
+        // LOG_INF("LoRa thread");
 
         // handle lora reception
         if (k_sem_take(&ctx->data_available, K_NO_WAIT) == 0)
         {
             LOG_INF("read %u bytes", ctx->rx_size);
             lora_handle_incoming_packet();
+        }
+
+        const char *random_data = "12345678";
+        if (!sx128x_transmit(random_data, strlen(random_data)))
+        {
+            LOG_ERR("failed to transmit");
+            healh_check();
+            healh_check();
+            healh_check();
+        }
+        else
+        {
+            LOG_INF("transmit");
+            healh_check();
         }
 
         // handle zbus reception

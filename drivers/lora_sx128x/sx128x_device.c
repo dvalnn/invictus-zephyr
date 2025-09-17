@@ -20,9 +20,6 @@ LOG_MODULE_REGISTER(sx128x_device, CONFIG_LORA_SX128X_LOG_LEVEL);
 
 #define SX128X_SPI_OPERATION (SPI_WORD_SET(8) | SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB)
 
-// TODO make kconfig
-#define LORA_SX128X_BUFFER_SIZE_BYTES 128U
-
 #define RETURN_ON_ERROR(status)                                                               \
     if (status != SX128X_STATUS_OK)                                                           \
     {                                                                                         \
@@ -42,15 +39,15 @@ void sx128x_log_configuration(const struct device *dev)
 {
     uint8_t status;
     sx128x_status_t ret = sx128x_get_lora_pkt_len(dev, &status);
-    LOG_DBG("pkt len: %d -> %d", (int)ret, (int)status);
+    LOG_INF("pkt len: %d -> %d", (int)ret, (int)status);
 
     sx128x_pkt_type_t pkt_type;
     ret = sx128x_get_pkt_type(dev, &pkt_type);
-    LOG_DBG("type: %d -> %d", (int)ret, (int)pkt_type);
+    LOG_INF("type: %d -> %d", (int)ret, (int)pkt_type);
 
     sx128x_lora_pkt_len_modes_t pkt_len;
     ret = sx128x_get_lora_pkt_len_mode(dev, &pkt_len);
-    LOG_DBG("mode: %d -> %d", (int)ret, (int)pkt_len);
+    LOG_INF("mode: %d -> %d", (int)ret, (int)pkt_len);
 }
 
 // Datasheet section 14.4.3 2. Rx Settings and Operations
@@ -60,7 +57,8 @@ void sx128x_log_configuration(const struct device *dev)
 // device will continue to search for a new packet
 int _sx128x_set_continous_rx_mode(const struct device *dev)
 {
-    return sx128x_set_rx(dev_data.dev, SX128X_TICK_SIZE_1000_US, 0xFF);
+    sx128x_clear_irq_status(dev, SX128X_IRQ_ALL);
+    return sx128x_set_rx(dev_data.dev, SX128X_TICK_SIZE_0015_US, 0xFF);
 }
 
 int _lora_config(const struct device *dev)
@@ -128,7 +126,7 @@ int _lora_config(const struct device *dev)
         .header_type = SX128X_LORA_RANGING_PKT_IMPLICIT,
         // According to datasheet (DS_SX1280-1_V3.3) Table 14-52
         // this value should be account for CRC (2 bytes)
-        .pld_len_in_bytes = 126,
+        .pld_len_in_bytes = 128,
         .crc_is_on = true,
         .invert_iq_is_on = false};
 
@@ -148,10 +146,15 @@ int _lora_config(const struct device *dev)
     return SX128X_STATUS_OK;
 }
 
+int sx128x_read(uint8_t *payload, size_t size)
+{
+    return sx128x_read_buffer(&dev_data.dev, LORA_SX128X_BUFFER_SIZE_BYTES, payload, size);
+}
+
 static void _cb_on_recv_event(const struct device *dev, struct gpio_callback *cb,
                               uint32_t pins)
 {
-    LOG_INF("@packet");
+    LOG_INF("@packet !!!");
     // if (dev_data.rx_callback == NULL)
     // {
     //     return;
@@ -163,7 +166,7 @@ static void _cb_on_recv_event(const struct device *dev, struct gpio_callback *cb
     // sx128x_set_rx(dev_data.dev, 0, 0);
     //
     // clear IRQ status
-    sx128x_status_t ret = sx128x_clear_irq_status(dev, SX128X_IRQ_RX_DONE);
+    sx128x_status_t ret = sx128x_clear_irq_status(dev, SX128X_IRQ_ALL);
     if (ret != SX128X_STATUS_OK)
     {
         LOG_ERR("failed to clear RX IRQ status");
@@ -172,12 +175,10 @@ static void _cb_on_recv_event(const struct device *dev, struct gpio_callback *cb
 
 bool sx128x_transmit(const uint8_t *payload, size_t size)
 {
-    // FIXME should we use a timeout value?
-    sx128x_status_t ret = sx128x_set_tx(dev_data.dev, SX128X_TICK_SIZE_1000_US, 40);
+    sx128x_status_t ret = sx128x_set_tx_params(dev_data.dev, 13, SX128X_RAMP_20_US);
     if (ret != SX128X_STATUS_OK)
     {
-        LOG_INF("Failed to transmit");
-        return false;
+        LOG_ERR("failed to set TX parameters %d: ", ret);
     }
 
     sx128x_status_t transmission_result = sx128x_write_buffer(dev_data.dev, 0, payload, size);
@@ -186,10 +187,12 @@ bool sx128x_transmit(const uint8_t *payload, size_t size)
         LOG_ERR("failed to write command");
     }
 
-    ret = sx128x_clear_irq_status(dev_data.dev, SX128X_IRQ_TX_DONE);
+    // FIXME should we use a timeout value?
+    ret = sx128x_set_tx(dev_data.dev, SX128X_TICK_SIZE_1000_US, 10);
     if (ret != SX128X_STATUS_OK)
     {
-        LOG_ERR("failed to clear TX IRQ status");
+        LOG_INF("Failed to transmit");
+        return false;
     }
 
     // go back to RX mode
@@ -213,7 +216,7 @@ bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
         LOG_ERR("DIO gpio is not ready");
         return false;
     }
-    LOG_INF("Valid DIO gpio");
+    LOG_DBG("Valid DIO gpio");
 
     int ret = gpio_pin_configure_dt(&config->dio3, GPIO_INPUT);
     if (ret != 0)
@@ -221,14 +224,14 @@ bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
         LOG_ERR("Failed to configure DIO as input due to %d", ret);
         return false;
     }
-    LOG_INF("Configured DIO gpio");
+    LOG_DBG("Configured DIO gpio");
 
     dev_data.rx_callback = rx_callback;
-    LOG_INF("Configured callback");
+    LOG_DBG("Configured callback");
 
     //  Configure IRQ to call _cb_on_recv_event
     gpio_init_callback(&dio3_cb_data, _cb_on_recv_event, config->dio3.pin);
-    LOG_INF("Initialized DIO");
+    LOG_DBG("Initialized DIO");
 
     int callback_result = gpio_add_callback(config->dio3.port, &dio3_cb_data);
     if (callback_result != 0)
@@ -245,14 +248,14 @@ bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
         return false;
     }
 
-    ret = sx128x_set_dio_irq_params(dev, SX128X_IRQ_RX_DONE, SX128X_IRQ_NONE, SX128X_IRQ_NONE,
-                                    SX128X_IRQ_RX_DONE);
+    ret = sx128x_set_dio_irq_params(dev, SX128X_IRQ_ALL, SX128X_IRQ_ALL, SX128X_IRQ_ALL,
+                                    SX128X_IRQ_ALL);
     if (ret != SX128X_STATUS_OK)
     {
         LOG_ERR("Failed to configure DIO3 IRQ");
         return false;
     }
-    LOG_INF("Configured DIO IRQ");
+    LOG_DBG("Configured DIO IRQ");
 
     // start reception
     int result = _sx128x_set_continous_rx_mode(dev);
@@ -267,10 +270,9 @@ bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
     if (status_ret != SX128X_STATUS_OK || radio_status.chip_mode != SX128X_CHIP_MODE_RX)
     {
         // TODO: verify because documentation is confusing
-        LOG_ERR("Radio not in RX mode: %d | %d | %d", status_ret, radio_status.cmd_status,
-                radio_status.chip_mode);
+        LOG_ERR("%d | %d | %d", status_ret, radio_status.cmd_status, radio_status.chip_mode);
     }
-    LOG_INF("Radio in RX mode");
+    LOG_DBG("Radio in RX mode");
     return SX128X_STATUS_OK;
 }
 

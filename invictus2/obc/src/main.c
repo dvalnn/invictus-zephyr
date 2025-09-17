@@ -120,17 +120,20 @@ static lora_context_t lora_context;
 
 bool setup_peripherals()
 {
-    if (!gpio_is_ready_dt(&led_green) || !gpio_is_ready_dt(&led_red)) {
+    if (!gpio_is_ready_dt(&led_green) || !gpio_is_ready_dt(&led_red))
+    {
         return false;
     }
 
     int ret = gpio_pin_configure_dt(&led_green, GPIO_OUTPUT_ACTIVE);
     int ret2 = gpio_pin_configure_dt(&led_red, GPIO_OUTPUT_ACTIVE);
-    if (ret < 0 || ret2 < 0) {
+    if (ret < 0 || ret2 < 0)
+    {
         return false;
     }
 
-    if (!pwm_is_ready_dt(&pwm)) {
+    if (!pwm_is_ready_dt(&pwm))
+    {
         return false;
     }
 
@@ -140,7 +143,7 @@ bool setup_peripherals()
 bool setup_services(atomic_t *stop_signal)
 {
     LOG_INF("Setting up threads...");
-    /* lora_context.stop_signal = stop_signal; */
+    lora_context.stop_signal = stop_signal;
 
     /* LOG_INF("  * state machine..."); */
     /* if (!state_machine_service_setup()) { */
@@ -157,11 +160,12 @@ bool setup_services(atomic_t *stop_signal)
     }
     */
 
-    /* LOG_INF("  * lora..."); */
-    /* if (!lora_service_setup(&lora_context)) { */
-    /*     LOG_ERR("LoRa thread setup failed"); */
-    /*     return false; */
-    /* } */
+    LOG_INF("  * lora...");
+    if (!lora_service_setup(&lora_context))
+    {
+        LOG_ERR("LoRa thread setup failed");
+        return false;
+    }
 
     LOG_INF("done...");
     return true;
@@ -169,7 +173,8 @@ bool setup_services(atomic_t *stop_signal)
 
 void healh_check(void)
 {
-    for (size_t i = 0; i < 2; ++i) {
+    for (size_t i = 0; i < 1; ++i)
+    {
         pwm_set_dt(&pwm, pwm.period, pwm.period / 2);
         k_sleep(K_MSEC(250));
 
@@ -183,32 +188,37 @@ int main(void)
 {
     LOG_INF("Starting OBC main thread");
 
-    if (!setup_peripherals()) {
+    if (!setup_peripherals())
+    {
         goto crash;
     }
 
-    /* atomic_t stop_signal = ATOMIC_INIT(0); */
+    atomic_t stop_signal = ATOMIC_INIT(0);
 
-    /* if (!setup_services(&stop_signal)) { */
-    /*     LOG_ERR("Failed to setup services"); */
-    /*     k_oops(); */
-    /* } */
+    if (!setup_services(&stop_signal))
+    {
+        LOG_ERR("Failed to setup services");
+        k_oops();
+    }
 
-    /* lora_service_start(); */
+    lora_service_start();
     /* state_machine_service_start(); */
     // modbus_service_start();
 
     LOG_INF("Services started.");
     healh_check();
 
-    while (1) {
+    while (1)
+    {
         int ret = gpio_pin_toggle_dt(&led_green);
         int ret2 = gpio_pin_toggle_dt(&led_red);
-        if (ret < 0 || ret2 < 0) {
+        if (ret < 0 || ret2 < 0)
+        {
             goto crash;
         }
 
-        LOG_INF("Heartbeat");
+        // LOG_INF("Heartbeat");
+        // healh_check();
 
         k_sleep(K_MSEC(1000));
     }
