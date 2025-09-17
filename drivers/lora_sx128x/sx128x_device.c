@@ -61,21 +61,51 @@ int _sx128x_set_continous_rx_mode(const struct device *dev)
     return sx128x_set_rx(dev_data.dev, SX128X_TICK_SIZE_0015_US, 0xFF);
 }
 
-int _lora_config(const struct device *dev)
+bool _sx128x_configure_peripherals(const struct device *dev)
 {
     const struct sx128x_context_cfg *config = dev->config;
 
+    // SPI device
     if (!spi_is_ready_dt(&config->spi))
     {
         LOG_DBG("SPI device not ready");
-        return SX128X_STATUS_ERROR;
+        return false;
     }
 
+    // Chip select
     if (!spi_cs_is_gpio_dt(&config->spi))
     {
         LOG_ERR("NSS NOT SET");
+        return false;
+    }
+
+    // Busy GPIO
+    if (!gpio_is_ready_dt(&config->busy))
+    {
+        LOG_ERR("BUSY gpio is not ready");
+        return false;
+    }
+    LOG_DBG("Valid BUSY gpio");
+
+    int ret = gpio_pin_configure_dt(&config->busy, GPIO_INPUT);
+    if (ret != 0)
+    {
+        LOG_ERR("Failed to configure BUSY as input due to %d", ret);
+        return false;
+    }
+    LOG_INF("Configured peripherals");
+
+    return true;
+}
+
+int _lora_config(const struct device *dev)
+{
+    if (!_sx128x_configure_peripherals(dev))
+    {
+        LOG_ERR("failed peripheral validation");
         return SX128X_STATUS_ERROR;
     }
+    const struct sx128x_context_cfg *config = dev->config;
 
     // TODO: Implement the initialization of the device
     // NOTE: Followed datasheet section "14.4 Lora Operation"
