@@ -25,7 +25,7 @@ struct sx128x_context_data {
     uint8_t tx_offset;
 };
 
-void sx1280x_write(uint8_t *, size_t);
-void sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t));
+bool sx128x_transmit(const uint8_t *, size_t);
+bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t));
 
 #endif // SX128X_HAL_CONTEXT_H

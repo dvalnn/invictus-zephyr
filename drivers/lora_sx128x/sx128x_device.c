@@ -170,8 +170,35 @@ static void _cb_on_recv_event(const struct device *dev, struct gpio_callback *cb
     }
 }
 
-void sx1280x_transmit(uint8_t *payload, size_t size)
+bool sx128x_transmit(const uint8_t *payload, size_t size)
 {
+    // FIXME should we use a timeout value?
+    sx128x_status_t ret = sx128x_set_tx(dev_data.dev, SX128X_TICK_SIZE_1000_US, 40);
+    if (ret != SX128X_STATUS_OK)
+    {
+        LOG_INF("Failed to transmit");
+        return false;
+    }
+
+    sx128x_status_t transmission_result = sx128x_write_buffer(dev_data.dev, 0, payload, size);
+    if (transmission_result != SX128X_STATUS_OK)
+    {
+        LOG_ERR("failed to write command");
+    }
+
+    ret = sx128x_clear_irq_status(dev_data.dev, SX128X_IRQ_TX_DONE);
+    if (ret != SX128X_STATUS_OK)
+    {
+        LOG_ERR("failed to clear TX IRQ status");
+    }
+
+    // go back to RX mode
+    if (_sx128x_set_continous_rx_mode(dev_data.dev) != 0)
+    {
+        LOG_ERR("Failed to go back to RX mode");
+    }
+
+    return transmission_result == SX128X_STATUS_OK;
 }
 
 bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
