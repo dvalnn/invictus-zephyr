@@ -259,27 +259,27 @@ bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
     dev_data.rx_callback = rx_callback;
     LOG_DBG("Configured callback");
 
+    int callback_result =
+        gpio_pin_interrupt_configure_dt(&config->dio3, GPIO_INT_EDGE_TO_ACTIVE);
+    if (callback_result < 0)
+    {
+        LOG_ERR("Failed to set interrupt due to %d", callback_result);
+        return false;
+    }
     //  Configure IRQ to call _cb_on_recv_event
-    gpio_init_callback(&dio3_cb_data, _cb_on_recv_event, config->dio3.pin);
+    gpio_init_callback(&dio3_cb_data, _cb_on_recv_event, BIT(config->dio3.pin));
     LOG_DBG("Initialized DIO");
 
-    int callback_result = gpio_add_callback(config->dio3.port, &dio3_cb_data);
-    if (callback_result != 0)
+    callback_result = gpio_add_callback(config->dio3.port, &dio3_cb_data);
+    if (callback_result < 0)
     {
         LOG_ERR("Failed to set callback due to %d", callback_result);
         return false;
     }
     LOG_DBG("Configured DIO callback");
 
-    callback_result = gpio_pin_interrupt_configure_dt(&config->dio3, GPIO_INT_EDGE_TO_ACTIVE);
-    if (callback_result != 0)
-    {
-        LOG_ERR("Failed to set interrupt due to %d", callback_result);
-        return false;
-    }
-
-    ret = sx128x_set_dio_irq_params(dev, SX128X_IRQ_ALL, SX128X_IRQ_ALL, SX128X_IRQ_ALL,
-                                    SX128X_IRQ_ALL);
+    ret = sx128x_set_dio_irq_params(dev, SX128X_IRQ_NONE, SX128X_IRQ_NONE, SX128X_IRQ_NONE,
+                                    SX128X_IRQ_TX_DONE);
     if (ret != SX128X_STATUS_OK)
     {
         LOG_ERR("Failed to configure DIO3 IRQ");
