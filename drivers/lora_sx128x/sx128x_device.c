@@ -245,7 +245,9 @@ int sx128x_read(uint8_t *payload, size_t size)
 
 bool sx128x_transmit(const uint8_t *payload, size_t size)
 {
-    sx128x_status_t ret = sx128x_set_tx_params(dev_data.dev, 5, SX128X_RAMP_20_US);
+    LOG_INF("transmitting %s | size %d", payload, size);
+
+    sx128x_status_t ret = sx128x_set_tx_params(dev_data.dev, 13, SX128X_RAMP_20_US);
     if (ret != SX128X_STATUS_OK)
     {
         LOG_ERR("failed to set TX parameters %d: ", ret);
@@ -257,11 +259,11 @@ bool sx128x_transmit(const uint8_t *payload, size_t size)
         LOG_ERR("failed to write command");
     }
 
-    ret = sx128x_set_dio_irq_params(dev_data.dev, SX128X_IRQ_NONE, SX128X_IRQ_NONE,
-                                    SX128X_IRQ_NONE, SX128X_IRQ_ALL);
+    ret = sx128x_set_dio_irq_params(dev_data.dev, SX128X_IRQ_TX_DONE, SX128X_IRQ_NONE,
+                                    SX128X_IRQ_NONE, SX128X_IRQ_TX_DONE);
 
     // FIXME should we use a timeout value?
-    ret = sx128x_set_tx(dev_data.dev, SX128X_TICK_SIZE_0015_US, 0);
+    ret = sx128x_set_tx(dev_data.dev, SX128X_TICK_SIZE_1000_US, 10);
     if (ret != SX128X_STATUS_OK)
     {
         LOG_INF("Failed to transmit");
