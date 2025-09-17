@@ -1,6 +1,7 @@
 // Loosely based on
 // https://github.com/zephyrproject-rtos/zephyr/blob/main/drivers/lora/sx12xx_common.c
 
+#include "zephyr/irq.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -27,6 +28,7 @@ LOG_MODULE_REGISTER(sx128x_device, CONFIG_LORA_SX128X_LOG_LEVEL);
         return status;                                                                        \
     }
 
+extern void healh_check(void);
 static struct gpio_callback dio3_cb_data;
 
 static struct sx1280_data
@@ -61,6 +63,34 @@ int _sx128x_set_continous_rx_mode(const struct device *dev)
     return sx128x_set_rx(dev_data.dev, SX128X_TICK_SIZE_0015_US, 0xFF);
 }
 
+static void _cb_on_recv_event(const struct device *dev, struct gpio_callback *cb,
+                              uint32_t pins)
+{
+    healh_check();
+    if (dev_data.rx_callback == NULL)
+    {
+        goto irq_finalize;
+    }
+    sx128x_status_t ret;
+// if (dev_data.rx_callback == NULL)
+// {
+//     return;
+// }
+//
+// dev_data.rx_callback(payload, size);
+//
+// // start Rx again
+// sx128x_set_rx(dev_data.dev, 0, 0);
+//
+irq_finalize:
+    // clear IRQ status
+    ret = sx128x_clear_irq_status(dev, SX128X_IRQ_ALL);
+    if (ret != SX128X_STATUS_OK)
+    {
+        LOG_ERR("failed to clear RX IRQ status");
+    }
+}
+
 bool _sx128x_configure_peripherals(const struct device *dev)
 {
     const struct sx128x_context_cfg *config = dev->config;
@@ -91,6 +121,38 @@ bool _sx128x_configure_peripherals(const struct device *dev)
     if (ret != 0)
     {
         LOG_ERR("Failed to configure BUSY as input due to %d", ret);
+        return false;
+    }
+
+    if (!gpio_is_ready_dt(&config->dio3))
+    {
+        LOG_ERR("DIO gpio is not ready");
+        return false;
+    }
+    LOG_DBG("Valid DIO gpio");
+
+    ret = gpio_pin_configure_dt(&config->dio3, GPIO_INPUT);
+    if (ret != 0)
+    {
+        LOG_ERR("Failed to configure DIO as input due to %d", ret);
+        return false;
+    }
+    LOG_DBG("Configured DIO gpio");
+
+    int callback_result = gpio_pin_interrupt_configure_dt(&config->dio3, GPIO_INT_EDGE_BOTH);
+    if (callback_result < 0)
+    {
+        LOG_ERR("Failed to set interrupt due to %d", callback_result);
+        return false;
+    }
+    //  Configure IRQ to call _cb_on_recv_event
+    gpio_init_callback(&dio3_cb_data, _cb_on_recv_event, BIT(config->dio3.pin));
+    LOG_DBG("Initialized DIO");
+
+    callback_result = gpio_add_callback(config->dio3.port, &dio3_cb_data);
+    if (callback_result < 0)
+    {
+        LOG_ERR("Failed to set callback due to %d", callback_result);
         return false;
     }
     LOG_INF("Configured peripherals");
@@ -181,31 +243,9 @@ int sx128x_read(uint8_t *payload, size_t size)
     return sx128x_read_buffer(&dev_data.dev, LORA_SX128X_BUFFER_SIZE_BYTES, payload, size);
 }
 
-static void _cb_on_recv_event(const struct device *dev, struct gpio_callback *cb,
-                              uint32_t pins)
-{
-    LOG_INF("@packet !!!");
-    // if (dev_data.rx_callback == NULL)
-    // {
-    //     return;
-    // }
-    //
-    // dev_data.rx_callback(payload, size);
-    //
-    // // start Rx again
-    // sx128x_set_rx(dev_data.dev, 0, 0);
-    //
-    // clear IRQ status
-    sx128x_status_t ret = sx128x_clear_irq_status(dev, SX128X_IRQ_ALL);
-    if (ret != SX128X_STATUS_OK)
-    {
-        LOG_ERR("failed to clear RX IRQ status");
-    }
-}
-
 bool sx128x_transmit(const uint8_t *payload, size_t size)
 {
-    sx128x_status_t ret = sx128x_set_tx_params(dev_data.dev, 13, SX128X_RAMP_20_US);
+    sx128x_status_t ret = sx128x_set_tx_params(dev_data.dev, 5, SX128X_RAMP_20_US);
     if (ret != SX128X_STATUS_OK)
     {
         LOG_ERR("failed to set TX parameters %d: ", ret);
@@ -217,8 +257,11 @@ bool sx128x_transmit(const uint8_t *payload, size_t size)
         LOG_ERR("failed to write command");
     }
 
+    ret = sx128x_set_dio_irq_params(dev_data.dev, SX128X_IRQ_NONE, SX128X_IRQ_NONE,
+                                    SX128X_IRQ_NONE, SX128X_IRQ_ALL);
+
     // FIXME should we use a timeout value?
-    ret = sx128x_set_tx(dev_data.dev, SX128X_TICK_SIZE_1000_US, 10);
+    ret = sx128x_set_tx(dev_data.dev, SX128X_TICK_SIZE_0015_US, 0);
     if (ret != SX128X_STATUS_OK)
     {
         LOG_INF("Failed to transmit");
@@ -226,10 +269,10 @@ bool sx128x_transmit(const uint8_t *payload, size_t size)
     }
 
     // go back to RX mode
-    if (_sx128x_set_continous_rx_mode(dev_data.dev) != 0)
-    {
-        LOG_ERR("Failed to go back to RX mode");
-    }
+    // if (_sx128x_set_continous_rx_mode(dev_data.dev) != 0)
+    // {
+    //     LOG_ERR("Failed to go back to RX mode");
+    // }
 
     return transmission_result == SX128X_STATUS_OK;
 }
@@ -239,47 +282,12 @@ bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
     LOG_INF("Setting up receive callback");
     // configure
     const struct device *dev = (const struct device *)dev_data.dev;
-    const struct sx128x_context_cfg *config = dev->config;
-
-    if (!gpio_is_ready_dt(&config->dio3))
-    {
-        LOG_ERR("DIO gpio is not ready");
-        return false;
-    }
-    LOG_DBG("Valid DIO gpio");
-
-    int ret = gpio_pin_configure_dt(&config->dio3, GPIO_INPUT);
-    if (ret != 0)
-    {
-        LOG_ERR("Failed to configure DIO as input due to %d", ret);
-        return false;
-    }
-    LOG_DBG("Configured DIO gpio");
 
     dev_data.rx_callback = rx_callback;
     LOG_DBG("Configured callback");
 
-    int callback_result =
-        gpio_pin_interrupt_configure_dt(&config->dio3, GPIO_INT_EDGE_TO_ACTIVE);
-    if (callback_result < 0)
-    {
-        LOG_ERR("Failed to set interrupt due to %d", callback_result);
-        return false;
-    }
-    //  Configure IRQ to call _cb_on_recv_event
-    gpio_init_callback(&dio3_cb_data, _cb_on_recv_event, BIT(config->dio3.pin));
-    LOG_DBG("Initialized DIO");
-
-    callback_result = gpio_add_callback(config->dio3.port, &dio3_cb_data);
-    if (callback_result < 0)
-    {
-        LOG_ERR("Failed to set callback due to %d", callback_result);
-        return false;
-    }
-    LOG_DBG("Configured DIO callback");
-
-    ret = sx128x_set_dio_irq_params(dev, SX128X_IRQ_NONE, SX128X_IRQ_NONE, SX128X_IRQ_NONE,
-                                    SX128X_IRQ_TX_DONE);
+    int ret = sx128x_set_dio_irq_params(dev, SX128X_IRQ_NONE, SX128X_IRQ_NONE, SX128X_IRQ_NONE,
+                                        SX128X_IRQ_TX_DONE);
     if (ret != SX128X_STATUS_OK)
     {
         LOG_ERR("Failed to configure DIO3 IRQ");
@@ -309,6 +317,7 @@ bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
 static int sx128x_init(const struct device *dev)
 {
     dev_data.dev = dev;
+    dev_data.rx_callback = NULL;
 
     // TODO check SPI pins, etc
     return _lora_config(dev);
