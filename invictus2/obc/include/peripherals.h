@@ -9,5 +9,6 @@
 #include <inttypes.h>
 
 void pwm_init(void);
+void pwm_set_duty_cycle(uint32_t channel, uint32_t period_us, uint32_t pulse_us);
 
 #endif // PERIPHERALS_H

@@ -173,7 +173,10 @@ int main(void)
 
     while (1) {
         LOG_INF("Heartbeat");
-        k_sleep(K_MSEC(1000));
+        k_sleep(K_MSEC(2000));
+        pwm_set_duty_cycle(5, 20000, 500);
+        k_sleep(K_MSEC(2000));
+        pwm_set_duty_cycle(5, 20000, 2500);
     }
 
     k_oops(); // Should never reach here
