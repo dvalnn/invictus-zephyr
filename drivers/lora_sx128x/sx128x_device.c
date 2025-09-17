@@ -236,7 +236,14 @@ bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
         LOG_ERR("Failed to set callback due to %d", callback_result);
         return false;
     }
-    LOG_INF("Configured DIO callback");
+    LOG_DBG("Configured DIO callback");
+
+    callback_result = gpio_pin_interrupt_configure_dt(&config->dio3, GPIO_INT_EDGE_TO_ACTIVE);
+    if (callback_result != 0)
+    {
+        LOG_ERR("Failed to set interrupt due to %d", callback_result);
+        return false;
+    }
 
     ret = sx128x_set_dio_irq_params(dev, SX128X_IRQ_RX_DONE, SX128X_IRQ_NONE, SX128X_IRQ_NONE,
                                     SX128X_IRQ_RX_DONE);
