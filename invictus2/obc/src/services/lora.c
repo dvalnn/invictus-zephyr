@@ -61,7 +61,7 @@ bool lora_service_setup(lora_context_t *context)
     ctx->rx_size = 0;
     ctx->device_valid = true;
 
-    sx128x_register_recv_callback(&lora_on_recv_data);
+    // sx128x_register_recv_callback(&lora_on_recv_data);
     LOG_INF("initialized loRa service thread");
     return true;
 
@@ -135,7 +135,7 @@ void lora_thread_entry(void *p1, void *p2, void *p3)
         else
         {
             LOG_INF("transmit");
-            healh_check();
+            // healh_check();
         }
 
         // handle zbus reception

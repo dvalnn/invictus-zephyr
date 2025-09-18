@@ -131,7 +131,7 @@ bool _sx128x_configure_peripherals(const struct device *dev)
     }
     LOG_DBG("Valid DIO gpio");
 
-    ret = gpio_pin_configure_dt(&config->dio3, GPIO_INPUT);
+    ret = gpio_pin_configure_dt(&config->dio3, GPIO_INPUT | config->dio3.dt_flags);
     if (ret != 0)
     {
         LOG_ERR("Failed to configure DIO as input due to %d", ret);
@@ -139,7 +139,7 @@ bool _sx128x_configure_peripherals(const struct device *dev)
     }
     LOG_DBG("Configured DIO gpio");
 
-    int callback_result = gpio_pin_interrupt_configure_dt(&config->dio3, GPIO_INT_EDGE_BOTH);
+    int callback_result = gpio_pin_interrupt_configure_dt(&config->dio3, GPIO_INT_EDGE_RISING);
     if (callback_result < 0)
     {
         LOG_ERR("Failed to set interrupt due to %d", callback_result);
@@ -218,7 +218,7 @@ int _lora_config(const struct device *dev)
         .header_type = SX128X_LORA_RANGING_PKT_IMPLICIT,
         // According to datasheet (DS_SX1280-1_V3.3) Table 14-52
         // this value should be account for CRC (2 bytes)
-        .pld_len_in_bytes = 128,
+        .pld_len_in_bytes = 126,
         .crc_is_on = true,
         .invert_iq_is_on = false};
 
@@ -245,8 +245,6 @@ int sx128x_read(uint8_t *payload, size_t size)
 
 bool sx128x_transmit(const uint8_t *payload, size_t size)
 {
-    LOG_INF("transmitting %s | size %d", payload, size);
-
     sx128x_status_t ret = sx128x_set_tx_params(dev_data.dev, 13, SX128X_RAMP_20_US);
     if (ret != SX128X_STATUS_OK)
     {
@@ -288,8 +286,8 @@ bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
     dev_data.rx_callback = rx_callback;
     LOG_DBG("Configured callback");
 
-    int ret = sx128x_set_dio_irq_params(dev, SX128X_IRQ_NONE, SX128X_IRQ_NONE, SX128X_IRQ_NONE,
-                                        SX128X_IRQ_TX_DONE);
+    int ret = sx128x_set_dio_irq_params(dev, SX128X_IRQ_RX_DONE, SX128X_IRQ_NONE,
+                                        SX128X_IRQ_NONE, SX128X_IRQ_RX_DONE);
     if (ret != SX128X_STATUS_OK)
     {
         LOG_ERR("Failed to configure DIO3 IRQ");
