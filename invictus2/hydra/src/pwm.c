@@ -1,4 +1,4 @@
-#include "peripherals.h"
+#include "pwm.h"
 
 #define PWM_NODE DT_NODELABEL(pwm)
 
@@ -25,7 +25,7 @@ void pwm_set_duty_cycle(uint32_t channel, uint32_t period_us, uint32_t pulse_us)
     LOG_INF("Successfully set pwm period %d us and pulse %d us on channel %d\n", period_us, pulse_us, channel);
 }
 
-void pwm_init(void) {
+void pwm_init() {
     pwm_dev = DEVICE_DT_GET(PWM_NODE);
 
     if (!device_is_ready(pwm_dev)) {

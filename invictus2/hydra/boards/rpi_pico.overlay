@@ -1,6 +1,14 @@
-/ {
-    servo: servo {
-        compatible = "pwm-leds";
-        pwms = <&pwm 12 PWM_MSEC(1) PWM_POLARITY_NORMAL>;
+&pinctrl {
+    pwm_default: pwm_default {
+        group1 {
+            pinmux = <PWM_2B_P5>;
+        };
     };
+};
+
+&pwm {
+    pinctrl-0 = <&pwm_default>;
+    pinctrl-names = "default";
+    divider-int-0 = <255>;
+    status = "okay";
 };

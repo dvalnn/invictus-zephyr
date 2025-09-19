@@ -114,28 +114,31 @@ bool setup_peripherals()
 bool setup_services(atomic_t *stop_signal)
 {
     LOG_INF("Setting up threads...");
-    /* lora_context.stop_signal = stop_signal; */
-
-    /* LOG_INF("  * state machine..."); */
-    /* if (!state_machine_service_setup()) { */
-    /*     LOG_ERR("State machine service setup failed"); */
-    /*     return false; */
-    /* } */
-
+    lora_context.stop_signal = stop_signal;
     /*
+    LOG_INF("  * state machine...");
+    if (!state_machine_service_setup()) { 
+        LOG_ERR("State machine service setup failed"); 
+        return false; 
+    } 
+    */
+    
     // Initialize the modbus thread
+    /*
     LOG_INF("  * modbus...");
     if (!modbus_service_setup()) {
         LOG_ERR("Modbus RTU master setup failed");
         return false;
     }
-    */
+    */    
 
-    /* LOG_INF("  * lora..."); */
-    /* if (!lora_service_setup(&lora_context)) { */
-    /*     LOG_ERR("LoRa thread setup failed"); */
-    /*     return false; */
-    /* } */
+    /*
+    LOG_INF("  * lora...");
+    if (!lora_service_setup(&lora_context)) {
+        LOG_ERR("LoRa thread setup failed");
+        return false;
+    }
+    */
 
     LOG_INF("done...");
     return true;
@@ -157,25 +160,25 @@ int main(void)
         k_oops();
     }
 
-    /* atomic_t stop_signal = ATOMIC_INIT(0); */
+    atomic_t stop_signal = ATOMIC_INIT(0); 
 
-    /* if (!setup_services(&stop_signal)) { */
-    /*     LOG_ERR("Failed to setup services"); */
-    /*     k_oops(); */
-    /* } */
+    if (!setup_services(&stop_signal)) { 
+        LOG_ERR("Failed to setup services"); 
+        k_oops(); 
+    } 
 
-    /* lora_service_start(); */
-    /* state_machine_service_start(); */
-    // modbus_service_start();
+    //lora_service_start();
+    //state_machine_service_start();
+    //modbus_service_start();
 
     LOG_INF("Services started.");
     health_check();
 
     while (1) {
         LOG_INF("Heartbeat");
-        k_sleep(K_MSEC(2000));
+        k_sleep(K_MSEC(1000));
         pwm_set_duty_cycle(5, 20000, 500);
-        k_sleep(K_MSEC(2000));
+        k_sleep(K_MSEC(1000));
         pwm_set_duty_cycle(5, 20000, 2500);
     }
 

@@ -13,6 +13,8 @@
 
 LOG_MODULE_REGISTER(lora_thread, LOG_LEVEL_DBG);
 
+
+
 #if !CONFIG_LORA_REDIRECT_UART
 static lora_context_t *ctx = NULL;
 // TODO fine tune size
@@ -103,7 +105,7 @@ void lora_service_start(void)
     k_thread_name_set(tid, "lora");
 }
 
-/// @brief Fetches data from multiple ZBus channels to build a status response
+/// @brief Builds a status response packet with the given system data 
 /// @param rep pointer to the status_rep struct to be filled
 void build_status_rep(struct cmd_status_rep_s * rep, system_data_t * data) {
     rep->hdr.command_id = CMD_STATUS_REP;
