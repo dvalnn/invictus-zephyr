@@ -54,6 +54,10 @@
     mode-gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
     /* ant-sel is grounded. Remaining props left as default */
   };
+
+  radio {
+    fem = <&nrf_fem_spi>;
+  };
 };
 
 &spi1 {
