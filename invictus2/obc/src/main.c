@@ -14,6 +14,21 @@
 #include "services/modbus.h"
 #include "services/state_machine/main_sm.h"
 
+/* The devicetree node identifier for the "led0" alias. */
+#define LED_GREEN DT_NODELABEL(led_green_0)
+#define LED_RED   DT_NODELABEL(led_red_0)
+
+static const struct gpio_dt_spec led_green = GPIO_DT_SPEC_GET(LED_GREEN, gpios);
+static const struct gpio_dt_spec led_red = GPIO_DT_SPEC_GET(LED_RED, gpios);
+
+#define BUZZER DT_NODELABEL(buzzer)
+static const struct pwm_dt_spec pwm = PWM_DT_SPEC_GET(BUZZER);
+
+static const struct device *fem = DEVICE_DT_GET(DT_NODELABEL(nrf_radio_fem));
+
+// FIXME: remove, it's just to make sure linker is working
+#include "invictus2/drivers/sx128x_hal.h"
+
 // THREADS:
 // - Main thread: LoRa communication. (for now just pipe everything to stdout).
 //   - Pre-Flight Mode: Switches between receive and transmit modes based
@@ -108,6 +123,13 @@ bool setup_peripherals()
 {
     LOG_INF("Setting up peripherals...");
     pwm_init();
+
+    if (!device_is_ready(fem))
+    {
+        LOG_ERR("nRF21540 FEM driver is not ready!");
+        return false;
+    }
+  
     return true;
 }
 
@@ -115,6 +137,7 @@ bool setup_services(atomic_t *stop_signal)
 {
     LOG_INF("Setting up threads...");
     lora_context.stop_signal = stop_signal;
+  
     /*
     LOG_INF("  * state machine...");
     if (!state_machine_service_setup()) { 
@@ -131,23 +154,16 @@ bool setup_services(atomic_t *stop_signal)
         return false;
     }
     */    
-
-    /*
+  
     LOG_INF("  * lora...");
-    if (!lora_service_setup(&lora_context)) {
+    if (!lora_service_setup(&lora_context))
+    {
         LOG_ERR("LoRa thread setup failed");
         return false;
     }
-    */
-
+  
     LOG_INF("done...");
     return true;
-}
-
-void health_check(void)
-{
-    LOG_INF("Performing health check...");
-    LOG_INF("Health check passed.");
 }
 
 // --- Main ---
@@ -176,6 +192,7 @@ int main(void)
 
     while (1) {
         LOG_INF("Heartbeat");
+
         k_sleep(K_MSEC(1000));
         pwm_set_duty_cycle(5, 20000, 500);
         k_sleep(K_MSEC(1000));

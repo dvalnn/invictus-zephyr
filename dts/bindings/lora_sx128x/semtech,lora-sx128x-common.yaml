@@ -8,7 +8,7 @@ include: spi-device.yaml
 properties:
   reset-gpios:
     type: phandle-array
-    required: true
+    required: false
     description: |
       GPIO connected to the radio's NRESET signal.
 

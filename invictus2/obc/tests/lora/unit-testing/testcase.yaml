@@ -1,0 +1,13 @@
+tests:
+  # section.subsection
+  sample.testing.ztest:
+    build_only: false
+    platform_allow:
+      - native_posix
+      - native_sim
+    integration_platforms:
+      - native_sim
+    extra_args:
+      - SX128X_FAKE=1
+      - EXTRA_DTC_OVERLAY_FILE=../../../../../invictus2/obc/boards/native_sim_native_64.overlay
+    tags: test_framework
