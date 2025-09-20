@@ -1,30 +1,37 @@
 #include <zephyr/kernel.h>
+#include <zephyr/zbus/zbus.h>
+#include <zephyr/shell/shell.h>
+
 #include <zephyr/sys/atomic.h>
 #include <zephyr/sys/atomic_types.h>
-#include <zephyr/zbus/zbus.h>
+
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/pwm.h>
+
+#if DT_NODE_HAS_COMPAT(DT_CHOSEN(zephyr_shell_uart), zephyr_cdc_acm_uart)
+#include <zephyr/drivers/uart.h>
+#endif // zephyr_shell_uart
 
 #include <zephyr/logging/log.h>
+
+LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 
 #include "data_models.h"
 #include "validators.h"
 #include "packets.h"
-#include "peripherals.h"
 
 #include "services/lora.h"
 #include "services/modbus.h"
 #include "services/state_machine/main_sm.h"
 
-/* The devicetree node identifier for the "led0" alias. */
-#define LED_GREEN DT_NODELABEL(led_green_0)
-#define LED_RED   DT_NODELABEL(led_red_0)
+static const struct gpio_dt_spec led_green =
+    GPIO_DT_SPEC_GET(DT_NODELABEL(led_green_0), gpios);
+static const struct gpio_dt_spec led_red = GPIO_DT_SPEC_GET(DT_NODELABEL(led_red_0), gpios);
+static const struct pwm_dt_spec buzzer = PWM_DT_SPEC_GET(DT_NODELABEL(buzzer));
 
-static const struct gpio_dt_spec led_green = GPIO_DT_SPEC_GET(LED_GREEN, gpios);
-static const struct gpio_dt_spec led_red = GPIO_DT_SPEC_GET(LED_RED, gpios);
+#define BUZZER_PULSE_MICROS 500
 
-#define BUZZER DT_NODELABEL(buzzer)
-static const struct pwm_dt_spec pwm = PWM_DT_SPEC_GET(BUZZER);
-
-static const struct device *fem = DEVICE_DT_GET(DT_NODELABEL(nrf_radio_fem));
+/* static const struct device *fem = DEVICE_DT_GET(DT_NODELABEL(nrf_radio_fem)); */
 
 // FIXME: remove, it's just to make sure linker is working
 #include "invictus2/drivers/sx128x_hal.h"
@@ -42,7 +49,6 @@ static const struct device *fem = DEVICE_DT_GET(DT_NODELABEL(nrf_radio_fem));
 // - Data Thread: Saves sensor data and debug logs to the SD card. -- Low
 // priority thread.
 //
-LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 
 // --- ZBUS Channel Definitions ---
 //
@@ -119,85 +125,86 @@ static lora_context_t lora_context;
 
 // --- Thread Spawning ---
 
-bool setup_peripherals()
-{
-    LOG_INF("Setting up peripherals...");
-    pwm_init();
-
-    if (!device_is_ready(fem))
-    {
-        LOG_ERR("nRF21540 FEM driver is not ready!");
-        return false;
-    }
-  
-    return true;
-}
-
 bool setup_services(atomic_t *stop_signal)
 {
     LOG_INF("Setting up threads...");
     lora_context.stop_signal = stop_signal;
-  
-    /*
+
     LOG_INF("  * state machine...");
-    if (!state_machine_service_setup()) { 
-        LOG_ERR("State machine service setup failed"); 
-        return false; 
-    } 
-    */
-    
+    if (!state_machine_service_setup())
+    {
+        LOG_ERR("State machine service setup failed");
+        return false;
+    }
+
     // Initialize the modbus thread
-    /*
     LOG_INF("  * modbus...");
-    if (!modbus_service_setup()) {
+    if (!modbus_service_setup())
+    {
         LOG_ERR("Modbus RTU master setup failed");
         return false;
     }
-    */    
-  
-    LOG_INF("  * lora...");
-    if (!lora_service_setup(&lora_context))
-    {
-        LOG_ERR("LoRa thread setup failed");
-        return false;
-    }
-  
+
+    /* LOG_INF("  * lora..."); */
+    /* if (!lora_service_setup(&lora_context)) */
+    /* { */
+    /*     LOG_ERR("LoRa thread setup failed"); */
+    /*     return false; */
+    /* } */
+
     LOG_INF("done...");
     return true;
+}
+
+void health_check(void)
+{
+    LOG_INF("Heartbeat");
+
+    k_sleep(K_MSEC(1000));
+    pwm_set_pulse_dt(&buzzer, BUZZER_PULSE_MICROS * 1000);
+    k_sleep(K_MSEC(1000));
+    pwm_set_pulse_dt(&buzzer, 0);
 }
 
 // --- Main ---
 int main(void)
 {
     LOG_INF("Starting OBC main thread");
+    health_check();
 
-    if (!setup_peripherals()) {
-        LOG_ERR("Failed to setup peripherals");
+#if DT_NODE_HAS_COMPAT(DT_CHOSEN(zephyr_shell_uart), zephyr_cdc_acm_uart)
+    const struct device *dev;
+    uint32_t dtr = 0;
+
+    LOG_INF("Initializing shell");
+    dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_shell_uart));
+    if (!device_is_ready(dev))
+    {
         k_oops();
     }
 
-    atomic_t stop_signal = ATOMIC_INIT(0); 
+    LOG_INF("Waiting uart DTR");
+    while (!dtr)
+    {
+        uart_line_ctrl_get(dev, UART_LINE_CTRL_DTR, &dtr);
+        k_sleep(K_MSEC(100));
+    }
+#endif
 
-    if (!setup_services(&stop_signal)) { 
-        LOG_ERR("Failed to setup services"); 
-        k_oops(); 
-    } 
-
-    //lora_service_start();
-    //state_machine_service_start();
-    //modbus_service_start();
-
-    LOG_INF("Services started.");
     health_check();
 
-    while (1) {
-        LOG_INF("Heartbeat");
-
-        k_sleep(K_MSEC(1000));
-        pwm_set_duty_cycle(5, 20000, 500);
-        k_sleep(K_MSEC(1000));
-        pwm_set_duty_cycle(5, 20000, 2500);
+    LOG_INF("Setting up services");
+    atomic_t stop_signal = ATOMIC_INIT(0);
+    if (!setup_services(&stop_signal))
+    {
+        LOG_ERR("Failed to setup services");
+        k_oops();
     }
 
-    k_oops(); // Should never reach here
+    // lora_service_start();
+    // state_machine_service_start();
+    // modbus_service_start();
+
+    LOG_INF("Services started.");
+    return 0;
 }

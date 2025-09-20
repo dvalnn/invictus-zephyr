@@ -1,6 +1,7 @@
-#include "zephyr/toolchain.h"
 
 #include <zephyr/kernel.h>
+#include <zephyr/toolchain.h>
+
 #include <zephyr/shell/shell.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/uart.h>
@@ -47,11 +48,13 @@ int main(void)
     uint32_t dtr = 0;
 
     dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_shell_uart));
-    if (!device_is_ready(dev)) {
+    if (!device_is_ready(dev))
+    {
         k_oops();
     }
 
-    while (!dtr) {
+    while (!dtr)
+    {
         uart_line_ctrl_get(dev, UART_LINE_CTRL_DTR, &dtr);
         k_sleep(K_MSEC(100));
     }
