@@ -31,3 +31,5 @@ config HYDRA_VARIANT
       or build system conditionals.
 
 endmenu
+
+source "Kconfig.zephyr"
