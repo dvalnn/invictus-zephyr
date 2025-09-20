@@ -190,7 +190,7 @@ int _lora_config(const struct device *dev)
 
     // 4. Set base adresses for Rx and Tx (Either full 256MB for both or 128MB each)
     const uint8_t tx_base = 0;
-    const uint8_t rx_base = tx_base + LORA_SX128X_BUFFER_SIZE_BYTES;
+    const uint8_t rx_base = tx_base; // + LORA_SX128X_BUFFER_SIZE_BYTES;
 
     LOG_DBG("setting buffer addresses to Tx %u and Rx %u", tx_base, rx_base);
     init_status = sx128x_set_buffer_base_address(dev, tx_base, rx_base);
@@ -199,9 +199,9 @@ int _lora_config(const struct device *dev)
     // 5. Set modulation parameter
     // TODO: make these parameters a kConfig as we might need to experiment with them
     static const sx128x_mod_params_lora_t mod_params = {
-        .sf = SX128X_LORA_RANGING_SF6,
-        .bw = SX128X_LORA_RANGING_BW_800,
-        .cr = SX128X_LORA_RANGING_CR_4_7,
+        .sf = SX128X_LORA_RANGING_SF12,
+        .bw = SX128X_LORA_RANGING_BW_1600,
+        .cr = SX128X_LORA_RANGING_CR_LI_4_8,
     };
 
     LOG_DBG("setting modulation parameters");
@@ -212,13 +212,13 @@ int _lora_config(const struct device *dev)
     static const sx128x_pkt_params_lora_t params = {
         .preamble_len =
             {
-                .mant = 12,
-                .exp = 1,
+                .mant = 6,
+                .exp = 0,
             },
         .header_type = SX128X_LORA_RANGING_PKT_IMPLICIT,
         // According to datasheet (DS_SX1280-1_V3.3) Table 14-52
         // this value should be account for CRC (2 bytes)
-        .pld_len_in_bytes = 126,
+        .pld_len_in_bytes = 253,
         .crc_is_on = true,
         .invert_iq_is_on = false};
 
@@ -257,11 +257,11 @@ bool sx128x_transmit(const uint8_t *payload, size_t size)
         LOG_ERR("failed to write command");
     }
 
-    ret = sx128x_set_dio_irq_params(dev_data.dev, SX128X_IRQ_TX_DONE, SX128X_IRQ_NONE,
-                                    SX128X_IRQ_NONE, SX128X_IRQ_TX_DONE);
+    ret = sx128x_set_dio_irq_params(dev_data.dev, SX128X_IRQ_ALL, SX128X_IRQ_NONE,
+                                    SX128X_IRQ_NONE, SX128X_IRQ_ALL);
 
     // FIXME should we use a timeout value?
-    ret = sx128x_set_tx(dev_data.dev, SX128X_TICK_SIZE_1000_US, 10);
+    ret = sx128x_set_tx(dev_data.dev, SX128X_TICK_SIZE_1000_US, 100);
     if (ret != SX128X_STATUS_OK)
     {
         LOG_INF("Failed to transmit");
@@ -273,7 +273,6 @@ bool sx128x_transmit(const uint8_t *payload, size_t size)
     // {
     //     LOG_ERR("Failed to go back to RX mode");
     // }
-
     return transmission_result == SX128X_STATUS_OK;
 }
 
