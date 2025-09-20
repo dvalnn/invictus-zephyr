@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: Apache-2.0
+
+menu "Hydra configuration"
+
+choice HYDRA_VARIANT_CHOICE
+    prompt "Hydra variant"
+    default HYDRA_UF
+    help
+      Select which Hydra variant is used for this build.
+      Exactly one variant must be selected.
+
+config HYDRA_UF
+    bool "Upper Feed"
+
+config HYDRA_LF
+    bool "Lower Feed"
+
+config HYDRA_FS
+    bool "Filling Station"
+
+endchoice
+
+# Optional: string alias with the chosen variant name
+config HYDRA_VARIANT
+    string "Hydra (string)"
+    default "upper feed" if HYDRA_UF
+    default "lower feed" if HYDRA_LF
+    default "filling station" if HYDRA_FS
+    help
+      String representation of the selected Hydra variant, useful for logs
+      or build system conditionals.
+
+endmenu
