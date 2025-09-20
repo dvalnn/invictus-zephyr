@@ -167,7 +167,7 @@ int _lora_config(const struct device *dev)
         LOG_ERR("failed peripheral validation");
         return SX128X_STATUS_ERROR;
     }
-    const struct sx128x_context_cfg *config = dev->config;
+    /* const struct sx128x_context_cfg *config = dev->config; */
 
     // TODO: Implement the initialization of the device
     // NOTE: Followed datasheet section "14.4 Lora Operation"

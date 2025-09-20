@@ -25,6 +25,8 @@ static const struct gpio_dt_spec led_red = GPIO_DT_SPEC_GET(LED_RED, gpios);
 #define BUZZER DT_NODELABEL(buzzer)
 static const struct pwm_dt_spec pwm = PWM_DT_SPEC_GET(BUZZER);
 
+static const struct device *fem = DEVICE_DT_GET(DT_NODELABEL(nrf_radio_fem));
+
 // FIXME: remove, it's just to make sure linker is working
 #include "invictus2/drivers/sx128x_hal.h"
 
@@ -134,6 +136,12 @@ bool setup_peripherals()
 
     if (!pwm_is_ready_dt(&pwm))
     {
+        return false;
+    }
+
+    if (!device_is_ready(fem))
+    {
+        LOG_ERR("nRF21540 FEM driver is not ready!");
         return false;
     }
 
