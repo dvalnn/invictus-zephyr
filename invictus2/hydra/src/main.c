@@ -9,6 +9,12 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 void setup() {
     pwm_init();
     LOG_INF("PWM initialized");
+    int rc = valves_init();
+    if (rc) {
+        LOG_WRN("Valves init failed: %d", rc);
+    } else {
+        LOG_INF("Valves initialized");
+    }
 }
 
 void loop() {
