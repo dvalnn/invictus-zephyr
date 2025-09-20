@@ -4,7 +4,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-bool radio_cmd_validator(const void *msg, size_t msg_size);
+bool packet_validator(const void *msg, size_t msg_size);
+/* NEED TO UPDATE TO NEW STATE MACHINE
 bool rocket_state_validator(const void *msg, size_t msg_size);
+*/
 
 #endif // ZBUS_VALIDATORS_H_

@@ -18,9 +18,9 @@ inline void lift_boards_init(struct lift_boards *const lb)
         return;
     }
 
-    memset(lb, 0, sizeof(struct lift_boards)); // REVIEW: if *r is always statically
+    memset(lb, 0, sizeof(struct lift_boards)); // REVIEW: if *r is always statically allocated,
+                                               // this is not needed
 
-    // allocated, this is not needed
     lb->rocket.meta.slave_id = CONFIG_MODBUS_ROCKET_LIFT_SLAVE_ID;
     lb->rocket.meta.ir_start = CONFIG_MODBUS_ROCKET_LIFT_INPUT_ADDR_START;
 
@@ -45,7 +45,7 @@ void lift_boards_read_irs(const int client_iface, struct lift_boards *const lb,
     modbus_slave_check_connection(rocket_rc, &lb->rocket.meta, "Rocket LIFT");
 
     if (fs_disabled) {
-        LOG_DBG("Filling Station is disconnected, skipping read.");
+        LOG_WRN_ONCE("Filling Station is disconnected, skipping read.");
         return;
     }
 
@@ -57,7 +57,7 @@ void lift_boards_read_irs(const int client_iface, struct lift_boards *const lb,
 }
 
 inline void lift_boards_irs_to_zbus_rep(const struct lift_boards *const lb,
-                                        union loadcell_weights_u *const weights,
+                                        loadcell_weights_t *const weights,
                                         const bool fs_disabled)
 {
     if (!lb || !weights) {

@@ -8,9 +8,195 @@
 
 #include <freq.h>
 #include <raspberrypi/rpi_pico/rp2040.dtsi>
+
 #include <zephyr/dt-bindings/pwm/pwm.h>
 #include <zephyr/dt-bindings/i2c/i2c.h>
+#include <zephyr/dt-bindings/adc/adc.h>
 #include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2040-pinctrl.h>
 
 #include "common/inv2_pinctrl_common.dtsi"
 #include "common/inv2_common.dtsi"
+
+/ {
+    aliases {
+        led0 = &led_green_0;
+        lora0 = &smt_radio;
+        modbus-rtu = &modbus_uart;
+    };
+
+    zephyr,user {
+        pwms = <&pwm 2 PWM_MSEC(20) PWM_POLARITY_NORMAL>, // Buzzer
+               <&pwm 3 PWM_MSEC(20) PWM_POLARITY_NORMAL>; // LV
+        io-channels = <&adc 0>, // PCB Temperature
+                      <&adc 1>; // Fault Detection
+    };
+
+    leds {
+        compatible = "gpio-leds";
+        status = "okay";
+
+        led_red_0: led2 {
+            label = "Red LED 0";
+            gpios = <&gpio0 0 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+        };
+
+        led_green_0: led0 {
+            label = "Green LED 0";
+            gpios = <&gpio0 1 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+        };
+
+        sol_valve_1: sol_valve_1{
+            label = "Solenoid Valve 1";
+            gpios = <&gpio0 18 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+        };
+
+        sol_valve_2: sol_valve_2{
+            label = "Solenoid Valve 2";
+            gpios = <&gpio0 19 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+        };
+
+        sol_valve_3: sol_valve_3{
+            label = "Solenoid Valve 3";
+            gpios = <&gpio0 20 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+        };
+
+        qdc_n2o: qdc_n2o{
+            label = "Quick Disconnect N2O Valve";
+            gpios = <&gpio0 21 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+        };
+
+        qdc_n2: qdc_n2{
+            label = "Quick Disconnect n2 Valve";
+            gpios = <&gpio0 22 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+        };
+
+        st_valve_1: st_valve_1{
+            label = "Steel ball Valve 1";
+            gpios = <&gpio0 23 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+        };
+
+        st_valve_2: st_valve_2{
+            label = "Steel ball Valve 2";
+            gpios = <&gpio0 24 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+        };
+
+        cam_enable: cam_enable{
+            label = "Camera Enable";
+            gpios = <&gpio0 25 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+        };
+    };
+};
+
+&spi1 {
+	clock-frequency = <DT_FREQ_M(5)>;
+	status = "okay";
+	pinctrl-0 = <&spi1_hydra>;
+	pinctrl-names = "default";
+
+    cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>,  // Thermo1
+               <&gpio0 13 GPIO_ACTIVE_LOW>, // Thermo2
+               <&gpio0 29 GPIO_ACTIVE_LOW>; // Thermo3
+
+    // TODO: correct compatible strings and properties
+    thermo1: thermo@0{
+        reg = <0>;
+        /* compatible = "max31865"; */
+        // drdy-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>; // optional, not connected
+    };
+
+    thermo2: thermo@1{
+        reg = <1>;
+        /* compatible = "max31865"; */
+        /* drdy-gpios = <&gpio0 12 GPIO_ACTIVE_LOW>; */
+    };
+
+    thermo3: thermo@2{
+        reg = <2>;
+        /* compatible = "max31865"; */
+        /* drdy-gpios = <&gpio0 17 GPIO_ACTIVE_LOW>; */
+    };
+};
+
+
+&i2c1 {
+    status = "okay";
+    clock-frequency = <I2C_BITRATE_FAST_PLUS>;
+    pinctrl-0 = <&i2c1_hydras>;
+    pinctrl-names = "default";
+
+
+    ad559x: ad559x@0x10 {
+        compatible = "adi,ad559x";
+        reg = <0x10>;
+        status = "okay";
+        reset-gpios = <&gpio0 16 GPIO_ACTIVE_LOW>;
+    };
+};
+
+// RS483 Modbus RTU master
+&uart1 {
+	current-speed = <115200>;
+	status = "okay";
+	pinctrl-0 = <&uart_rs485>;
+	pinctrl-names = "default";
+
+    modbus_uart: modbus0{
+        compatible = "zephyr,modbus-serial";
+        status = "okay";
+        de-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+    };
+};
+
+&adc{
+    #io-channle-cells = <1>;
+    status = "okay";
+
+    channel@0{
+        reg = <0>;
+        label = "PCB Temperature";
+        zephyr,gain = <ADC_GAIN_1>;
+        zephyr,reference = <ADC_REF_INTERNAL>;
+        zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,resolution = <12>;
+    };
+
+    channel@1{
+        reg = <1>;
+        label = "Fault Detection";
+        zephyr,gain = <ADC_GAIN_1>;
+        zephyr,reference = <ADC_REF_INTERNAL>;
+        zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,resolution = <12>;
+    };
+}
+
+&pinctrl{
+	spi1_hydra: spi1_hydra {
+		group1 {
+			pinmux = <SPI1_CSN_P9>, <SPI1_CSN_P13>, <SPI1_CSN_P29>,
+                     <SPI1_SCK_P10>, <SPI1_TX_P11>;
+		};
+		group2 {
+			pinmux = <SPI1_RX_P8>;
+			input-enable;
+		};
+	};
+
+	uart_rs485: uart_rs485 {
+		group1 {
+			pinmux = <UART1_TX_P4>;
+		};
+		group2 {
+			pinmux = <UART1_RX_P5>;
+			input-enable;
+		};
+	};
+
+    i2c1_hydras: i2c1_hydras {
+        group1 {
+            pinmux = <I2C1_SDA_P14>, <I2C1_SCL_P15>;
+            input-enable;
+            input-schmitt-enable;
+        };
+    };
+};

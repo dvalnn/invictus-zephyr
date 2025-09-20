@@ -1,60 +1,86 @@
-#include "services/lora.h"
+#include "services/fake_lora.h"
+#include "packets.h"
 
-#if CONFIG_LORA_REDIRECT_UART
-
-#include "zephyr/drivers/uart.h"
-
+ZBUS_CHAN_DECLARE(chan_packets);
 LOG_MODULE_REGISTER(lora_backend_testing, LOG_LEVEL_DBG);
 
 #define UART_DEVICE_NODE DT_CHOSEN(zephyr_shell_uart)
-#define MSG_SIZE         32
+#define MSG_SIZE         PACKET_SIZE
 
-K_MSGQ_DEFINE(uart_msgq, MSG_SIZE, 10, 4);
+K_MSGQ_DEFINE(uart_msgq, PACKET_SIZE, 10, 4);
 static const struct device *const uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
 
-static char rx_buf[MSG_SIZE];
-static int rx_buf_pos;
+static char rx_buf[PACKET_SIZE];
+static int rx_buf_pos = 0;
 
-void serial_cb(const struct device *dev, void *user_data)
+static void serial_cb(const struct device *dev, void *user_data)
 {
-    uint8_t c;
+    if (dev == NULL) {
+        LOG_ERR("UART device is NULL");
+        return;
+    }
 
     if (!uart_irq_update(uart_dev)) {
+        LOG_ERR("Didn't update uart irq");
         return;
     }
 
-    if (!uart_irq_rx_ready(uart_dev)) {
+    int ret = uart_irq_rx_ready(uart_dev);
+    if (ret <= 0) {
+        if (ret == -ENOTSUP) {
+            LOG_ERR("API not enabled\n");
+        } else if (ret == -ENOSYS) {
+            LOG_ERR("function not implemented\n");
+        } else {
+            LOG_INF("Rx not ready: %d\n", ret);
+        }
         return;
     }
 
-    /* read until FIFO empty */
+    // read a full command or until the buffer is full
+    //uint8_t c[32];
+    //rx_buf_pos = 0;
+    /*
     while (uart_fifo_read(uart_dev, &c, 1) == 1) {
-        if ((c == '\n' || c == '\r') && rx_buf_pos > 0) {
-            /* terminate string */
-            rx_buf[rx_buf_pos] = '\0';
-
-            /* if queue is full, message is silently dropped */
+        //LOG_INF("Fifo read");
+        if (rx_buf_pos == (PACKET_SIZE - 1)) {
+            LOG_INF("Sent message to queue");
             k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
-
-            /* reset the buffer (it was copied to the msgq) */
             rx_buf_pos = 0;
         } else if (rx_buf_pos < (sizeof(rx_buf) - 1)) {
+            LOG_INF("%d: %d", rx_buf_pos, c);
             rx_buf[rx_buf_pos++] = c;
+        } else {
+            LOG_INF("Dropped byte");
         }
-        /* else: characters beyond buffer size are dropped */
     }
+    */
+   int bytes_read = 0;
+   bytes_read += uart_fifo_read(uart_dev, &rx_buf[rx_buf_pos], 32);
+   rx_buf_pos += bytes_read;
+   if(rx_buf_pos == (PACKET_SIZE)) {
+    k_msgq_put(&uart_msgq, &rx_buf, K_NO_WAIT);
+    rx_buf_pos = 0;
+   }
 }
 
-bool lora_setup(void)
+bool fake_lora_setup(void)
 {
+    if (uart_dev == NULL) {
+        LOG_ERR("UART device not found!");
+        return 0;
+    }
+
+    LOG_INF("UART device found: %s", uart_dev->name);
     if (!device_is_ready(uart_dev)) {
         LOG_ERR("UART device not found!");
-        return false;
+        return 0;
     }
+    LOG_INF("UART device is ready: %s", uart_dev->name);
 
     /* configure interrupt and callback to receive data */
     int ret = uart_irq_callback_user_data_set(uart_dev, serial_cb, NULL);
-
+    LOG_INF("UART callback set");
     if (ret < 0) {
         if (ret == -ENOTSUP) {
             LOG_ERR("Interrupt-driven UART API support not enabled\n");
@@ -63,64 +89,51 @@ bool lora_setup(void)
         } else {
             LOG_ERR("Error setting UART callback: %d\n", ret);
         }
-        return false;
+        return 0;
     }
-
     return true;
 }
 
-void lora_backend()
+void uart_write(char *buf, int buf_size)
 {
-    char tx_buf[MSG_SIZE];
+	for (int i = 0; i < buf_size; i++) {
+		uart_poll_out(uart_dev, buf[i]);
+	}
+}
 
+void fake_lora_backend()
+{
+    LOG_INF("Fake LoRa backend (UART) started");
     uart_irq_rx_enable(uart_dev);
+    LOG_INF("Enabled UART RX IRQ");
+    
+    struct generic_packet_s packet = {0};
 
-    LOG_INF("LORA UART Shell thread started");
+    // indefinitely wait for input from the user
+    while (k_msgq_get(&uart_msgq, &rx_buf, K_FOREVER) == 0) {
+        LOG_INF("Received something");
 
-    /* indefinitely wait for input from the user */
-    while (k_msgq_get(&uart_msgq, &tx_buf, K_FOREVER) == 0) {
-        LOG_DBG("CMD: %s", tx_buf);
-
-        // split the tx_buf by spaces.
-        // first string element is the command type tag
-        // second element is the command integer tag
-        //
-        // Example:
-        //  `normal 0x1` -> normal commands will be processed by the FSM
-        //  `override 0x2 ...` -> override commands will be ignored for now
-
-#define CMD_TYPE_TAG_SIZE 15
-
-        char command_type[CMD_TYPE_TAG_SIZE + 1] = {0};
-        cmd_t command = 0;
-
-        int num_args = sscanf(tx_buf, "%15s %x", command_type, &command);
-        if (num_args != 2) {
-            LOG_ERR("Invalid command format: %s", tx_buf);
+        if (sizeof(rx_buf) != PACKET_SIZE) {
+            LOG_ERR("Invalid command size: %d (expected %d)", sizeof(rx_buf), PACKET_SIZE);
+            LOG_HEXDUMP_WRN(rx_buf, sizeof(rx_buf), "Invalid command hex dump");
             continue;
         }
 
-        // TODO: refactor
-        if (strcmp(command_type, "normal") == 0) {
-            LOG_INF("Processing normal command: %d", command);
-
-            struct lora_cmd_msg cmd_msg = {
-                .subsystem = SUBSYSTEM_ID_FSM,
-                .command = command,
-            };
-
-            // TODO: better timeout handling
-            int ret = zbus_chan_pub(&lora_cmd_chan, &cmd_msg, K_NO_WAIT);
-            if (ret < 0) {
-                LOG_ERR("Failed to publish command to LORA channel: %d", ret);
-            }
-
-        } else {
-            LOG_WRN("Unsupported command type: %s", command_type);
+        int err = packet_unpack((const uint8_t *const)rx_buf, sizeof(rx_buf), &packet);
+        if (err != PACK_ERROR_NONE) {
+            LOG_ERR("Failed to unpack command: %d", err);
+            LOG_HEXDUMP_WRN(rx_buf, sizeof(rx_buf), "Invalid command hex dump");
+            continue;
         }
+        
+        int rc = zbus_chan_pub(&chan_packets, (const void *)&packet, K_NO_WAIT);
+        if (rc != 0) {
+            LOG_ERR("Failed to publish packet to channel: %d", rc);
+            continue;
+        }
+
+        LOG_INF("Published packet with cmd ID %d to packet channel", packet.header.command_id);
     }
 
     k_oops(); // unreachable
 }
-#endif
-

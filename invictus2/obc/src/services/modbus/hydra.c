@@ -60,7 +60,7 @@ void hydra_boards_read_irs(const int client_iface, struct hydra_boards *const hb
     modbus_slave_check_connection(lf_rc, &hb->lf.meta, "LF hydra sensors");
 
     if (fs_disabled) {
-        LOG_DBG("Filling Station is disconnected, skipping read.");
+        LOG_WRN_ONCE("Filling Station is disconnected, skipping read.");
         return;
     }
 
@@ -72,8 +72,8 @@ void hydra_boards_read_irs(const int client_iface, struct hydra_boards *const hb
 }
 
 inline void hydra_boards_irs_to_zbus_rep(const struct hydra_boards *const hb,
-                                         union thermocouples_u *const thermocouples,
-                                         union pressures_u *const pressures,
+                                         thermocouples_t *const thermocouples,
+                                         pressures_t *const pressures,
                                          const bool fs_disabled)
 {
     if (!hb || !thermocouples || !pressures) {

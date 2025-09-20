@@ -10,7 +10,6 @@ static DEFAULT_FSM_OBJECT(test_obj, 0);
 static void filling_sm_suite_before(void *data)
 {
     ARG_UNUSED(data);
-
     test_obj.command = 0; // clear commands
 
     // clear sensor data

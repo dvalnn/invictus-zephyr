@@ -23,12 +23,14 @@ class ModbusSlaveSimulator:
         self.messages: list[str] = []
         self.connection_status = "Disconnected"
 
+        # NOTE: Input registers and coils set to N+1 needed registers
+
         # Initialize UF Hydra (Slave ID 1)
         self.uf_hydra_store = ModbusSlaveContext(
             di=None,
             co=ModbusSequentialDataBlock(0, [False] * 3),
             hr=None,
-            ir=ModbusSequentialDataBlock(0, [0] * 2),
+            ir=ModbusSequentialDataBlock(0, [0] * 4),
         )
 
         # Initialize LF Hydra (Slave ID 2)
@@ -36,7 +38,28 @@ class ModbusSlaveSimulator:
             di=None,
             co=ModbusSequentialDataBlock(0, [False] * 3),
             hr=None,
-            ir=ModbusSequentialDataBlock(0, [0] * 4),
+            ir=ModbusSequentialDataBlock(0, [0] * 5),
+        )
+
+        self.fs_hydra_store = ModbusSlaveContext(
+            di=None,
+            co=ModbusSequentialDataBlock(0, [False] * 3),
+            hr=None,
+            ir=ModbusSequentialDataBlock(0, [0] * 7),
+        )
+
+        self.rocket_lift_store = ModbusSlaveContext(
+            di=None,
+            co=ModbusSequentialDataBlock(0, [False] * 2),
+            hr=None,
+            ir=ModbusSequentialDataBlock(0, [0] * 5),
+        )
+
+        self.fs_lift_store = ModbusSlaveContext(
+            di=None,
+            co=ModbusSequentialDataBlock(0, [False] * 1),
+            hr=None,
+            ir=ModbusSequentialDataBlock(0, [0] * 2),
         )
 
         # Create context with multiple slaves
@@ -44,6 +67,9 @@ class ModbusSlaveSimulator:
             slaves={
                 1: self.uf_hydra_store,  # UF Hydra on address 1
                 2: self.lf_hydra_store,  # LF Hydra on address 2
+                3: self.fs_hydra_store,  # FS Hydra on address 3
+                4: self.rocket_lift_store,  # Rocket Lift on address 4
+                5: self.fs_lift_store,  # FS Lift on address 5
             },
             single=False,
         )
@@ -174,24 +200,25 @@ class ModbusSlaveSimulator:
     def get_slave_info(self) -> Dict[int, Dict[str, Any]]:
         """Get information about all configured slaves."""
         info = {}
-        for slave_id in [1, 2]:  # UF and LF Hydra
-            if slave_id in self.context:
-                slave_context = self.context[slave_id]
-                slave_name = "UF Hydra" if slave_id == 1 else "LF Hydra"
+        for slave_id, slave_name in zip(list(range(1, 6)), ["UF Hydra", "LF Hydra", "FS Hydra", "Rocket Lift", "FS Lift"]):
+            if slave_id not in self.context:
+                continue
 
-                info[slave_id] = {
-                    "name": slave_name,
-                    "coils": slave_context.store["c"] is not None,
-                    "discrete_inputs": slave_context.store["d"] is not None,
-                    "holding_registers": slave_context.store["h"] is not None,
-                    "input_registers": slave_context.store["i"] is not None,
-                }
+            slave_context = self.context[slave_id]
 
-                # Get counts if available
-                if slave_context.store["c"] is not None:
-                    info[slave_id]["coil_count"] = len(slave_context.store["c"].values)
-                if slave_context.store["i"] is not None:
-                    info[slave_id]["ir_count"] = len(slave_context.store["i"].values)
+            info[slave_id] = {
+                "name": slave_name,
+                "coils": slave_context.store["c"] is not None,
+                "discrete_inputs": slave_context.store["d"] is not None,
+                "holding_registers": slave_context.store["h"] is not None,
+                "input_registers": slave_context.store["i"] is not None,
+            }
+
+            # Get counts if available
+            if slave_context.store["c"] is not None:
+                info[slave_id]["coil_count"] = len(slave_context.store["c"].values)
+            if slave_context.store["i"] is not None:
+                info[slave_id]["ir_count"] = len(slave_context.store["i"].values)
 
         return info
 

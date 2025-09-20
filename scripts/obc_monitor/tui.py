@@ -13,6 +13,7 @@ from rich.panel import Panel
 from rich.live import Live
 from rich.text import Text
 from rich.table import Table
+from rich.columns import Columns
 
 from .config import Config
 from .commands import CommandProcessor
@@ -82,6 +83,21 @@ class OBCMonitorTUI:
         if len(self.command_log) > self.config.max_log_entries:
             self.command_log.pop(0)
 
+    def _collect_wrapped_messages(
+        self, messages: list[str], max_rows: int, panel_width: int
+    ) -> list[str]:
+        """Collect messages that fit within the max_rows limit, accounting for wrapping."""
+        rows_used = 0
+        selected = []
+        for line in reversed(messages):
+            clean_line = ansi_delete.sub("", line)
+            row_count = max(1, -(-len(clean_line) // panel_width))  # ceil division
+            if rows_used + row_count > max_rows:
+                break
+            selected.append(line)
+            rows_used += row_count
+        return list(reversed(selected))
+
     def update_display(self):
         """Update the display with current data."""
         # Process new messages from subsystems
@@ -91,13 +107,18 @@ class OBCMonitorTUI:
 
         # Calculate visible lines for each panel
         term_height = self.console.size.height
-        log_lines = max(int((term_height) * 0.80), 10)
-        uart_lines = max(int(term_height * 0.65), 15)
+        log_lines = int(term_height * 0.80)
+        uart_lines = int(term_height * 0.70)
 
-        # Command log panel
+        panel_width_left = max(1, self.console.size.width // 2)  # left column panels
+        panel_width_right = max(1, self.console.size.width // 2)  # right column panels
+
+        # Command log panel (wrapping-aware)
         command_text = Text()
-        for line in self.command_log[-log_lines:]:
-            # Color-code different message types
+        selected_log = self._collect_wrapped_messages(
+            self.command_log, log_lines, panel_width_left
+        )
+        for line in selected_log:
             if "✓" in line:
                 command_text.append(line + "\n", style="green")
             elif "✗" in line:
@@ -139,12 +160,14 @@ class OBCMonitorTUI:
             Panel(status_table, title="System Status", border_style="yellow")
         )
 
-        # UART output panel
+        # UART output panel (wrapping-aware)
         uart_text = Text()
-        for line in self.uart_listener.messages[-uart_lines:]:
-            line = ansi_delete.sub("", line)  # Remove ANSI escape codes
-            # split after "RX:" or "TX:" for color coding
+        selected_uart = self._collect_wrapped_messages(
+            self.uart_listener.messages, uart_lines, panel_width_right
+        )
 
+        for line in selected_uart:
+            line = ansi_delete.sub("", line)
             style = "green" if "RX:" in line else "cyan" if "TX:" in line else "white"
             parts = line.split("RX:", 1) if "RX:" in line else line.split("TX:", 1)
             text_style = (
@@ -170,30 +193,33 @@ class OBCMonitorTUI:
         )
 
         # Modbus status panel - show both slaves
-        modbus_table = Table(title="Modbus Status")
-        modbus_table.add_column("Slave", style="yellow", no_wrap=True)
-        modbus_table.add_column("Register", style="cyan", no_wrap=True)
-        modbus_table.add_column("Value", style="white")
-
-        # Get slave info
+        tables = []
         slave_info = self.modbus_simulator.get_slave_info()
+        for slave_id in range(1, 6):
+            if slave_id not in slave_info:
+                continue
 
-        for slave_id in [1, 2]:
-            if slave_id in slave_info:
-                slave_name = slave_info[slave_id]["name"]
-                registers = self.modbus_simulator.get_register_values(slave_id, 0, 5)
+            slave_name = slave_info[slave_id]["name"]
 
-                if not registers:
-                    modbus_table.add_row(slave_name, "No data", "-")
-                else:
-                    first_row = True
-                    for reg_name, value in registers.items():
-                        display_name = slave_name if first_row else ""
-                        modbus_table.add_row(display_name, reg_name, str(value))
-                        first_row = False
+            modbus_table = Table(title=slave_name)
+            modbus_table.add_column("Register", style="cyan", no_wrap=True)
+            modbus_table.add_column("Value", style="white")
+
+            registers = self.modbus_simulator.get_register_values(slave_id, 0, 5)
+            if not registers:
+                modbus_table.add_row("No data", "-")
+            else:
+                for reg_name, value in registers.items():
+                    modbus_table.add_row(reg_name, str(value))
+
+            tables.append(modbus_table)
 
         self.layout["modbus_status"].update(
-            Panel(modbus_table, title="Modbus Status", border_style="magenta")
+            Panel.fit(
+                Columns(tables),
+                title="Modbus Status",
+                border_style="magenta",
+            )
         )
 
     def process_command(self, command: str):
