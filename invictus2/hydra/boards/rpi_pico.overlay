@@ -1,7 +1,14 @@
-&uart0 {
-       modbus_uart: modbus0  {
-                compatible = "zephyr,modbus-serial";
-                status = "okay";
-       };
-       status = "okay";
+&pinctrl {
+    pwm_default: pwm_default {
+        group1 {
+            pinmux = <PWM_2B_P5>;
+        };
+    };
+};
+
+&pwm {
+    pinctrl-0 = <&pwm_default>;
+    pinctrl-names = "default";
+    divider-int-0 = <255>;
+    status = "okay";
 };

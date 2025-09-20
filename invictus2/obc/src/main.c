@@ -4,12 +4,11 @@
 #include <zephyr/zbus/zbus.h>
 
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/pwm.h>
 
 #include "data_models.h"
 #include "validators.h"
 #include "packets.h"
+#include "peripherals.h"
 
 #include "services/lora.h"
 #include "services/modbus.h"
@@ -122,29 +121,15 @@ static lora_context_t lora_context;
 
 bool setup_peripherals()
 {
-    if (!gpio_is_ready_dt(&led_green) || !gpio_is_ready_dt(&led_red))
-    {
-        return false;
-    }
-
-    int ret = gpio_pin_configure_dt(&led_green, GPIO_OUTPUT_ACTIVE);
-    int ret2 = gpio_pin_configure_dt(&led_red, GPIO_OUTPUT_ACTIVE);
-    if (ret < 0 || ret2 < 0)
-    {
-        return false;
-    }
-
-    if (!pwm_is_ready_dt(&pwm))
-    {
-        return false;
-    }
+    LOG_INF("Setting up peripherals...");
+    pwm_init();
 
     if (!device_is_ready(fem))
     {
         LOG_ERR("nRF21540 FEM driver is not ready!");
         return false;
     }
-
+  
     return true;
 }
 
@@ -152,43 +137,33 @@ bool setup_services(atomic_t *stop_signal)
 {
     LOG_INF("Setting up threads...");
     lora_context.stop_signal = stop_signal;
-
-    /* LOG_INF("  * state machine..."); */
-    /* if (!state_machine_service_setup()) { */
-    /*     LOG_ERR("State machine service setup failed"); */
-    /*     return false; */
-    /* } */
-
+  
     /*
+    LOG_INF("  * state machine...");
+    if (!state_machine_service_setup()) { 
+        LOG_ERR("State machine service setup failed"); 
+        return false; 
+    } 
+    */
+    
     // Initialize the modbus thread
+    /*
     LOG_INF("  * modbus...");
     if (!modbus_service_setup()) {
         LOG_ERR("Modbus RTU master setup failed");
         return false;
     }
-    */
-
+    */    
+  
     LOG_INF("  * lora...");
     if (!lora_service_setup(&lora_context))
     {
         LOG_ERR("LoRa thread setup failed");
         return false;
     }
-
+  
     LOG_INF("done...");
     return true;
-}
-
-void healh_check(void)
-{
-    for (size_t i = 0; i < 1; ++i)
-    {
-        pwm_set_dt(&pwm, pwm.period, pwm.period / 2);
-        k_sleep(K_MSEC(250));
-
-        pwm_set_pulse_dt(&pwm, 0);
-        k_sleep(K_MSEC(250));
-    }
 }
 
 // --- Main ---
@@ -196,41 +171,33 @@ int main(void)
 {
     LOG_INF("Starting OBC main thread");
 
-    if (!setup_peripherals())
-    {
-        goto crash;
-    }
-
-    atomic_t stop_signal = ATOMIC_INIT(0);
-
-    if (!setup_services(&stop_signal))
-    {
-        LOG_ERR("Failed to setup services");
+    if (!setup_peripherals()) {
+        LOG_ERR("Failed to setup peripherals");
         k_oops();
     }
 
-    lora_service_start();
-    /* state_machine_service_start(); */
-    // modbus_service_start();
+    atomic_t stop_signal = ATOMIC_INIT(0); 
+
+    if (!setup_services(&stop_signal)) { 
+        LOG_ERR("Failed to setup services"); 
+        k_oops(); 
+    } 
+
+    //lora_service_start();
+    //state_machine_service_start();
+    //modbus_service_start();
 
     LOG_INF("Services started.");
-    healh_check();
+    health_check();
 
-    while (1)
-    {
-        int ret = gpio_pin_toggle_dt(&led_green);
-        int ret2 = gpio_pin_toggle_dt(&led_red);
-        if (ret < 0 || ret2 < 0)
-        {
-            goto crash;
-        }
-
-        // LOG_INF("Heartbeat");
-        // healh_check();
+    while (1) {
+        LOG_INF("Heartbeat");
 
         k_sleep(K_MSEC(1000));
+        pwm_set_duty_cycle(5, 20000, 500);
+        k_sleep(K_MSEC(1000));
+        pwm_set_duty_cycle(5, 20000, 2500);
     }
 
-crash:
     k_oops(); // Should never reach here
 }
