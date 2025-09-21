@@ -58,19 +58,22 @@ static atomic_t fs_disabled = ATOMIC_INIT(false);
 
 static void modbus_listener_cb(const struct zbus_channel *chan)
 {
-    if (chan == &chan_actuators) {
+    if (chan == &chan_actuators)
+    {
         k_work_submit_to_queue(&modbus_work_q, &actuator_work);
         return;
     }
 
-    if (chan == &chan_packets) {
+    if (chan == &chan_packets)
+    {
         k_work_submit_to_queue(&modbus_work_q, &command_work);
         return;
     }
 
     // NOTE: There is no need to listen to the rocket state after the filling station is
     // disabled.
-    if (chan == &chan_rocket_state && !(bool)atomic_get(&fs_disabled)) {
+    if (chan == &chan_rocket_state && !(bool)atomic_get(&fs_disabled))
+    {
         k_work_submit_to_queue(&modbus_work_q, &rocket_state_work);
         return;
     }
@@ -97,11 +100,13 @@ bool modbus_service_setup(void)
     const struct device *const dev = DEVICE_DT_GET(DT_PARENT(MODBUS_NODE));
     uint32_t dtr = 0;
 
-    if (!device_is_ready(dev) || usb_enable(NULL)) {
+    if (!device_is_ready(dev) || usb_enable(NULL))
+    {
         return false;
     }
 
-    while (!dtr) {
+    while (!dtr)
+    {
         uart_line_ctrl_get(dev, UART_LINE_CTRL_DTR, &dtr);
         k_sleep(K_MSEC(100));
     }
@@ -112,7 +117,8 @@ bool modbus_service_setup(void)
     const char iface_name[] = {DEVICE_DT_NAME(MODBUS_NODE)};
     client_iface = modbus_iface_get_by_name(iface_name);
 
-    if (client_iface < 0) {
+    if (client_iface < 0)
+    {
         LOG_ERR("Failed to get client_iface index for %s", iface_name);
         return false;
     }

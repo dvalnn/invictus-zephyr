@@ -1,7 +1,6 @@
 // Loosely based on
 // https://github.com/zephyrproject-rtos/zephyr/blob/main/drivers/lora/sx12xx_common.c
 
-#include "zephyr/irq.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -28,7 +27,7 @@ LOG_MODULE_REGISTER(sx128x_device, CONFIG_LORA_SX128X_LOG_LEVEL);
         return status;                                                                        \
     }
 
-extern void healh_check(void);
+extern void health_check(void);
 static struct gpio_callback dio3_cb_data;
 
 static struct sx1280_data
@@ -66,7 +65,7 @@ int _sx128x_set_continous_rx_mode(const struct device *dev)
 static void _cb_on_recv_event(const struct device *dev, struct gpio_callback *cb,
                               uint32_t pins)
 {
-    healh_check();
+    health_check();
     if (dev_data.rx_callback == NULL)
     {
         goto irq_finalize;
