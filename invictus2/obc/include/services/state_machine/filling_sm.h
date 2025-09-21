@@ -1,12 +1,6 @@
 #ifndef FILLING_SM_H
 #define FILLING_SM_H
 
-#include "data_models.h"
-#include "services/state_machine/main_sm.h"
-#include "zephyr/smf.h"
-#include <zephyr/logging/log.h>
-
-
 void safe_pause_entry(void *o);
 void safe_pause_run(void *o);
 void safe_pause_exit(void *o);
@@ -51,7 +45,6 @@ void pre_press_vent_entry(void *o);
 void pre_press_vent_run(void *o);
 void pre_press_vent_exit(void *o);
 
-
 void fill_n2o_entry(void *o);
 void fill_n2o_run(void *o);
 void fill_n2o_exit(void *o);
@@ -67,7 +60,6 @@ void fill_n2o_fill_exit(void *o);
 void fill_n2o_vent_entry(void *o);
 void fill_n2o_vent_run(void *o);
 void fill_n2o_vent_exit(void *o);
-
 
 void post_press_entry(void *o);
 void post_press_run(void *o);

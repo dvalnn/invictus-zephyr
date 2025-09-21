@@ -1,11 +1,6 @@
 #ifndef FLIGHT_SM_H
 #define FLIGHT_SM_H
 
-#include "data_models.h"
-#include "main_sm.h"
-#include "zephyr/smf.h"
-#include <zephyr/logging/log.h>
-
 void ignition_entry(void *o);
 void ignition_run(void *o);
 void ignition_exit(void *o);
