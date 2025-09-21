@@ -38,7 +38,7 @@ typedef struct packet_header_s
 // NOTE: Generic packet structure, cast to a specific packet type to access values by name.
 typedef struct generic_packet_s
 {
-    struct packet_header_s header;
+    packet_header_t header;
     uint8_t payload[PACKET_PAYLOAD_BYTES];
 } generic_packet_t;
 
@@ -186,13 +186,6 @@ typedef enum fill_cmd_e
     CMD_FILL_POST_PRESS,
 } fill_command_t;
 
-typedef struct
-{
-    struct packet_header_s header;
-    command_t cmd;
-
-} packet_t;
-
 // -----------------------------------------------------------------------------
 // Individual Command Definitions
 // -----------------------------------------------------------------------------
@@ -273,5 +266,7 @@ enum pack_error_e packet_pack(const generic_packet_t *const packet, uint8_t *con
 
 enum pack_error_e packet_unpack(const uint8_t *const in_buf, const size_t in_buf_size,
                                 generic_packet_t *const packet);
+
+generic_packet_t create_cmd_packet(command_t cmd);
 
 #endif // COMMANDS_H_

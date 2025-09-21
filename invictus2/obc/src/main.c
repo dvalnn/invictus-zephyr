@@ -104,9 +104,10 @@ ZBUS_CHAN_DEFINE(chan_actuators,       /* Channel Name */
 );
 
 // --- Packets from Ground Station ---
-ZBUS_CHAN_DEFINE(chan_packets,         /* Channel Name */
-                 generic_packet_t,     /* Message Type */
-                 packet_validator,     /* Validator Func */
+ZBUS_CHAN_DEFINE(chan_packets,     /* Channel Name */
+                 generic_packet_t, /* Message Type */
+                 NULL,             /* Validator Func */
+                 /* packet_validator,     /\* Validator Func *\/ */
                  NULL,                 /* User Data */
                  ZBUS_OBSERVERS_EMPTY, /* Observers */
                  ZBUS_MSG_INIT(0)      /* Initial Value */
