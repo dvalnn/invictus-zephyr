@@ -49,7 +49,8 @@ void boost_timer_stop_fn(struct k_timer *timer_id)
 /* =============================================================================== */
 void ignition_entry(void *o)
 {
-    ARG_UNUSED(o);
+    struct sm_object *s = (struct sm_object *)o;
+    s->state_data.flight_state = IGNITION;
 }
 
 void ignition_run(void *o)
@@ -72,6 +73,8 @@ void ignition_exit(void *o)
 /* ======================================================================== */
 void boost_entry(void *o)
 {
+    struct sm_object *s = (struct sm_object *)o;
+    s->state_data.flight_state = BOOST;
     boost_timer_start();
 }
 
@@ -109,7 +112,8 @@ void boost_exit(void *o)
 /* ======================================================================== */
 void coast_entry(void *o)
 {
-    ARG_UNUSED(o);
+    struct sm_object *s = (struct sm_object *)o;
+    s->state_data.flight_state = COAST;
 }
 
 void coast_run(void *o)
@@ -132,7 +136,8 @@ void coast_exit(void *o)
 /* ======================================================================== */
 void apogee_entry(void *o)
 {
-    ARG_UNUSED(o);
+    struct sm_object *s = (struct sm_object *)o;
+    s->state_data.flight_state = APOGEE;
 }
 
 void apogee_run(void *o)
@@ -155,7 +160,8 @@ void apogee_exit(void *o)
 /* ======================================================================== */
 void drogue_chute_entry(void *o)
 {
-    ARG_UNUSED(o);
+    struct sm_object *s = (struct sm_object *)o;
+    s->state_data.flight_state = DROGUE_CHUTE;
 }
 
 void drogue_chute_run(void *o)
@@ -178,7 +184,8 @@ void drogue_chute_exit(void *o)
 /* ======================================================================== */
 void main_chute_entry(void *o)
 {
-    ARG_UNUSED(o);
+    struct sm_object *s = (struct sm_object *)o;
+    s->state_data.flight_state = MAIN_CHUTE;
 }
 
 void main_chute_run(void *o)
@@ -201,7 +208,8 @@ void main_chute_exit(void *o)
 /* ======================================================================== */
 void touchdown_entry(void *o)
 {
-    ARG_UNUSED(o);
+    struct sm_object *s = (struct sm_object *)o;
+    s->state_data.flight_state = TOUCHDOWN;
 }
 
 void touchdown_run(void *o)

@@ -16,9 +16,11 @@ struct sm_object
 {
     /* This must be first */
     struct smf_ctx ctx;
+
     command_t command;
     fill_command_t fill_command;
     system_data_t data;
+    state_data_t state_data;
     struct sm_config *config;
 };
 

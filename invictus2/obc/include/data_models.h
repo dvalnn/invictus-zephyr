@@ -52,7 +52,7 @@ typedef enum
     _FILL_SST_MAX
 } fill_substate_t;
 
-#define FLIGHT_SST(SST) (SST + _FILL_SST_MAX + 1)
+#define FLIGHT_SST(SST) (SST + FILL_SST(_FILL_SST_MAX) + 1)
 
 // Flight Substates
 typedef enum

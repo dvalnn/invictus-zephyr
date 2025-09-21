@@ -16,6 +16,7 @@ void safe_pause_entry(void *o)
 {
     // Close all valves for safety.
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = SAFE_PAUSE;
     close_all_valves(s);
 }
 
@@ -51,6 +52,7 @@ void safe_pause_exit(void *o)
 void safe_pause_idle_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = SAFE_PAUSE_IDLE;
     close_all_valves(s);
 }
 
@@ -77,6 +79,7 @@ void safe_pause_idle_exit(void *o)
 void safe_pause_vent_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = SAFE_PAUSE_VENT;
     open_single_valve(s, VALVE_VENT);
 }
 
@@ -102,6 +105,7 @@ void safe_pause_vent_exit(void *o)
 void fill_n2_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = FILL_N2;
     close_all_valves(s);
 }
 
@@ -121,6 +125,7 @@ void fill_n2_exit(void *o)
 void fill_n2_idle_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = FILL_N2_IDLE;
     close_all_valves(s);
 }
 
@@ -130,12 +135,12 @@ void fill_n2_idle_run(void *o)
     struct sm_object *s = (struct sm_object *)o;
 
     if (s->data.pressures.n2_line_pressure <=
-        s->config->filling_sm_config.f_copv.target_n2_tank_pressure)
+        s->config->filling_sm_config.fill_n2.target_n2_tank_pressure)
     {
         SET_FILL_STATE(s, FILL_N2_FILL);
     }
     else if (s->data.pressures.n2_line_pressure >
-             s->config->filling_sm_config.f_copv.trigger_n2_tank_pressure)
+             s->config->filling_sm_config.fill_n2.trigger_n2_tank_pressure)
     {
         SET_FILL_STATE(s, FILL_N2_VENT);
     }
@@ -152,6 +157,7 @@ void fill_n2_idle_exit(void *o)
 void fill_n2_fill_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = FILL_N2_FILL;
     open_single_valve(s, VALVE_N2_FILL);
 }
 
@@ -161,7 +167,7 @@ void fill_n2_fill_run(void *o)
     struct sm_object *s = (struct sm_object *)o;
 
     if (s->data.pressures.n2_line_pressure >=
-        s->config->filling_sm_config.f_copv.target_n2_tank_pressure)
+        s->config->filling_sm_config.fill_n2.target_n2_tank_pressure)
     {
         SET_FILL_STATE(s, FILL_N2_IDLE);
     }
@@ -179,6 +185,7 @@ void fill_n2_fill_exit(void *o)
 void fill_n2_vent_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = FILL_N2_VENT;
     close_all_valves(s);
     set_valve(s, VALVE_N2_FILL, true);
     set_valve(s, VALVE_VENT, true);
@@ -189,7 +196,7 @@ void fill_n2_vent_run(void *o)
     // Transition to idle when pressure reaches target.
     struct sm_object *s = (struct sm_object *)o;
     if (s->data.pressures.n2_line_pressure <=
-        s->config->filling_sm_config.f_copv.target_n2_tank_pressure)
+        s->config->filling_sm_config.fill_n2.target_n2_tank_pressure)
     {
         SET_FILL_STATE(s, FILL_N2_IDLE);
     }
@@ -206,6 +213,7 @@ void fill_n2_vent_exit(void *o)
 void pre_press_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = PRE_PRESS;
     close_all_valves(s);
 }
 
@@ -225,6 +233,7 @@ void pre_press_exit(void *o)
 void pre_press_idle_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = PRE_PRESS_IDLE;
     close_all_valves(s);
 }
 
@@ -233,13 +242,13 @@ void pre_press_idle_run(void *o)
     // Transition to vent or fill based on pressure.
     struct sm_object *s = (struct sm_object *)o;
     if (s->data.pressures.n2o_tank_pressure >
-        s->config->filling_sm_config.pre_p.trigger_n2o_tank_pressure)
+        s->config->filling_sm_config.pre_press.trigger_n2o_tank_pressure)
     {
         SET_FILL_STATE(s, PRE_PRESS_VENT);
         return;
     }
     if (s->data.pressures.n2o_tank_pressure <
-        s->config->filling_sm_config.pre_p.target_n2o_tank_pressure)
+        s->config->filling_sm_config.pre_press.target_n2o_tank_pressure)
     {
         SET_FILL_STATE(s, PRE_PRESS_FILL_N2);
     }
@@ -256,6 +265,7 @@ void pre_press_idle_exit(void *o)
 void pre_press_vent_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = PRE_PRESS_VENT;
     open_single_valve(s, VALVE_VENT);
 }
 
@@ -264,7 +274,7 @@ void pre_press_vent_run(void *o)
     // Transition to idle when pressure is safe.
     struct sm_object *s = (struct sm_object *)o;
     if (s->data.pressures.n2o_tank_pressure <=
-        s->config->filling_sm_config.pre_p.target_n2o_tank_pressure)
+        s->config->filling_sm_config.pre_press.target_n2o_tank_pressure)
     {
         SET_FILL_STATE(s, PRE_PRESS_IDLE);
     }
@@ -281,6 +291,7 @@ void pre_press_vent_exit(void *o)
 void pre_press_fill_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = PRE_PRESS_FILL_N2;
     open_single_valve(s, VALVE_PRESSURIZING);
 }
 
@@ -290,7 +301,7 @@ void pre_press_fill_run(void *o)
     struct sm_object *s = (struct sm_object *)o;
 
     if (s->data.pressures.n2o_tank_pressure >=
-        s->config->filling_sm_config.pre_p.target_n2o_tank_pressure)
+        s->config->filling_sm_config.pre_press.target_n2o_tank_pressure)
     {
         SET_FILL_STATE(s, PRE_PRESS_IDLE);
     }
@@ -307,6 +318,7 @@ void pre_press_fill_exit(void *o)
 void fill_n2o_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = FILL_N2O;
     close_all_valves(s);
 }
 
@@ -326,6 +338,7 @@ void fill_n2o_exit(void *o)
 void fill_n2o_idle_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = FILL_N2O_IDLE;
     close_all_valves(s);
 }
 
@@ -335,7 +348,7 @@ void fill_n2o_idle_run(void *o)
     struct sm_object *s = (struct sm_object *)o;
 
     if (s->data.loadcells.n2o_loadcell <
-        s->config->filling_sm_config.f_n2o.target_n2o_tank_weight)
+        s->config->filling_sm_config.fill_n2o.target_n2o_tank_weight)
     {
         SET_FILL_STATE(s, FILL_N2O_FILL);
     }
@@ -352,6 +365,7 @@ void fill_n2o_idle_exit(void *o)
 void fill_n2o_fill_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = FILL_N2O_FILL;
     open_single_valve(s, VALVE_N2O_FILL);
 }
 
@@ -363,14 +377,14 @@ void fill_n2o_fill_run(void *o)
     struct sm_object *s = (struct sm_object *)o;
 
     if (s->data.pressures.n2o_tank_pressure >=
-            s->config->filling_sm_config.f_n2o.trigger_n2o_tank_pressure &&
+            s->config->filling_sm_config.fill_n2o.trigger_n2o_tank_pressure &&
         s->data.thermocouples.n2o_tank_uf_t1 >
-            s->config->filling_sm_config.f_n2o.trigger_n2o_tank_temperature)
+            s->config->filling_sm_config.fill_n2o.trigger_n2o_tank_temperature)
     {
         SET_FILL_STATE(s, FILL_N2O_VENT);
     }
     else if (s->data.loadcells.n2o_loadcell >=
-             s->config->filling_sm_config.f_n2o.target_n2o_tank_weight)
+             s->config->filling_sm_config.fill_n2o.target_n2o_tank_weight)
     {
         SET_FILL_STATE(s, FILL_N2O_IDLE);
     }
@@ -387,6 +401,7 @@ void fill_n2o_fill_exit(void *o)
 void fill_n2o_vent_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = FILL_N2O_VENT;
     close_all_valves(s);
     set_valve(s, VALVE_N2O_FILL, true);
     set_valve(s, VALVE_VENT, true);
@@ -399,9 +414,9 @@ void fill_n2o_vent_run(void *o)
     struct sm_object *s = (struct sm_object *)o;
 
     if (s->data.pressures.n2o_tank_pressure <=
-            s->config->filling_sm_config.f_n2o.target_n2o_tank_pressure ||
+            s->config->filling_sm_config.fill_n2o.target_n2o_tank_pressure ||
         s->data.thermocouples.n2o_tank_uf_t1 <=
-            s->config->filling_sm_config.f_n2o.trigger_n2o_tank_temperature)
+            s->config->filling_sm_config.fill_n2o.trigger_n2o_tank_temperature)
     {
         SET_FILL_STATE(s, FILL_N2O_FILL);
     }
@@ -437,6 +452,7 @@ void post_press_exit(void *o)
 void post_press_idle_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = POST_PRESS_IDLE;
     close_all_valves(s);
 }
 
@@ -446,12 +462,12 @@ void post_press_idle_run(void *o)
     struct sm_object *s = (struct sm_object *)o;
 
     if (s->data.pressures.n2o_tank_pressure >
-        s->config->filling_sm_config.post_p.trigger_n2o_tank_pressure)
+        s->config->filling_sm_config.post_press.trigger_n2o_tank_pressure)
     {
         SET_FILL_STATE(s, POST_PRESS_VENT);
     }
     else if (s->data.pressures.n2o_tank_pressure <
-             s->config->filling_sm_config.post_p.target_n2o_tank_pressure)
+             s->config->filling_sm_config.post_press.target_n2o_tank_pressure)
     {
         SET_FILL_STATE(s, POST_PRESS_FILL_N2);
     }
@@ -468,6 +484,7 @@ void post_press_idle_exit(void *o)
 void post_press_fill_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = POST_PRESS_FILL_N2;
     open_single_valve(s, VALVE_N2_FILL);
 }
 
@@ -477,7 +494,7 @@ void post_press_fill_run(void *o)
     struct sm_object *s = (struct sm_object *)o;
 
     if (s->data.pressures.n2o_tank_pressure >=
-        s->config->filling_sm_config.post_p.target_n2o_tank_pressure)
+        s->config->filling_sm_config.post_press.target_n2o_tank_pressure)
     {
         SET_FILL_STATE(s, POST_PRESS_IDLE);
     }
@@ -494,6 +511,7 @@ void post_press_fill_exit(void *o)
 void post_press_vent_entry(void *o)
 {
     struct sm_object *s = (struct sm_object *)o;
+    s->state_data.filling_state = POST_PRESS_VENT;
     open_single_valve(s, VALVE_VENT);
 }
 
@@ -503,7 +521,7 @@ void post_press_vent_run(void *o)
     struct sm_object *s = (struct sm_object *)o;
 
     if (s->data.pressures.n2o_tank_pressure <=
-        s->config->filling_sm_config.post_p.target_n2o_tank_pressure)
+        s->config->filling_sm_config.post_press.target_n2o_tank_pressure)
     {
         SET_FILL_STATE(s, POST_PRESS_IDLE);
     }

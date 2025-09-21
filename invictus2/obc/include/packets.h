@@ -11,7 +11,7 @@
 
 // REVIEW: make this KConfig param?
 #define SUPPORTED_PACKET_VERSION 1
-#define OBC_PACKET_ID 2
+#define OBC_PACKET_ID            2
 #define GROUND_STATION_PACKET_ID 1
 
 // -----------------------------------------------------------------------------
@@ -19,7 +19,8 @@
 // -----------------------------------------------------------------------------
 
 // Always 1 byte fields, packed for on-the-wire transmission.
-typedef struct packet_header_s {
+typedef struct packet_header_s
+{
     uint8_t packet_version;
     uint8_t sender_id;
     uint8_t target_id;
@@ -35,7 +36,8 @@ typedef struct packet_header_s {
 #define PACKET_PAYLOAD_BYTES (PACKET_SIZE - PACKET_HEADER_BYTES)
 
 // NOTE: Generic packet structure, cast to a specific packet type to access values by name.
-struct generic_packet_s {
+struct generic_packet_s
+{
     struct packet_header_s header;
     uint8_t payload[PACKET_PAYLOAD_BYTES];
 };
@@ -57,24 +59,28 @@ struct generic_packet_s {
 // Fill Exec payloads
 // -----------------------------------------------------------------------------
 
-struct fill_N2_params_s {
+struct fill_N2_params_s
+{
     uint16_t target_N2_deci_bar;
     uint16_t trigger_N2_deci_bar;
 };
 
-struct fill_press_params_s {
+struct fill_press_params_s
+{
     uint16_t target_tank_deci_bar;
     uint16_t trigger_tank_deci_bar; // optional: set to 0xFFFF if unused
 };
 
-struct fill_N2O_params_s {
+struct fill_N2O_params_s
+{
     uint16_t target_weight_grams;
     int16_t trigger_temp_deci_c;
 };
 
 // Fill exec generic envelope
-struct fill_exec_s {
-    uint8_t program_id;                          // values from enum fill_program_e
+struct fill_exec_s
+{
+    uint8_t program_id;                       // values from fill_command_t
     uint8_t params[PACKET_PAYLOAD_BYTES - 1]; // 1 byte for program_id, rest for params
 };
 
@@ -86,7 +92,8 @@ struct fill_exec_s {
 // Manual Commands
 // -----------------------------------------------------------------------------
 
-enum manual_cmd_e {
+enum manual_cmd_e
+{
     _MANUAL_CMD_NONE = 0,
 
     MANUAL_CMD_SD_LOG_START,
@@ -100,22 +107,26 @@ enum manual_cmd_e {
     _MANUAL_CMD_MAX
 };
 
-struct manual_valve_state_s {
+struct manual_valve_state_s
+{
     uint8_t valve_id;
     uint8_t open; // boolean: 0 closed, 1 open
 };
 
-struct manual_valve_ms_s {
+struct manual_valve_ms_s
+{
     uint8_t valve_id;
     uint32_t duration_ms;
 };
 
-struct manual_tare_s {
+struct manual_tare_s
+{
     uint8_t id; // loadcell or tank id
 };
 
 // same logic as struct fill_exec_s
-struct manual_exec_s {
+struct manual_exec_s
+{
     uint8_t manual_cmd_id;
     uint8_t params[PACKET_PAYLOAD_BYTES - 1];
 };
@@ -126,7 +137,8 @@ struct manual_exec_s {
 // ACK contains the command id being acknowledged and optional error code(s).
 // Define a compact representation.
 
-struct ack_s {
+struct ack_s
+{
     uint8_t ack_cmd_id;  // command_t that is acknowledged
     uint8_t status_code; // 0 = OK, non-zero = error
     uint8_t params[PACKET_PAYLOAD_BYTES - 2];
@@ -135,7 +147,8 @@ struct ack_s {
 // -----------------------------------------------------------------------------
 // Command IDs
 // -----------------------------------------------------------------------------
-typedef enum cmd_e {
+typedef enum cmd_e
+{
     _CMD_NONE = 0,
 
     // FROM GROUND STATION to OBC
@@ -164,15 +177,17 @@ typedef enum cmd_e {
     _CMD_MAX
 } command_t;
 
-typedef enum fill_cmd_e {
+typedef enum fill_cmd_e
+{
     CMD_FILL_NONE = 0,
     CMD_FILL_N2,
     CMD_FILL_PRE_PRESS,
     CMD_FILL_N2O,
     CMD_FILL_POST_PRESS,
-} fill_command_t;   
+} fill_command_t;
 
-typedef struct {
+typedef struct
+{
     struct packet_header_s header;
     command_t cmd;
 
@@ -196,21 +211,23 @@ typedef struct {
 
 #define _COMMAND_NAME(name) cmd_##name##_s
 
-#define _ASSERT_PACKET_SIZE(name)                                                                \
+#define _ASSERT_PACKET_SIZE(name)                                                             \
     BUILD_ASSERT(sizeof(struct _COMMAND_NAME(name)) == PACKET_SIZE, #name " size error")
 
 // Packet with no payload data (all reserved)
-#define MAKE_PACKET(name)                                                                        \
-    struct _COMMAND_NAME(name) {                                                              \
-        struct packet_header_s hdr;                                                              \
-        uint8_t _reserved[PACKET_PAYLOAD_BYTES];                                           \
+#define MAKE_PACKET(name)                                                                     \
+    struct _COMMAND_NAME(name)                                                                \
+    {                                                                                         \
+        struct packet_header_s hdr;                                                           \
+        uint8_t _reserved[PACKET_PAYLOAD_BYTES];                                              \
     };                                                                                        \
     _ASSERT_PACKET_SIZE(name)
 
 // Packet with defined payload data
-#define MAKE_PACKET_WITH_PAYLOAD(name, partial_s)                                                \
-    struct _COMMAND_NAME(name) {                                                              \
-        struct packet_header_s hdr;                                                              \
+#define MAKE_PACKET_WITH_PAYLOAD(name, partial_s)                                             \
+    struct _COMMAND_NAME(name)                                                                \
+    {                                                                                         \
+        struct packet_header_s hdr;                                                           \
         partial_s payload;                                                                    \
         uint8_t _reserved[_PAD_SIZE(partial_s)];                                              \
     };                                                                                        \
@@ -242,7 +259,8 @@ MAKE_PACKET_WITH_PAYLOAD(manual_exec, struct manual_exec_s);
 // Serialization helpers (declarations)
 // -----------------------------------------------------------------------------
 
-enum pack_error_e {
+enum pack_error_e
+{
     PACK_ERROR_NONE = 0,
     PACK_ERROR_INVALID_ARG,
     PACK_ERROR_BUFFER_TOO_SMALL,
@@ -251,9 +269,9 @@ enum pack_error_e {
 };
 
 enum pack_error_e packet_pack(const struct generic_packet_s *const packet,
-                                 uint8_t *const out_buf, const size_t out_buf_size);
+                              uint8_t *const out_buf, const size_t out_buf_size);
 
 enum pack_error_e packet_unpack(const uint8_t *const in_buf, const size_t in_buf_size,
-                                   struct generic_packet_s *const packet);
+                                struct generic_packet_s *const packet);
 
 #endif // COMMANDS_H_
