@@ -1,6 +1,5 @@
 #include <zephyr/kernel.h>
 #include <zephyr/zbus/zbus.h>
-#include <zephyr/shell/shell.h>
 
 #include <zephyr/sys/atomic.h>
 #include <zephyr/sys/atomic_types.h>
@@ -19,6 +18,7 @@ LOG_MODULE_REGISTER(obc, LOG_LEVEL_INF);
 #include "data_models.h"
 #include "validators.h"
 #include "packets.h"
+#include "shell.h"
 
 #include "services/lora.h"
 #include "services/modbus.h"
@@ -104,12 +104,12 @@ ZBUS_CHAN_DEFINE(chan_actuators,       /* Channel Name */
 );
 
 // --- Packets from Ground Station ---
-ZBUS_CHAN_DEFINE(chan_packets,            /* Channel Name */
-                 struct generic_packet_s, /* Message Type */
-                 packet_validator,        /* Validator Func */
-                 NULL,                    /* User Data */
-                 ZBUS_OBSERVERS_EMPTY,    /* Observers */
-                 ZBUS_MSG_INIT(0)         /* Initial Value */
+ZBUS_CHAN_DEFINE(chan_packets,         /* Channel Name */
+                 generic_packet_t,     /* Message Type */
+                 packet_validator,     /* Validator Func */
+                 NULL,                 /* User Data */
+                 ZBUS_OBSERVERS_EMPTY, /* Observers */
+                 ZBUS_MSG_INIT(0)      /* Initial Value */
 );
 
 // --- Rocket State ---
@@ -170,27 +170,9 @@ void health_check(void)
 int main(void)
 {
     LOG_INF("Starting OBC main thread");
+
     health_check();
-
-#if DT_NODE_HAS_COMPAT(DT_CHOSEN(zephyr_shell_uart), zephyr_cdc_acm_uart)
-    const struct device *dev;
-    uint32_t dtr = 0;
-
-    LOG_INF("Initializing shell");
-    dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_shell_uart));
-    if (!device_is_ready(dev))
-    {
-        k_oops();
-    }
-
-    LOG_INF("Waiting uart DTR");
-    while (!dtr)
-    {
-        uart_line_ctrl_get(dev, UART_LINE_CTRL_DTR, &dtr);
-        k_sleep(K_MSEC(100));
-    }
-#endif
-
+    setup_shell_if_enabled();
     health_check();
 
     LOG_INF("Setting up services");
@@ -201,8 +183,8 @@ int main(void)
         k_oops();
     }
 
-    // lora_service_start();
-    // state_machine_service_start();
+    /* lora_service_start(); */
+    state_machine_service_start();
     // modbus_service_start();
 
     LOG_INF("Services started.");

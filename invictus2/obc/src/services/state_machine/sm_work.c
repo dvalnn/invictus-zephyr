@@ -113,7 +113,7 @@ static void rocket_state_listener_cb(const struct zbus_channel *chan)
 
 static void command_work_handler(struct k_work *work)
 {
-    struct generic_packet_s generic_packet;
+    generic_packet_t generic_packet;
     int ret = zbus_chan_read(&chan_packets, &generic_packet, K_NO_WAIT);
     ZBUS_RET_CHECK(ret, &command_work);
 

@@ -36,11 +36,11 @@ typedef struct packet_header_s
 #define PACKET_PAYLOAD_BYTES (PACKET_SIZE - PACKET_HEADER_BYTES)
 
 // NOTE: Generic packet structure, cast to a specific packet type to access values by name.
-struct generic_packet_s
+typedef struct generic_packet_s
 {
     struct packet_header_s header;
     uint8_t payload[PACKET_PAYLOAD_BYTES];
-};
+} generic_packet_t;
 
 // -----------------------------------------------------------------------------
 // STATUS_REP payload layout
@@ -268,10 +268,10 @@ enum pack_error_e
     PACK_ERROR_INVALID_CMD_ID,
 };
 
-enum pack_error_e packet_pack(const struct generic_packet_s *const packet,
-                              uint8_t *const out_buf, const size_t out_buf_size);
+enum pack_error_e packet_pack(const generic_packet_t *const packet, uint8_t *const out_buf,
+                              const size_t out_buf_size);
 
 enum pack_error_e packet_unpack(const uint8_t *const in_buf, const size_t in_buf_size,
-                                struct generic_packet_s *const packet);
+                                generic_packet_t *const packet);
 
 #endif // COMMANDS_H_
