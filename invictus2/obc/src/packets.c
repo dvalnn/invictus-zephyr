@@ -51,3 +51,13 @@ enum pack_error_e packet_unpack(const uint8_t *const in_buf, const size_t in_buf
     CHECK_PACKET(packet);
     return PACK_ERROR_NONE;
 }
+
+generic_packet_t create_cmd_packet(command_t cmd)
+{
+    packet_header_t header = {.packet_version = SUPPORTED_PACKET_VERSION,
+                              .sender_id = OBC_PACKET_ID,
+                              .target_id = GROUND_STATION_PACKET_ID,
+                              .command_id = (uint8_t)cmd};
+    generic_packet_t packet = {.header = header, .payload = {0}};
+    return packet;
+}

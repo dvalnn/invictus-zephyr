@@ -33,7 +33,7 @@ ZBUS_CHAN_DECLARE(chan_packets);
 ZBUS_CHAN_DECLARE(chan_weight_sensors, chan_pressure_sensors, chan_thermo_sensors);
 
 // Published channels
-ZBUS_CHAN_DECLARE(chan_rocket_state);
+ZBUS_CHAN_DECLARE(chan_rocket_state, chan_actuators);
 
 static void rocket_state_listener_cb(const struct zbus_channel *chan);
 
@@ -111,21 +111,9 @@ static void rocket_state_listener_cb(const struct zbus_channel *chan)
     }
 }
 
-static void command_work_handler(struct k_work *work)
+static void handle_fill_exec_command(struct cmd_fill_exec_s *fill_exec)
 {
-    generic_packet_t generic_packet;
-    int ret = zbus_chan_read(&chan_packets, &generic_packet, K_NO_WAIT);
-    ZBUS_RET_CHECK(ret, &command_work);
-
-    command_t cmd = (command_t)generic_packet.header.command_id;
-    if (cmd != CMD_FILL_EXEC)
-    {
-        return;
-    }
-
     struct filling_sm_config *fill_cfg = &sm_obj.config->filling_sm_config;
-
-    struct cmd_fill_exec_s *fill_exec = (struct cmd_fill_exec_s *)&generic_packet;
     fill_command_t fill_cmd = (fill_command_t)fill_exec->payload.program_id;
 
     switch (fill_cmd)
@@ -195,8 +183,49 @@ static void command_work_handler(struct k_work *work)
         return;
     }
 
-    sm_obj.command = cmd;
+    sm_obj.command = CMD_FILL_EXEC;
     sm_obj.fill_command = fill_cmd;
+}
+
+static void command_work_handler(struct k_work *work)
+{
+    generic_packet_t generic_packet;
+    int ret = zbus_chan_read(&chan_packets, &generic_packet, K_NO_WAIT);
+    ZBUS_RET_CHECK(ret, &command_work);
+
+    command_t cmd = (command_t)generic_packet.header.command_id;
+    switch (cmd)
+    {
+    case CMD_ABORT:
+    case CMD_READY:
+    case CMD_ARM:
+    case CMD_FIRE:
+    case CMD_LAUNCH_OVERRIDE:
+    case CMD_STOP:
+    case CMD_SAFE_PAUSE:
+    case CMD_RESUME:
+    case CMD_MANUAL_TOGGLE:
+        sm_obj.command = cmd;
+        break;
+
+    case CMD_FILL_EXEC:
+        handle_fill_exec_command((struct cmd_fill_exec_s *)&generic_packet);
+        break;
+
+    case CMD_MANUAL_EXEC:
+    case CMD_STATUS_REQ:
+        LOG_WRN("Received unimplemented command: %d", cmd);
+        return;
+
+    case CMD_STATUS_REP:
+    case CMD_ACK:
+        return; // Ignore these commands
+
+    case _CMD_NONE:
+    case _CMD_MAX:
+        LOG_ERR("Received unknown command: %d", cmd);
+        return;
+    }
 
     SCHEDULE_SM_RUN();
 }
@@ -247,6 +276,8 @@ static void state_machine_work_handler(struct k_work *work)
     {
         LOG_ERR("Failed to publish rocket state: %d", ret);
     }
+
+    zbus_chan_pub(&chan_actuators, &sm_obj.data.actuators, K_NO_WAIT);
 }
 
 bool state_machine_service_setup(void)
