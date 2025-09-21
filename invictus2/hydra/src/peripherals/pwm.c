@@ -1,4 +1,4 @@
-#include "pwm.h"
+#include "peripherals/pwm.h"
 
 #define PWM_NODE DT_NODELABEL(pwm)
 

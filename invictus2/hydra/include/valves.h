@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "pwm.h"
+#include "peripherals/pwm.h"
 
 // Logical IDs for available HYDRA valves (as per inv2_hydra_rp2040.dts)
 typedef enum {

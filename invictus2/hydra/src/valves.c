@@ -6,7 +6,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/util.h>
-#include "gpio.h"
+#include "peripherals/gpio.h"
 
 LOG_MODULE_REGISTER(valves, LOG_LEVEL_INF);
 

@@ -1,5 +1,5 @@
 // HYDRA GPIO abstraction implementation
-#include "gpio.h"
+#include "peripherals/gpio.h"
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
