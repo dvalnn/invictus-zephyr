@@ -13,8 +13,8 @@ build board proj extra_args:
   west build -p {{pristine}} -b {{board}} {{proj}} {{extra_args}}
 
 shell := "false"
-_obc_shell_flags := "-DEXTRA_DTC_OVERLAY_FILE=extra/shell.overlay -DCONF_FILE=extra/overlay_shell.conf"
 modbus_cdc := "false"
+_obc_shell_flags := "-DEXTRA_DTC_OVERLAY_FILE=extra/shell.overlay -DCONF_FILE=extra/overlay_shell.conf"
 _obc_modbus_cdc_flags := "-DEXTRA_DTC_OVERLAY_FILE=extra/cdc-acm.overlay -DEXTRA_CONF_FILE=extra/overlay-cdc-acm.conf"
 _obc_flags := if shell != "false" { _obc_shell_flags } else { if modbus_cdc != "false" { _obc_modbus_cdc_flags } else { "" } }
 obc: (build "inv2_obc" "invictus2/obc" _obc_flags )

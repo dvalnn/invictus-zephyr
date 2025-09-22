@@ -87,6 +87,7 @@ bool packet_validator(const void *msg, size_t msg_size)
     case CMD_LAUNCH_OVERRIDE:
     case CMD_STOP:
     case CMD_RESUME:
+    case CMD_SAFE_PAUSE:
     case CMD_MANUAL_TOGGLE:
         return true; // No payload data, just reserved bytes
 

@@ -9,7 +9,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/uart.h>
 
-LOG_MODULE_REGISTER(obc_shell, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(obc_shell, LOG_LEVEL_DBG);
 
 ZBUS_CHAN_DECLARE(chan_packets);
 
@@ -77,11 +77,10 @@ SHELL_CMD_REGISTER(packet, &packet_subcmd_set, "Packet commands", NULL);
 
 static int pub_cmd(const struct shell *sh, command_t cmd)
 {
-    shell_print(sh, "Publishing command %d", cmd);
     generic_packet_t pack = create_cmd_packet(cmd);
-    shell_print(sh, "Packet created");
-    int ret = zbus_chan_pub(&chan_packets, &pack, K_NO_WAIT);
+    LOG_HEXDUMP_DBG(&pack, sizeof(pack), "Packet data");
 
+    int ret = zbus_chan_pub(&chan_packets, (const void *)&pack, K_MSEC(100));
     if (ret == 0)
     {
         shell_print(sh, "Published command %d", cmd);
@@ -200,7 +199,7 @@ static int packet_fill_n2_handler(const struct shell *sh, size_t argc, char **ar
     fill_exec->payload.program_id = CMD_FILL_N2;
     memcpy(fill_exec->payload.params, &payload, sizeof(payload));
 
-    return zbus_chan_pub(&chan_packets, &generic_pack, K_NO_WAIT);
+    return zbus_chan_pub(&chan_packets, (const void *)&generic_pack, K_MSEC(100));
 }
 
 static int packet_fill_pre_press_handler(const struct shell *sh, size_t argc, char **argv)
@@ -229,7 +228,7 @@ static int packet_fill_pre_press_handler(const struct shell *sh, size_t argc, ch
     fill_exec->payload.program_id = CMD_FILL_PRE_PRESS;
     memcpy(fill_exec->payload.params, &payload, sizeof(payload));
 
-    return zbus_chan_pub(&chan_packets, &generic_pack, K_NO_WAIT);
+    return zbus_chan_pub(&chan_packets, (const void *)&generic_pack, K_MSEC(100));
 }
 
 static int packet_fill_n2o_handler(const struct shell *sh, size_t argc, char **argv)
@@ -259,7 +258,7 @@ static int packet_fill_n2o_handler(const struct shell *sh, size_t argc, char **a
     fill_exec->payload.program_id = CMD_FILL_N2O;
     memcpy(fill_exec->payload.params, &payload, sizeof(payload));
 
-    return zbus_chan_pub(&chan_packets, &generic_pack, K_NO_WAIT);
+    return zbus_chan_pub(&chan_packets, (const void *)&generic_pack, K_MSEC(100));
 }
 
 static int packet_fill_post_press_handler(const struct shell *sh, size_t argc, char **argv)
@@ -288,7 +287,7 @@ static int packet_fill_post_press_handler(const struct shell *sh, size_t argc, c
     fill_exec->payload.program_id = CMD_FILL_POST_PRESS;
     memcpy(fill_exec->payload.params, &payload, sizeof(payload));
 
-    return zbus_chan_pub(&chan_packets, &generic_pack, K_NO_WAIT);
+    return zbus_chan_pub(&chan_packets, (const void *)&generic_pack, K_MSEC(100));
 }
 
 static int packet_manual_exec_handler(const struct shell *sh, size_t argc, char **argv)
