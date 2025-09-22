@@ -10,7 +10,7 @@
 static struct sm_object sm_obj;
 bool smf_run_scheduled = false;
 
-LOG_MODULE_DECLARE(state_machine_service);
+LOG_MODULE_DECLARE(state_machine_service, LOG_LEVEL_DBG);
 
 #define SM_WORK_Q_PRIO 5                      // TODO: make KConfig
 K_THREAD_STACK_DEFINE(sm_work_q_stack, 1024); // TODO: Make KConfig
@@ -38,10 +38,10 @@ ZBUS_CHAN_DECLARE(chan_rocket_state, chan_actuators);
 static void rocket_state_listener_cb(const struct zbus_channel *chan);
 
 ZBUS_LISTENER_DEFINE(rocket_state_listener, rocket_state_listener_cb);
-ZBUS_CHAN_ADD_OBS(chan_packets, rocket_state_listener, 5);          // FIXME: Make KConfig
-ZBUS_CHAN_ADD_OBS(chan_weight_sensors, rocket_state_listener, 5);   // FIXME: Make KConfig
-ZBUS_CHAN_ADD_OBS(chan_thermo_sensors, rocket_state_listener, 5);   // FIXME: Make KConfig
-ZBUS_CHAN_ADD_OBS(chan_pressure_sensors, rocket_state_listener, 5); // FIXME: Make KConfig
+ZBUS_CHAN_ADD_OBS(chan_packets, rocket_state_listener, 6);          // FIXME: Make KConfig
+ZBUS_CHAN_ADD_OBS(chan_weight_sensors, rocket_state_listener, 6);   // FIXME: Make KConfig
+ZBUS_CHAN_ADD_OBS(chan_thermo_sensors, rocket_state_listener, 6);   // FIXME: Make KConfig
+ZBUS_CHAN_ADD_OBS(chan_pressure_sensors, rocket_state_listener, 6); // FIXME: Make KConfig
 
 #define ZBUS_RET_CHECK(ret, work)                                                             \
     switch (ret)                                                                              \
@@ -190,7 +190,7 @@ static void handle_fill_exec_command(struct cmd_fill_exec_s *fill_exec)
 static void command_work_handler(struct k_work *work)
 {
     generic_packet_t generic_packet;
-    int ret = zbus_chan_read(&chan_packets, &generic_packet, K_NO_WAIT);
+    int ret = zbus_chan_read(&chan_packets, &generic_packet, K_MSEC(100));
     ZBUS_RET_CHECK(ret, &command_work);
 
     command_t cmd = (command_t)generic_packet.header.command_id;
@@ -219,6 +219,7 @@ static void command_work_handler(struct k_work *work)
 
     case CMD_STATUS_REP:
     case CMD_ACK:
+        LOG_WRN("Received command not meant for state machine: %d", cmd);
         return; // Ignore these commands
 
     case _CMD_NONE:
@@ -227,14 +228,15 @@ static void command_work_handler(struct k_work *work)
         return;
     }
 
+    LOG_INF("Received command: %d", sm_obj.command);
     SCHEDULE_SM_RUN();
 }
 
 static void weight_work_handler(struct k_work *work)
 {
     loadcell_weights_t weights;
-    int ret = zbus_chan_read(&chan_weight_sensors, &weights, K_NO_WAIT);
-    ZBUS_RET_CHECK(ret, &command_work);
+    int ret = zbus_chan_read(&chan_weight_sensors, &weights, K_MSEC(100));
+    ZBUS_RET_CHECK(ret, &weight_work);
 
     sm_obj.data.loadcells = weights;
     SCHEDULE_SM_RUN();
@@ -243,8 +245,8 @@ static void weight_work_handler(struct k_work *work)
 static void thermo_work_handler(struct k_work *work)
 {
     thermocouples_t thermos;
-    int ret = zbus_chan_read(&chan_thermo_sensors, &thermos, K_NO_WAIT);
-    ZBUS_RET_CHECK(ret, &command_work);
+    int ret = zbus_chan_read(&chan_thermo_sensors, &thermos, K_MSEC(100));
+    ZBUS_RET_CHECK(ret, &thermo_work);
 
     sm_obj.data.thermocouples = thermos;
     SCHEDULE_SM_RUN();
@@ -253,8 +255,8 @@ static void thermo_work_handler(struct k_work *work)
 static void pressure_work_handler(struct k_work *work)
 {
     pressures_t pressures;
-    int ret = zbus_chan_read(&chan_pressure_sensors, &pressures, K_NO_WAIT);
-    ZBUS_RET_CHECK(ret, &command_work);
+    int ret = zbus_chan_read(&chan_pressure_sensors, &pressures, K_MSEC(100));
+    ZBUS_RET_CHECK(ret, &pressure_work);
 
     sm_obj.data.pressures = pressures;
     SCHEDULE_SM_RUN();
@@ -271,13 +273,24 @@ static void state_machine_work_handler(struct k_work *work)
     sm_obj.command = 0;
     sm_obj.fill_command = 0;
 
-    int ret = zbus_chan_pub(&chan_rocket_state, &sm_obj.state_data, K_NO_WAIT);
+    int ret = zbus_chan_pub(&chan_rocket_state, &sm_obj.state_data, K_MSEC(100));
     if (ret != 0)
     {
         LOG_ERR("Failed to publish rocket state: %d", ret);
     }
 
-    zbus_chan_pub(&chan_actuators, &sm_obj.data.actuators, K_NO_WAIT);
+    LOG_INF("Rocket state"
+            " - Main state: %d"
+            " - Filling state: %d"
+            " - Flight state: %d",
+            sm_obj.state_data.main_state, sm_obj.state_data.filling_state,
+            sm_obj.state_data.flight_state);
+
+    ret = zbus_chan_pub(&chan_actuators, &sm_obj.data.actuators, K_MSEC(100));
+    if (ret != 0)
+    {
+        LOG_ERR("Failed to publish actuators state: %d", ret);
+    }
 }
 
 bool state_machine_service_setup(void)

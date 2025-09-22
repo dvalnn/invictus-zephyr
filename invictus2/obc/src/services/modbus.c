@@ -137,8 +137,8 @@ static void hydra_read_ir_work_handler(struct k_work *work)
     hydra_boards_irs_to_zbus_rep(&hydras, &temperatures, &pressures,
                                  (bool)atomic_get(&fs_disabled));
 
-    zbus_chan_pub(&chan_thermo_sensors, (const void *)&temperatures, K_NO_WAIT);
-    zbus_chan_pub(&chan_pressure_sensors, (const void *)&pressures, K_NO_WAIT);
+    zbus_chan_pub(&chan_thermo_sensors, (const void *)&temperatures, K_MSEC(100));
+    zbus_chan_pub(&chan_pressure_sensors, (const void *)&pressures, K_MSEC(100));
 }
 
 static void lift_read_ir_work_handler(struct k_work *work)
@@ -150,7 +150,7 @@ static void lift_read_ir_work_handler(struct k_work *work)
     lift_boards_read_irs(client_iface, &lifts, (bool)atomic_get(&fs_disabled));
     lift_boards_irs_to_zbus_rep(&lifts, &weights, (bool)atomic_get(&fs_disabled));
 
-    zbus_chan_pub(&chan_weight_sensors, (const void *)&weights, K_NO_WAIT);
+    zbus_chan_pub(&chan_weight_sensors, (const void *)&weights, K_MSEC(100));
 }
 
 static void actuator_work_handler(struct k_work *work)
@@ -177,6 +177,6 @@ void modbus_service_start(void)
                        K_THREAD_STACK_SIZEOF(modbus_work_q_stack), CONFIG_MODBUS_WORK_Q_PRIO,
                        NULL);
 
-    k_work_schedule_for_queue(&modbus_work_q, &hydra_sample_work, K_NO_WAIT);
-    k_work_schedule_for_queue(&modbus_work_q, &lift_sample_work, K_NO_WAIT);
+    k_work_schedule_for_queue(&modbus_work_q, &hydra_sample_work, K_MSEC(100));
+    k_work_schedule_for_queue(&modbus_work_q, &lift_sample_work, K_MSEC(100));
 }
