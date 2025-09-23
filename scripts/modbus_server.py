@@ -1,36 +1,43 @@
-from pymodbus.server import StartSerialServer
-from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
-from pymodbus.datastore.store import ModbusSequentialDataBlock
-import logging
+ 
+from pymodbus.client import ModbusSerialClient
+import time
 
-logging.basicConfig(level=logging.INFO)
-
-# Serial port settings (adjust for your system)
-serial_port = "/dev/ttyUSB0"  # Change as needed
-baud_rate = 19200
-parity = "N"   # Options: "N" (None), "E" (Even), "O" (Odd)
-stopbits = 1
-bytesize = 8
-
-# Create slaves (IDs 1 to 100, each with 180 holding registers initialized to 0)
-slaves = {
-    slave_id: ModbusSlaveContext(hr=ModbusSequentialDataBlock(0, [0] * 180))
-    for slave_id in range(1, 101)
-}
-
-context = ModbusServerContext(slaves=slaves, single=False)
-
-try:
-    logging.info(f"Starting Modbus RTU server on {serial_port} @ {baud_rate} baud")
-    StartSerialServer(
-        context,
-        port=serial_port,
-        baudrate=baud_rate,
-        parity=parity,
-        stopbits=stopbits,
-        bytesize=bytesize,
-        framer=None,  # Default RTU framer will be used
+def main():
+    client = ModbusSerialClient(
+        port="/dev/ttyACM0",  # Adjust to your serial port
+        baudrate=115200,
+        timeout=1,
+        parity="N",
+        stopbits=1,
+        bytesize=8
     )
 
-except Exception as e:
-    logging.error(f"Error starting RTU server: {e}")
+    if not client.connect():
+        print("Failed to connect to Modbus RTU server.")
+        return
+
+    print("Connected. Listening for Modbus responses...")
+
+    try:
+        while True:
+            response = client.read_holding_registers(
+                address=0,      #starting register
+                count=8,       #number of registers
+                slave=1         #slaveID
+            )
+
+            if response.isError():
+                print("Error reading:", response)
+            else:
+                print("Received registers:", response.registers)
+
+            time.sleep(1)  # poll every second
+
+    except KeyboardInterrupt:
+        print("\nStopping client...")
+
+    finally:
+        client.close()
+
+if __name__ == "__main__":
+    main()

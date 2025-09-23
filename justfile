@@ -21,10 +21,14 @@ obc: (build "inv2_obc" "invictus2/obc" _obc_flags )
 
 gs: (build "inv2_obc" "invictus2/ground_station" "")
 
+
+cdc_flag := if modbus_cdc != "false" { "-DEXTRA_DTC_OVERLAY_FILE=extra/cdc-acm.overlay -DEXTRA_CONF_FILE=extra/overlay-cdc-acm.conf" } else { "" }
+
 hydra variant:
-  west build -p {{pristine}} -b inv2_hydra invictus2/hydra \
-    -DEXTRA_DTC_OVERLAY_FILE=extra/{{variant}}.overlay \
-    -DEXTRA_CONF_FILE=extra/overlay_{{variant}}.conf
+    west build -p {{pristine}} -b inv2_hydra invictus2/hydra \
+      -DEXTRA_DTC_OVERLAY_FILE=extra/{{variant}}.overlay \
+      -DEXTRA_CONF_FILE=extra/overlay_{{variant}}.conf \
+      {{cdc_flag}}
 
 runner := "openocd"
 flash:
