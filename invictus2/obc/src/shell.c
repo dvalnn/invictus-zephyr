@@ -178,7 +178,7 @@ static int packet_fill_n2_handler(const struct shell *sh, size_t argc, char **ar
     if (argc < 3)
     {
         shell_print(
-            sh, "Usage: packet fill_exec fill_n2 <target_weight_grams> <trigger_temp_deci_c>");
+            sh, "Usage: packet fill_exec fill_n2 <target_N2_deci_bar> <trigger_N2_deci_bar>");
         return -EINVAL;
     }
 
