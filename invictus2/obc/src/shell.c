@@ -103,7 +103,6 @@ static int packet_abort_handler(const struct shell *sh, size_t argc, char **argv
 
 static int packet_ready_handler(const struct shell *sh, size_t argc, char **argv)
 {
-    ARG_UNUSED(sh);
     ARG_UNUSED(argc);
     ARG_UNUSED(argv);
 
@@ -112,7 +111,6 @@ static int packet_ready_handler(const struct shell *sh, size_t argc, char **argv
 
 static int packet_arm_handler(const struct shell *sh, size_t argc, char **argv)
 {
-    ARG_UNUSED(sh);
     ARG_UNUSED(argc);
     ARG_UNUSED(argv);
 
@@ -121,7 +119,6 @@ static int packet_arm_handler(const struct shell *sh, size_t argc, char **argv)
 
 static int packet_fire_handler(const struct shell *sh, size_t argc, char **argv)
 {
-    ARG_UNUSED(sh);
     ARG_UNUSED(argc);
     ARG_UNUSED(argv);
 
@@ -130,7 +127,6 @@ static int packet_fire_handler(const struct shell *sh, size_t argc, char **argv)
 
 static int packet_launch_ovrd_handler(const struct shell *sh, size_t argc, char **argv)
 {
-    ARG_UNUSED(sh);
     ARG_UNUSED(argc);
     ARG_UNUSED(argv);
 
@@ -139,7 +135,6 @@ static int packet_launch_ovrd_handler(const struct shell *sh, size_t argc, char 
 
 static int packet_stop_handler(const struct shell *sh, size_t argc, char **argv)
 {
-    ARG_UNUSED(sh);
     ARG_UNUSED(argc);
     ARG_UNUSED(argv);
 
@@ -148,7 +143,6 @@ static int packet_stop_handler(const struct shell *sh, size_t argc, char **argv)
 
 static int packet_safe_pause_handler(const struct shell *sh, size_t argc, char **argv)
 {
-    ARG_UNUSED(sh);
     ARG_UNUSED(argc);
     ARG_UNUSED(argv);
 
@@ -157,7 +151,6 @@ static int packet_safe_pause_handler(const struct shell *sh, size_t argc, char *
 
 static int packet_resume_handler(const struct shell *sh, size_t argc, char **argv)
 {
-    ARG_UNUSED(sh);
     ARG_UNUSED(argc);
     ARG_UNUSED(argv);
 
@@ -166,7 +159,6 @@ static int packet_resume_handler(const struct shell *sh, size_t argc, char **arg
 
 static int packet_manual_toggle_handler(const struct shell *sh, size_t argc, char **argv)
 {
-    ARG_UNUSED(sh);
     ARG_UNUSED(argc);
     ARG_UNUSED(argv);
 
