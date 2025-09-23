@@ -1,0 +1,37 @@
+description: MAX31856 Precision Thermocouple to Digital Converter with Linearization
+
+compatible: "maxim,max31856"
+
+include: spi-device.yaml
+
+properties:
+  thermocouple-type:
+    type: int
+    required: true
+    default: 4
+    enum:
+      - 1  # B Type
+      - 2  # E Type
+      - 3  # J Type
+      - 4  # K Type
+      - 5  # N Type
+      - 6  # R Type
+      - 7  # S Type
+      - 8  # T Type
+    description: |
+      Select the type of Thermocouple. In order [B:0 E J K N R S T8]
+
+  drdy-gpios:
+    type: phandle-array
+    required: false
+    description: |
+      GPIO connected to the negated Data Ready output.
+      Active Low.
+
+  fault-gpios:
+    type: phandle-array
+    required: false
+    description: |
+      GPIO connected to the negated Fault output.
+      Represents cable, thermocouple or temperature fault.
+      Active low.

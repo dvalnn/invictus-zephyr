@@ -1,0 +1,7 @@
+config MAX31856
+	bool "MAX31856 sensor"
+	default y
+	depends on DT_HAS_MAXIM_MAX31856_ENABLED
+	select SPI
+	help
+	  Enable driver for MAX31856 SPI-based precision thermocouple to digital converter with linearization.

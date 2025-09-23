@@ -1,3 +1,4 @@
 menu "Drivers"
 rsource "lora_sx128x/Kconfig"
+rsource "sensor/maxim/max31856/Kconfig"
 endmenu
