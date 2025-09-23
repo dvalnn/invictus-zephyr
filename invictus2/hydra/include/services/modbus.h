@@ -5,26 +5,38 @@
 #include <zephyr/modbus/modbus.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(modbus, LOG_LEVEL_INF);
 
 typedef enum {
-    sol_valve_1,
-    sol_valve_2,
-    sol_valve_3,
-    sb_valve_1,
-    sb_valve_2,
-    qdc_valve_1,
-    qdc_valve_2,
-    servo_1,
+    SOL_VALVE_1 = 0,
+    SOL_VALVE_2,
+    SOL_VALVE_3,
+    SB_VALVE_1,
+    SB_VALVE_2,
+    QDC_VALVE_1,
+    QDC_VALVE_2,
+    SERVO_1,
+    ACTUATOR_COUNT
 } actuators_t;
 
 typedef enum {
-    thermo_1,
-    thermo_2,
-    thermo_3,
-    pressure_1,
-    pressure_2,
-    pressure_3,
+    THERMO_1 = 0,
+    THERMO_2,
+    THERMO_3,
+    PRESSURE_1,
+    PRESSURE_2,
+    PRESSURE_3,
+    SENSOR_COUNT
 } sensors_t;
+
+typedef struct {
+    /* Note that the array that will be receiving the coil
+     * values must be greater than or equal to:
+     *                   (num_coils - 1) / 8 + 1
+     */
+    uint8_t coils[ACTUATOR_COUNT / 8 + 2]; // +2 to be safe since division is rounded down
+    uint16_t holding_registers[SENSOR_COUNT]; // each sensor uses one register
+} modbus_memory_t;
+
+int modbus_init();
 
 #endif // MODBUS_H
