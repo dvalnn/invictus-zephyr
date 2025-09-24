@@ -27,14 +27,15 @@ LOG_MODULE_REGISTER(sx128x_hal, CONFIG_LORA_SX128X_LOG_LEVEL);
 
 static void sx128x_hal_wait_on_busy(const struct sx128x_context_cfg *config)
 {
-    bool ret =
-        WAIT_FOR(gpio_pin_get_dt(&config->busy) == 0,
-                 (1000 * CONFIG_LORA_SX128X_HAL_WAIT_ON_BUSY_TIMEOUT_MSEC), k_usleep(100));
-    if (!ret) {
-        LOG_ERR("Timeout of %dms hit when waiting for sx126x busy!",
-                CONFIG_LORA_SX128X_HAL_WAIT_ON_BUSY_TIMEOUT_MSEC);
-        k_oops(); // Terminate the thread
-    }
+    // bool ret =
+    //     WAIT_FOR(gpio_pin_get_dt(&config->busy) == 0,
+    //              (1000 * CONFIG_LORA_SX128X_HAL_WAIT_ON_BUSY_TIMEOUT_MSEC), k_usleep(100));
+    // if (!ret)
+    // {
+    //     LOG_ERR("Timeout of %dms hit when waiting for sx126x busy!",
+    //             CONFIG_LORA_SX128X_HAL_WAIT_ON_BUSY_TIMEOUT_MSEC);
+    //     k_oops(); // Terminate the thread
+    // }
 }
 
 static void sx128x_wakeup_check_ready(const struct device *dev)
