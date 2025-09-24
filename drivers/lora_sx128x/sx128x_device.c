@@ -160,15 +160,8 @@ bool _sx128x_configure_peripherals(const struct device *dev)
     return true;
 }
 
-int _lora_config(const struct device *dev)
+int sx128x_config(const struct device *dev)
 {
-    if (!_sx128x_configure_peripherals(dev))
-    {
-        LOG_ERR("failed peripheral validation");
-        return SX128X_STATUS_ERROR;
-    }
-    const struct sx128x_context_cfg *config = dev->config;
-
     // TODO: Implement the initialization of the device
     // NOTE: Followed datasheet section "14.4 Lora Operation"
     sx128x_status_t init_status;
@@ -226,7 +219,7 @@ int _lora_config(const struct device *dev)
     init_status = sx128x_set_lora_pkt_params(dev, &params);
     RETURN_ON_ERROR(init_status);
 
-    LOG_DBG("finished configuration");
+    LOG_INF("finished configuration");
 
     sx128x_log_configuration(dev);
 
@@ -317,9 +310,10 @@ static int sx128x_init(const struct device *dev)
 {
     dev_data.dev = dev;
     dev_data.rx_callback = NULL;
-
+    struct sx128x_context_data *data = dev->data;
+    data->sleep_status = SX128X_AWAKE;
     // TODO check SPI pins, etc
-    return _lora_config(dev);
+    return _sx128x_configure_peripherals(dev);
 }
 
 #define SX128X_DEFINE(node_id)                                                                \

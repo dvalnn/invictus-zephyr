@@ -61,7 +61,12 @@ bool lora_service_setup(lora_context_t *context)
     ctx->rx_size = 0;
     ctx->device_valid = true;
 
-    // sx128x_register_recv_callback(&lora_on_recv_data);
+    if (sx128x_config(dev) != SX128X_STATUS_OK)
+    {
+        LOG_ERR("Failed to configure module");
+        return false;
+    }
+    sx128x_register_recv_callback(&lora_on_recv_data);
     LOG_INF("initialized loRa service thread");
     return true;
 

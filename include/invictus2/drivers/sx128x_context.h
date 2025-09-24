@@ -30,6 +30,7 @@ struct sx128x_context_data
 // TODO make kconfig
 #define LORA_SX128X_BUFFER_SIZE_BYTES 128U
 
+int sx128x_config(const struct device *dev);
 bool sx128x_transmit(const uint8_t *, size_t);
 int sx128x_read(uint8_t *payload, size_t size);
 bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t));
