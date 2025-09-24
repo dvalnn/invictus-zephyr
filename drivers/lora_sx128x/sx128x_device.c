@@ -132,7 +132,7 @@ bool _sx128x_configure_peripherals(const struct device *dev)
     }
     LOG_DBG("Valid DIO gpio");
 
-    ret = gpio_pin_configure_dt(&config->dio3, GPIO_INPUT | config->dio3.dt_flags);
+    ret = gpio_pin_configure_dt(&config->dio3, GPIO_INPUT);
     if (ret != 0)
     {
         LOG_ERR("Failed to configure DIO as input due to %d", ret);
