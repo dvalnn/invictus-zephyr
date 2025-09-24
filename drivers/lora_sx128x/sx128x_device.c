@@ -66,29 +66,30 @@ int _sx128x_set_continous_rx_mode(const struct device *dev)
 static void _cb_on_recv_event(const struct device *dev, struct gpio_callback *cb,
                               uint32_t pins)
 {
-    healh_check();
-    if (dev_data.rx_callback == NULL)
-    {
-        goto irq_finalize;
-    }
-    sx128x_status_t ret;
-// if (dev_data.rx_callback == NULL)
-// {
-//     return;
-// }
-//
-// dev_data.rx_callback(payload, size);
-//
-// // start Rx again
-// sx128x_set_rx(dev_data.dev, 0, 0);
-//
-irq_finalize:
-    // clear IRQ status
-    ret = sx128x_clear_irq_status(dev, SX128X_IRQ_ALL);
-    if (ret != SX128X_STATUS_OK)
-    {
-        LOG_ERR("failed to clear RX IRQ status");
-    }
+    LOG_INF("!!!!!!!!!!!!!!! IRQ called");
+    // healh_check();
+    // if (dev_data.rx_callback == NULL)
+    // {
+    //     goto irq_finalize;
+    // }
+    // sx128x_status_t ret;
+    // if (dev_data.rx_callback == NULL)
+    // {
+    //     return;
+    // }
+    //
+    // dev_data.rx_callback(payload, size);
+    //
+    // // start Rx again
+    // sx128x_set_rx(dev_data.dev, 0, 0);
+    //
+    // irq_finalize:
+    //     // clear IRQ status
+    //     ret = sx128x_clear_irq_status(dev, SX128X_IRQ_ALL);
+    //     if (ret != SX128X_STATUS_OK)
+    //     {
+    //         LOG_ERR("failed to clear RX IRQ status");
+    //     }
 }
 
 bool _sx128x_configure_peripherals(const struct device *dev)
