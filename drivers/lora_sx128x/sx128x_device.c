@@ -45,11 +45,11 @@ void sx128x_log_configuration(const struct device *dev)
 
     sx128x_pkt_type_t pkt_type;
     ret = sx128x_get_pkt_type(dev, &pkt_type);
-    LOG_INF("type: %d -> %d", (int)ret, (int)pkt_type);
+    LOG_INF("type: %d -> %02X", (int)ret, (int)pkt_type);
 
     sx128x_lora_pkt_len_modes_t pkt_len;
     ret = sx128x_get_lora_pkt_len_mode(dev, &pkt_len);
-    LOG_INF("mode: %d -> %d", (int)ret, (int)pkt_len);
+    LOG_INF("mode: %d -> %02X", (int)ret, (int)pkt_len);
 }
 
 // Datasheet section 14.4.3 2. Rx Settings and Operations
@@ -209,7 +209,7 @@ int sx128x_config(const struct device *dev)
                 .mant = 6,
                 .exp = 0,
             },
-        .header_type = SX128X_LORA_RANGING_PKT_IMPLICIT,
+        .header_type = SX128X_LORA_RANGING_PKT_EXPLICIT,
         // According to datasheet (DS_SX1280-1_V3.3) Table 14-52
         // this value should be account for CRC (2 bytes)
         .pld_len_in_bytes = 253,
@@ -279,8 +279,8 @@ bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
     dev_data.rx_callback = rx_callback;
     LOG_DBG("Configured callback");
 
-    int ret = sx128x_set_dio_irq_params(dev, SX128X_IRQ_RX_DONE, SX128X_IRQ_NONE,
-                                        SX128X_IRQ_NONE, SX128X_IRQ_RX_DONE);
+    int ret = sx128x_set_dio_irq_params(dev, SX128X_IRQ_ALL, SX128X_IRQ_NONE, SX128X_IRQ_NONE,
+                                        SX128X_IRQ_ALL);
     if (ret != SX128X_STATUS_OK)
     {
         LOG_ERR("Failed to configure DIO3 IRQ");
@@ -289,21 +289,13 @@ bool sx128x_register_recv_callback(void (*rx_callback)(uint8_t *, uint16_t))
     LOG_DBG("Configured DIO IRQ");
 
     // start reception
-    int result = _sx128x_set_continous_rx_mode(dev);
+    sx128x_status_t result = sx128x_set_rx(dev_data.dev, SX128X_TICK_SIZE_1000_US, 10);
     if (result != 0)
     {
         LOG_ERR("Failed to set RX mode");
         return false;
     }
 
-    sx128x_chip_status_t radio_status;
-    sx128x_status_t status_ret = sx128x_get_status(dev, &radio_status);
-    if (status_ret != SX128X_STATUS_OK || radio_status.chip_mode != SX128X_CHIP_MODE_RX)
-    {
-        // TODO: verify because documentation is confusing
-        LOG_ERR("%d | %d | %d", status_ret, radio_status.cmd_status, radio_status.chip_mode);
-    }
-    LOG_DBG("Radio in RX mode");
     return SX128X_STATUS_OK;
 }
 

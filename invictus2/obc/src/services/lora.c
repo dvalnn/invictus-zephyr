@@ -121,6 +121,7 @@ void lora_thread_entry(void *p1, void *p2, void *p3)
     while (*ctx->stop_signal != 1)
     {
         // LOG_INF("LoRa thread");
+        sx128x_register_recv_callback(&lora_on_recv_data);
 
         // handle lora reception
         if (k_sem_take(&ctx->data_available, K_NO_WAIT) == 0)
@@ -129,20 +130,9 @@ void lora_thread_entry(void *p1, void *p2, void *p3)
             lora_handle_incoming_packet();
         }
 
-        const char *random_data = "12345678";
-        if (!sx128x_transmit(random_data, strlen(random_data)))
-        {
-            LOG_ERR("failed to transmit");
-            healh_check();
-            healh_check();
-            healh_check();
-        }
-        else
-        {
-            LOG_INF("transmit");
-            // healh_check();
-        }
-
+        LOG_INF("lora service");
+        // // set modem in RX mode
+        // sx128x_register_recv_callback(&lora_on_recv_data);
         // handle zbus reception
 
         // TODO sleep only difference
