@@ -21,6 +21,7 @@
     aliases {
         led0 = &led_green_0;
         modbus-rtu = &modbus_uart;
+        ad559x = &ad559x;
     };
 
     zephyr,user {
@@ -123,12 +124,17 @@
     pinctrl-0 = <&i2c1_hydras>;
     pinctrl-names = "default";
 
-
     ad559x: ad559x@10 {
         compatible = "adi,ad559x";
-        reg = <0x10>;
         status = "okay";
+        reg = <0x10>;
         reset-gpios = <&gpio0 16 GPIO_ACTIVE_LOW>;
+
+        ad559x_dac: dac-controller {
+          compatible = "adi,ad559x-dac";
+          status = "okay";
+          #io-channel-cells = <1>;
+        };
     };
 };
 
