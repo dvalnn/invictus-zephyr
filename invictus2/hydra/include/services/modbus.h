@@ -33,7 +33,7 @@ typedef struct {
      * values must be greater than or equal to:
      *                   (num_coils - 1) / 8 + 1
      */
-    uint8_t coils[ACTUATOR_COUNT / 8 + 2]; // +2 to be safe since division is rounded down
+    uint8_t coils[(ACTUATOR_COUNT - 1) / 8 + 1];
     uint16_t holding_registers[SENSOR_COUNT]; // each sensor uses one register
 } modbus_memory_t;
 

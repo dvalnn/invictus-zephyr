@@ -6,18 +6,14 @@
 
 LOG_MODULE_REGISTER(hydra_modbus, LOG_LEVEL_INF);
 
-static uint16_t holding_reg[8];
-static uint8_t coils_state;
-
+static modbus_memory_t mb_mem = {0};
 
 static int coil_rd(uint16_t addr, bool *state)
 {
-	/*
-	if (addr >= ARRAY_SIZE(led_dev)) {
+	if (addr >= ACTUATOR_COUNT) {
 		return -ENOTSUP;
 	}
-	*/
-	if (coils_state & BIT(addr)) {
+	if (mb_mem.coils[addr / 8] & BIT(addr % 8)) {
 		*state = true;
 	} else {
 		*state = false;
@@ -31,17 +27,15 @@ static int coil_rd(uint16_t addr, bool *state)
 static int coil_wr(uint16_t addr, bool state)
 {
 	bool on;
-	/*
-	if (addr >= ARRAY_SIZE(led_dev)) {
+	if (addr >= ACTUATOR_COUNT) {
 		return -ENOTSUP;
 	}
-	*/
 
 	if (state == true) {
-		coils_state |= BIT(addr);
+		mb_mem.coils[addr / 8] |= BIT(addr % 8);
 		on = true;
 	} else {
-		coils_state &= ~BIT(addr);
+		mb_mem.coils[addr / 8] &= ~BIT(addr % 8);
 		on = false;
 	}
 
@@ -54,13 +48,11 @@ static int coil_wr(uint16_t addr, bool state)
 
 static int holding_reg_rd(uint16_t addr, uint16_t *reg)
 {
-	/*
-	if (addr >= ARRAY_SIZE(holding_reg)) {
+	if (addr >= SENSOR_COUNT) {
 		return -ENOTSUP;
 	}
-	*/
 
-	*reg = holding_reg[addr];
+	*reg = mb_mem.holding_registers[addr];
 
 	LOG_INF("Holding register read, addr %u", addr);
 
@@ -69,12 +61,11 @@ static int holding_reg_rd(uint16_t addr, uint16_t *reg)
 
 static int holding_reg_wr(uint16_t addr, uint16_t reg)
 {
-	/*
-	if (addr >= ARRAY_SIZE(holding_reg)) {
+	if (addr >= SENSOR_COUNT) {
 		return -ENOTSUP;
 	}
-	*/
-	holding_reg[addr] = reg;
+
+	mb_mem.holding_registers[addr] = reg;
 
 	LOG_INF("Holding register write, addr %u", addr);
 
