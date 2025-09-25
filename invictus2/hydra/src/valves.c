@@ -7,37 +7,25 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/util.h>
 #include "peripherals/gpio.h"
+#include "data_models.h"
 
 LOG_MODULE_REGISTER(valves, LOG_LEVEL_INF);
 
-// Names aligned with GPIO mapping in hydra GPIO layer
-
-// Human-friendly names aligned with s_valve_specs
-static const char *const s_valve_names[HYDRA_VALVE_COUNT] = {
-    "sol_valve_1",
-    "sol_valve_2",
-    "sol_valve_3",
-    "qdc_n2o",
-    "qdc_n2",
-    "st_valve_1",
-    "st_valve_2",
-};
-
-static bool s_open_state[HYDRA_VALVE_COUNT];
+static bool s_open_state[VALVE_COUNT];
 
 int valves_init(void)
 {
     memset(s_open_state, 0, sizeof(s_open_state));
     int rc = gpio_init_valves();
     if (rc == 0) {
-        LOG_INF("Valves initialized (%d)", HYDRA_VALVE_COUNT);
+        LOG_INF("Valves initialized (%d)", VALVE_COUNT);
     }
     return rc;
 }
 
-int valve_set(hydra_valve_t id, bool open)
+int valve_set(valve_t id, bool open)
 {
-    if (id < 0 || id >= HYDRA_VALVE_COUNT) {
+    if (id < 0 || id >= VALVE_COUNT) {
         return -EINVAL;
     }
 
@@ -49,9 +37,9 @@ int valve_set(hydra_valve_t id, bool open)
     return r;
 }
 
-int valve_toggle(hydra_valve_t id)
+int valve_toggle(valve_t id)
 {
-    if (id < 0 || id >= HYDRA_VALVE_COUNT) {
+    if (id < 0 || id >= VALVE_COUNT) {
         return -EINVAL;
     }
     return valve_set(id, !s_open_state[id]);
@@ -63,22 +51,22 @@ int valve_toggle_by_name(const char *name)
         return -EINVAL;
     }
 
-    for (int i = 0; i < HYDRA_VALVE_COUNT; ++i) {
+    for (int i = 0; i < VALVE_COUNT; ++i) {
         if (strcmp(name, s_valve_names[i]) == 0) {
-            return valve_toggle((hydra_valve_t)i);
+            return valve_toggle((valve_t)i);
         }
     }
 
     return -ENOENT;
 }
 
-bool valve_is_open(hydra_valve_t id)
+bool valve_is_open(valve_t id)
 {
-    if (id < 0 || id >= HYDRA_VALVE_COUNT) return false;
+    if (id < 0 || id >= VALVE_COUNT) return false;
     return s_open_state[id];
 }
 
-int valve_open_ms(hydra_valve_t id, uint32_t ms)
+int valve_open_ms(valve_t id, uint32_t ms)
 {
     int r = valve_set(id, true);
     if (r) return r;

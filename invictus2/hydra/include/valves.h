@@ -7,18 +7,6 @@
 
 #include "peripherals/pwm.h"
 
-// Logical IDs for available HYDRA valves (as per inv2_hydra_rp2040.dts)
-typedef enum {
-	HYDRA_VALVE_SOL1 = 0,     // sol_valve_1
-	HYDRA_VALVE_SOL2,         // sol_valve_2
-	HYDRA_VALVE_SOL3,         // sol_valve_3
-	HYDRA_VALVE_QDC_N2O,      // qdc_n2o
-	HYDRA_VALVE_QDC_N2,       // qdc_n2
-	HYDRA_VALVE_STEEL1,       // st_valve_1
-	HYDRA_VALVE_STEEL2,       // st_valve_2
-	HYDRA_VALVE_COUNT
-} hydra_valve_t;
-
 // Initialize all valve GPIOs as outputs, default closed (inactive)
 int valves_init(void);
 

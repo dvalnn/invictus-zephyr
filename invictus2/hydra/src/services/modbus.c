@@ -6,11 +6,64 @@
 
 LOG_MODULE_REGISTER(hydra_modbus, LOG_LEVEL_INF);
 
+// Published channels
+ZBUS_CHAN_DECLARE(chan_valves);
+
+// Subscribed channels
+ZBUS_CHAN_DECLARE(chan_temps, chan_pressures);
+
+static void modbus_listener_cb(const struct zbus_channel *chan);
+
+ZBUS_LISTENER_DEFINE(modbus_listener, modbus_listener_cb);
+ZBUS_CHAN_ADD_OBS(chan_temps, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
+ZBUS_CHAN_ADD_OBS(chan_pressures, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
+
+
+#define MODBUS_THREAD_STACK_SIZE 1024 // TODO: make KConfig
+#define MODBUS_THREAD_PRIORITY 5 // TODO: make KConfig
+
+K_THREAD_STACK_DEFINE(modbus_thread_stack, MODBUS_THREAD_STACK_SIZE);
+static struct k_thread modbus_thread_data;
+
 static modbus_memory_t mb_mem = {0};
+
+static void modbus_listener_cb(const struct zbus_channel *chan)
+{
+	if(chan == NULL) {
+		return;
+	}
+
+	if (chan == &chan_pressures) {
+		const press_msg_t *msg = zbus_chan_const_msg(chan);
+		if (msg == NULL) {
+			return;
+		}
+
+		for (int i = 0; i < 3; ++i) {
+			mb_mem.holding_registers[i + 3] = msg->pressures[i]; //FIXME: need to check this logic, don't like it
+		}
+
+		LOG_DBG("Pressures updated in holding registers");
+		return;
+	}
+	if (chan == &chan_temps) {
+		const temps_msg_t *msg = zbus_chan_const_msg(chan);
+		if (msg == NULL) {
+			return;
+		}
+
+		for (int i = 0; i < 3; ++i) {
+			mb_mem.holding_registers[i] = (uint16_t)msg->temps[i]; //FIXME: same here
+		}
+
+		LOG_DBG("Temps updated in holding registers");
+		return;
+	}
+}
 
 static int coil_rd(uint16_t addr, bool *state)
 {
-	if (addr >= ACTUATOR_COUNT) {
+	if (addr >= VALVE_COUNT) {
 		return -ENOTSUP;
 	}
 	if (mb_mem.coils[addr / 8] & BIT(addr % 8)) {
@@ -27,7 +80,7 @@ static int coil_rd(uint16_t addr, bool *state)
 static int coil_wr(uint16_t addr, bool state)
 {
 	bool on;
-	if (addr >= ACTUATOR_COUNT) {
+	if (addr >= VALVE_COUNT) {
 		return -ENOTSUP;
 	}
 
@@ -38,8 +91,6 @@ static int coil_wr(uint16_t addr, bool state)
 		mb_mem.coils[addr / 8] &= ~BIT(addr % 8);
 		on = false;
 	}
-
-	//gpio_pin_set(led_dev[addr].port, led_dev[addr].pin, (int)on);
 
 	LOG_INF("Coil write, addr %u, %d", addr, (int)state);
 
@@ -94,7 +145,7 @@ const static struct modbus_iface_param server_param = {
 #define MODBUS_NODE DT_ALIAS(modbus_rtu)
 
 
-int init_modbus_server(void)
+int modbus_setup(void)
 {
 	const char iface_name[] = {DEVICE_DT_NAME(MODBUS_NODE)};
 	int iface;
@@ -107,4 +158,26 @@ int init_modbus_server(void)
 	}
 
 	return modbus_init_server(iface, server_param);
+}
+
+void modbus_thread_entry(void *p1, void *p2, void *p3) {
+	ARG_UNUSED(p1);
+	ARG_UNUSED(p2);
+	ARG_UNUSED(p3);
+
+	LOG_INF("Modbus RTU server thread starting");
+
+	while (1) {
+		k_sleep(K_MSEC(1000));
+	}
+}
+
+void modbus_start(void) {
+	k_tid_t tid = k_thread_create(&modbus_thread_data, modbus_thread_stack,
+                                  K_THREAD_STACK_SIZEOF(modbus_thread_stack),
+                                  modbus_thread_entry,
+                                  NULL, NULL, NULL,
+                                  MODBUS_THREAD_PRIORITY, 0, K_NO_WAIT);
+
+    k_thread_name_set(tid, "modbus_thread");
 }

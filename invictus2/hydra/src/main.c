@@ -10,6 +10,30 @@
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
+ZBUS_CHAN_DEFINE(chan_valves,          // channel name
+    modbus_msg_t,                      // message type
+    NULL,                              // validator (optional)
+    NULL,                              // user data (optional)
+    ZBUS_OBSERVERS_EMPTY,              // observers (none for now)
+    ZBUS_MSG_INIT(0)                   // initial value
+);
+
+ZBUS_CHAN_DEFINE(chan_temps,           // channel name
+    temps_msg_t,                       // message type
+    NULL,                              // validator (optional)
+    NULL,                              // user data (optional)
+    ZBUS_OBSERVERS_EMPTY,              // observers (none for now)
+    ZBUS_MSG_INIT(0)                   // initial value
+);
+
+ZBUS_CHAN_DEFINE(chan_pressures,       // channel name
+    press_msg_t,                       // message type
+    NULL,                              // validator (optional)
+    NULL,                              // user data (optional)
+    ZBUS_OBSERVERS_EMPTY,              // observers (none for now)
+    ZBUS_MSG_INIT(0)                   // initial value
+);
+
 void setup()
 {
     /*
@@ -44,7 +68,7 @@ void setup()
 	LOG_INF("Client connected to server on %s", dev->name);
 #endif
 
-	if (init_modbus_server()) {
+	if (modbus_setup()) {
 		LOG_ERR("Modbus RTU server initialization failed");
 	}
 }
@@ -57,6 +81,7 @@ void loop()
 int main(void)
 {
     setup();
+    modbus_start();
     while (1)
     {
         loop();
