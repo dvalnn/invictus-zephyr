@@ -3,6 +3,8 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/modbus/modbus.h>
 #include <zephyr/sys/util.h>
+#include <zephyr/zbus/zbus.h>
+#include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(hydra_modbus, LOG_LEVEL_INF);
 
@@ -38,11 +40,9 @@ static void modbus_listener_cb(const struct zbus_channel *chan)
 		if (msg == NULL) {
 			return;
 		}
-
-		for (int i = 0; i < 3; ++i) {
-			mb_mem.holding_registers[i + 3] = msg->pressures[i]; //FIXME: need to check this logic, don't like it
-		}
-
+		mb_mem.holding_registers[PRESSURE_1] = msg->pressure1;
+		mb_mem.holding_registers[PRESSURE_2] = msg->pressure2;
+		mb_mem.holding_registers[PRESSURE_3] = msg->pressure3;
 		LOG_DBG("Pressures updated in holding registers");
 		return;
 	}
@@ -51,11 +51,9 @@ static void modbus_listener_cb(const struct zbus_channel *chan)
 		if (msg == NULL) {
 			return;
 		}
-
-		for (int i = 0; i < 3; ++i) {
-			mb_mem.holding_registers[i] = (uint16_t)msg->temps[i]; //FIXME: same here
-		}
-
+		mb_mem.holding_registers[THERMO_1] = msg->thermo1;
+		mb_mem.holding_registers[THERMO_2] = msg->thermo2;
+		mb_mem.holding_registers[THERMO_3] = msg->thermo3;
 		LOG_DBG("Temps updated in holding registers");
 		return;
 	}
@@ -91,7 +89,14 @@ static int coil_wr(uint16_t addr, bool state)
 		mb_mem.coils[addr / 8] &= ~BIT(addr % 8);
 		on = false;
 	}
+	// Maybe too much work to do in a callback?
+	valves_msg_t msg;
 
+	for (size_t i = 0; i < sizeof(mb_mem.coils); i++) {
+		msg.valve_states[i] = mb_mem.coils[i];
+	}
+
+	zbus_chan_pub(&chan_valves, &msg, K_NO_WAIT);
 	LOG_INF("Coil write, addr %u, %d", addr, (int)state);
 
 	return 0;

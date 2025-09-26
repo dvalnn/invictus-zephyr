@@ -11,11 +11,11 @@
 
 LOG_MODULE_REGISTER(valves, LOG_LEVEL_INF);
 
-static bool s_open_state[VALVE_COUNT];
+static bool valve_states[VALVE_COUNT];
 
 int valves_init(void)
 {
-    memset(s_open_state, 0, sizeof(s_open_state));
+    memset(valve_states, 0, sizeof(valve_states));
     int rc = gpio_init_valves();
     if (rc == 0) {
         LOG_INF("Valves initialized (%d)", VALVE_COUNT);
@@ -31,7 +31,7 @@ int valve_set(valve_t id, bool open)
 
     int r = gpio_set_valve((int)id, open);
     if (r == 0) {
-        s_open_state[id] = open;
+        valve_states[id] = open;
         LOG_DBG("Valve %u set to %s", id, open ? "OPEN" : "CLOSED");
     }
     return r;
@@ -42,28 +42,15 @@ int valve_toggle(valve_t id)
     if (id < 0 || id >= VALVE_COUNT) {
         return -EINVAL;
     }
-    return valve_set(id, !s_open_state[id]);
-}
-
-int valve_toggle_by_name(const char *name)
-{
-    if (name == NULL) {
-        return -EINVAL;
-    }
-
-    for (int i = 0; i < VALVE_COUNT; ++i) {
-        if (strcmp(name, s_valve_names[i]) == 0) {
-            return valve_toggle((valve_t)i);
-        }
-    }
-
-    return -ENOENT;
+    return valve_set(id, !valve_states[id]);
 }
 
 bool valve_is_open(valve_t id)
 {
-    if (id < 0 || id >= VALVE_COUNT) return false;
-    return s_open_state[id];
+    if (id < 0 || id >= VALVE_COUNT) {
+        return -EINVAL;
+    }
+    return valve_states[id];
 }
 
 int valve_open_ms(valve_t id, uint32_t ms)
@@ -74,6 +61,7 @@ int valve_open_ms(valve_t id, uint32_t ms)
     return valve_set(id, false);
 }
 
+/* SERVO VALVE WONT BE USED FOR NOW
 // Sets the servo angle in degrees [0, 270]
 void valve_pwm_set_angle(float angle)
 {
@@ -88,3 +76,4 @@ void valve_pwm_set_angle(float angle)
 
     pwm_set_duty_cycle(5, 20000, pulseWidth); // Channel 5, 20ms period, pulse width calculated above
 }
+*/

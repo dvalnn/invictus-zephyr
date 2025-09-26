@@ -5,8 +5,6 @@
 #include <zephyr/modbus/modbus.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(data_models, LOG_LEVEL_INF);
-
 typedef enum {
     SOL_VALVE_1 = 0,
     SOL_VALVE_2,
@@ -34,12 +32,12 @@ typedef struct {
 } valves_msg_t;
 
 typedef struct {
-    int16_t temps[3];
+    int16_t thermo1, thermo2, thermo3;
 } temps_msg_t;
 
 typedef struct
 {
-    uint16_t pressures[3];
+    uint16_t pressure1, pressure2, pressure3;
 } press_msg_t;
 
 typedef struct {

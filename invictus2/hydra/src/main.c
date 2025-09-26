@@ -1,5 +1,6 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/zbus/zbus.h>
 #include "valves.h"
 #include "peripherals/pwm.h"
 #include "peripherals/adc.h"
@@ -11,7 +12,7 @@
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
 ZBUS_CHAN_DEFINE(chan_valves,          // channel name
-    modbus_msg_t,                      // message type
+    valves_msg_t,                      // message type
     NULL,                              // validator (optional)
     NULL,                              // user data (optional)
     ZBUS_OBSERVERS_EMPTY,              // observers (none for now)

@@ -15,6 +15,7 @@ typedef struct {
     uint16_t holding_registers[SENSOR_COUNT]; // each sensor uses one register
 } modbus_memory_t;
 
-int init_modbus_server(void);
+int modbus_setup(void);
+void modbus_start(void);
 
 #endif // MODBUS_H

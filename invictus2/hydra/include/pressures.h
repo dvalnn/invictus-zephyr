@@ -9,6 +9,9 @@
 #define N2O_PRESSURE_MIN_BAR 0
 #define N2O_PRESSURE_MAX_BAR 100
 
+int pressures_init(void);
+void pressures_start(void);
+
 int mv_to_mbar(int32_t mv, int32_t min_bar, int32_t max_bar);
 
 #endif // PRESSURES_H
