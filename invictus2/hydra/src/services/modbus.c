@@ -186,18 +186,6 @@ int modbus_setup(void)
 	return modbus_init_server(iface, server_param);
 }
 
-void modbus_thread_entry(void *p1, void *p2, void *p3) {
-	ARG_UNUSED(p1);
-	ARG_UNUSED(p2);
-	ARG_UNUSED(p3);
-
-	LOG_INF("Modbus RTU server thread starting");
-
-	while (1) {
-		k_sleep(K_MSEC(1000));
-	}
-}
-
 void modbus_start(void) {
 	k_work_queue_start(&modbus_work_q, modbus_work_q_stack,
                        K_THREAD_STACK_SIZEOF(modbus_work_q_stack), CONFIG_MODBUS_WORK_Q_PRIO,
