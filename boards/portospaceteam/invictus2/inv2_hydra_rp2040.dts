@@ -109,19 +109,19 @@
 
     thermo1: thermo@0{
         reg = <0x0>;
-        compatible = "maxim,max31865";
+        compatible = "maxim,max31856";
         drdy-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>; // optional, not connected
     };
 
     thermo2: thermo@1{
         reg = <0x1>;
-        compatible = "maxim,max31865";
+        compatible = "maxim,max31856";
         drdy-gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
     };
 
     thermo3: thermo@2{
         reg = <0x2>;
-        compatible = "maxim,max31865";
+        compatible = "maxim,max31856";
         drdy-gpios = <&gpio0 17 GPIO_ACTIVE_LOW>;
     };
 };
