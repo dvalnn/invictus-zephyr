@@ -223,6 +223,18 @@ static int max31856_init(const struct device *dev)
     static const struct max31856_config max31856_config_##n = {                               \
         .spi = SPI_DT_SPEC_INST_GET(n, SPI_WORD_SET(8U) | SPI_TRANSFER_MSB, 0),               \
         .thermocouple_type = DT_INST_PROP_OR(n, thermocouple_type, 4),                        \
+        .filter_50hz = DT_INST_PROP_OR(n, filter_50hz, false),                                \
+        .avg_mode = (DT_INST_PROP_OR(n, averaging_mode, 1) == 1)   ? MAX31856_AVG_1           \
+                    : (DT_INST_PROP_OR(n, averaging_mode, 1) == 2) ? MAX31856_AVG_2           \
+                    : (DT_INST_PROP_OR(n, averaging_mode, 1) == 4) ? MAX31856_AVG_4           \
+                    : (DT_INST_PROP_OR(n, averaging_mode, 1) == 8) ? MAX31856_AVG_8           \
+                                                                   : MAX31856_AVG_16,         \
+        .oc_fault_mode =                                                                      \
+            (DT_INST_PROP_OR(n, open_circuit_mode, 0) == 1)   ? MAX31856_OCFAULT_10MS         \
+            : (DT_INST_PROP_OR(n, open_circuit_mode, 0) == 2) ? MAX31856_OCFAULT_32MS         \
+            : (DT_INST_PROP_OR(n, open_circuit_mode, 0) == 3) ? MAX31856_OCFAULT_100MS        \
+                                                              : MAX31856_OCFAULT_DISABLED,    \
+        .cj_offset_raw = DT_INST_PROP_OR(n, cj_offset, 0),                                    \
     };                                                                                        \
     SENSOR_DEVICE_DT_INST_DEFINE(n, &max31856_init, NULL, &max31856_data_##n,                 \
                                  &max31856_config_##n, POST_KERNEL,                           \
