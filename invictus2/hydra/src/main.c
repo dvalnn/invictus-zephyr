@@ -72,6 +72,9 @@ void setup()
 	if (modbus_setup()) {
 		LOG_ERR("Modbus RTU server initialization failed");
 	}
+
+    pressures_init();
+    temperatures_init();
 }
 
 void loop()
@@ -83,6 +86,9 @@ int main(void)
 {
     setup();
     modbus_start();
+    pressures_start();
+    temperatures_start();
+    LOG_INF("System initialized");
     while (1)
     {
         loop();

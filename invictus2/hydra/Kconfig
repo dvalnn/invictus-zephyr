@@ -32,4 +32,16 @@ config HYDRA_VARIANT
 
 endmenu
 
+config MODBUS_ZBUS_LISTENER_PRIO
+    int "zbus priority assigned to the modbus listener callback"
+    default 5
+
+config MODBUS_WORK_Q_PRIO
+    int "priority for the modbus work queue thread"
+    default 5
+
+config MODBUS_WORK_Q_STACK
+    int "stack size for the modbus work q, in bytes"
+    default 1024
+
 source "Kconfig.zephyr"

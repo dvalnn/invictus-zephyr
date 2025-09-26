@@ -8,6 +8,8 @@
 
 LOG_MODULE_REGISTER(hydra_modbus, LOG_LEVEL_INF);
 
+#define MODBUS_NODE DT_ALIAS(modbus_rtu)
+
 // Published channels
 ZBUS_CHAN_DECLARE(chan_valves);
 
@@ -20,12 +22,16 @@ ZBUS_LISTENER_DEFINE(modbus_listener, modbus_listener_cb);
 ZBUS_CHAN_ADD_OBS(chan_temps, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
 ZBUS_CHAN_ADD_OBS(chan_pressures, modbus_listener, CONFIG_MODBUS_ZBUS_LISTENER_PRIO);
 
+K_THREAD_STACK_DEFINE(modbus_work_q_stack, CONFIG_MODBUS_WORK_Q_STACK);
+static struct k_work_q modbus_work_q;
 
-#define MODBUS_THREAD_STACK_SIZE 1024 // TODO: make KConfig
-#define MODBUS_THREAD_PRIORITY 5 // TODO: make KConfig
+static void mb_temps_work_handler(struct k_work *work);
+static void mb_press_work_handler(struct k_work *work);
+static void mb_valves_work_handler(struct k_work *work);
 
-K_THREAD_STACK_DEFINE(modbus_thread_stack, MODBUS_THREAD_STACK_SIZE);
-static struct k_thread modbus_thread_data;
+static K_WORK_DEFINE(modbus_temps_work, mb_temps_work_handler);
+static K_WORK_DEFINE(modbus_press_work, mb_press_work_handler);
+static K_WORK_DEFINE(modbus_valves_work, mb_valves_work_handler);
 
 static modbus_memory_t mb_mem = {0};
 
@@ -40,10 +46,7 @@ static void modbus_listener_cb(const struct zbus_channel *chan)
 		if (msg == NULL) {
 			return;
 		}
-		mb_mem.holding_registers[PRESSURE_1] = msg->pressure1;
-		mb_mem.holding_registers[PRESSURE_2] = msg->pressure2;
-		mb_mem.holding_registers[PRESSURE_3] = msg->pressure3;
-		LOG_DBG("Pressures updated in holding registers");
+		k_work_submit_to_queue(&modbus_work_q, &modbus_press_work);
 		return;
 	}
 	if (chan == &chan_temps) {
@@ -51,12 +54,40 @@ static void modbus_listener_cb(const struct zbus_channel *chan)
 		if (msg == NULL) {
 			return;
 		}
-		mb_mem.holding_registers[THERMO_1] = msg->thermo1;
-		mb_mem.holding_registers[THERMO_2] = msg->thermo2;
-		mb_mem.holding_registers[THERMO_3] = msg->thermo3;
-		LOG_DBG("Temps updated in holding registers");
+		k_work_submit_to_queue(&modbus_work_q, &modbus_temps_work);
 		return;
 	}
+}
+
+static void mb_temps_work_handler(struct k_work *work)
+{
+    temps_msg_t temps;
+    zbus_chan_read(&chan_temps, &temps, K_NO_WAIT);
+
+	mb_mem.holding_registers[THERMO_1] = temps.thermo1;
+	mb_mem.holding_registers[THERMO_2] = temps.thermo2;
+	mb_mem.holding_registers[THERMO_3] = temps.thermo3;
+}
+
+static void mb_press_work_handler(struct k_work *work)
+{
+    press_msg_t pressures;
+    zbus_chan_read(&chan_pressures, &pressures, K_NO_WAIT);
+
+	mb_mem.holding_registers[PRESSURE_1] = pressures.pressure1;
+	mb_mem.holding_registers[PRESSURE_2] = pressures.pressure2;
+	mb_mem.holding_registers[PRESSURE_3] = pressures.pressure3;
+}
+
+static void mb_valves_work_handler(struct k_work *work)
+{
+	valves_msg_t msg;
+
+	for (size_t i = 0; i < sizeof(mb_mem.coils); i++) {
+		msg.valve_states[i] = mb_mem.coils[i];
+	}
+
+	zbus_chan_pub(&chan_valves, &msg, K_NO_WAIT);
 }
 
 static int coil_rd(uint16_t addr, bool *state)
@@ -89,14 +120,7 @@ static int coil_wr(uint16_t addr, bool state)
 		mb_mem.coils[addr / 8] &= ~BIT(addr % 8);
 		on = false;
 	}
-	// Maybe too much work to do in a callback?
-	valves_msg_t msg;
-
-	for (size_t i = 0; i < sizeof(mb_mem.coils); i++) {
-		msg.valve_states[i] = mb_mem.coils[i];
-	}
-
-	zbus_chan_pub(&chan_valves, &msg, K_NO_WAIT);
+	k_work_submit_to_queue(&modbus_work_q, &modbus_valves_work);
 	LOG_INF("Coil write, addr %u, %d", addr, (int)state);
 
 	return 0;
@@ -147,9 +171,6 @@ const static struct modbus_iface_param server_param = {
 	},
 };
 
-#define MODBUS_NODE DT_ALIAS(modbus_rtu)
-
-
 int modbus_setup(void)
 {
 	const char iface_name[] = {DEVICE_DT_NAME(MODBUS_NODE)};
@@ -178,11 +199,8 @@ void modbus_thread_entry(void *p1, void *p2, void *p3) {
 }
 
 void modbus_start(void) {
-	k_tid_t tid = k_thread_create(&modbus_thread_data, modbus_thread_stack,
-                                  K_THREAD_STACK_SIZEOF(modbus_thread_stack),
-                                  modbus_thread_entry,
-                                  NULL, NULL, NULL,
-                                  MODBUS_THREAD_PRIORITY, 0, K_NO_WAIT);
+	k_work_queue_start(&modbus_work_q, modbus_work_q_stack,
+                       K_THREAD_STACK_SIZEOF(modbus_work_q_stack), CONFIG_MODBUS_WORK_Q_PRIO,
+                       NULL);
 
-    k_thread_name_set(tid, "modbus_thread");
 }

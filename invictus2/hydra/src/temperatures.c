@@ -1,14 +1,14 @@
 #include "temperatures.h"
-
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(temperatures, LOG_LEVEL_INF);
 
-K_THREAD_STACK_DEFINE(thermos_thread_stack, THERMOS_THREAD_STACK_SIZE);
-static struct k_thread thermos_thread_data;
-
 #define THERMOS_THREAD_STACK_SIZE 1024 // TODO: make KConfig
 #define THERMOS_THREAD_PRIORITY 5 // TODO: make KConfig
+
+K_THREAD_STACK_DEFINE(thermos_thread_stack, THERMOS_THREAD_STACK_SIZE);
+static struct k_thread thermos_thread_data;
 
 int temperatures_init(void)
 {
