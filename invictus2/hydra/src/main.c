@@ -1,11 +1,11 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/zbus/zbus.h>
-#include "valves.h"
-#include "peripherals/pwm.h"
-#include "peripherals/adc.h"
+
 #include "services/modbus.h"
 #include "pressures.h"
+#include "temperatures.h"
+#include "valves.h"
 
 #define MAIN_DELAY 1000
 

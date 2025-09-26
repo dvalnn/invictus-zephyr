@@ -11,6 +11,9 @@
 // Initialize all valve GPIOs as outputs, default closed (inactive)
 int valves_init(void);
 
+// Start the valves workqueue
+void valves_start(void);
+
 // Set a valve state: open = true to energize coil, false to close
 int valve_set(valve_t id, bool open);
 

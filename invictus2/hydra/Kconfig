@@ -44,4 +44,16 @@ config MODBUS_WORK_Q_STACK
     int "stack size for the modbus work q, in bytes"
     default 1024
 
+config VALVES_ZBUS_LISTENER_PRIO
+    int "zbus priority assigned to the valves listener callback"
+    default 5
+
+config VALVES_WORK_Q_PRIO
+    int "priority for the valves work queue thread"
+    default 5
+
+config VALVES_WORK_Q_STACK
+    int "stack size for the valves work q, in bytes"
+    default 1024
+
 source "Kconfig.zephyr"
