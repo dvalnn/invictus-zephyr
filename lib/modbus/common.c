@@ -5,6 +5,20 @@ static struct modbus_server *active_server = NULL;
 #define K_MALLOC_NON_ZERO(count, size) ((count) > 0 ? k_malloc((count) * (size)) : NULL)
 #define K_FREE_NOT_NULL(ptr)           (ptr ? k_free(ptr) : (void)0)
 
+#define REG_OP_BEGIN(server, meta, addr, regptr)                                              \
+    do                                                                                        \
+    {                                                                                         \
+        if (!(server) || !(regptr))                                                           \
+            return -EINVAL;                                                                   \
+        if ((addr) < (meta).start_addr || (addr) >= (meta).start_addr + (meta).count)         \
+            return -EINVAL;                                                                   \
+        if (k_mutex_lock(&(server)->regs_mutex,                                               \
+                         K_MSEC(CONFIG_MODBUS_REG_MTX_LOCK_TIMEOUT)) != 0)                    \
+            return -EBUSY;                                                                    \
+    } while (0)
+
+#define REG_OP_END(server) k_mutex_unlock(&(server)->regs_mutex)
+
 static int coil_rd(uint16_t addr, bool *state);
 static int coil_wr(uint16_t addr, bool state);
 static int discrete_input_rd(uint16_t addr, bool *state);
@@ -55,9 +69,7 @@ int modbus_server_init(struct modbus_server *server, struct modbus_server_meta m
         K_MALLOC_NON_ZERO(meta.holding_registers_fp.count, sizeof(float));
 #endif
 
-    k_mutex_init(&server->regs_mutex);
-
-    return 0;
+    return k_mutex_init(&server->regs_mutex);
 }
 
 int modbus_server_free(struct modbus_server *server)
@@ -125,206 +137,112 @@ int modbus_server_stop(const struct modbus_server *const server)
 
 static int coil_rd(uint16_t addr, bool *state)
 {
-    if (!active_server || !state)
-    {
-        return -EINVAL;
-    }
+    REG_OP_BEGIN(active_server, active_server->meta.coils, addr, active_server->regs.coils);
 
-    if (addr < active_server->meta.coils.start_addr ||
-        addr >= active_server->meta.coils.start_addr + active_server->meta.coils.count)
-    {
-        return -EFAULT;
-    }
+    uint8_t *coils = active_server->regs.coils;
+    uint16_t start = active_server->meta.coils.start_addr;
 
-    k_mutex_lock(&active_server->regs_mutex, K_FOREVER);
-    *state = (active_server->regs.coils[addr - active_server->meta.coils.start_addr / 8] >>
-              (addr % 8)) &
-             0x01;
-    k_mutex_unlock(&active_server->regs_mutex);
+    uint8_t bit = (addr - start) % 8;
+    size_t offset = (addr - start) / 8;
 
-    return 0;
+    *state = (coils[offset] >> (bit)) & 0x01;
+
+    return REG_OP_END(active_server);
 }
 
 static int coil_wr(uint16_t addr, bool state)
 {
-    if (!active_server)
-    {
-        return -EINVAL;
-    }
+    REG_OP_BEGIN(active_server, active_server->meta.coils, addr, active_server->regs.coils);
 
-    if (addr < active_server->meta.coils.start_addr ||
-        addr >= active_server->meta.coils.start_addr + active_server->meta.coils.count)
-    {
-        return -EFAULT;
-    }
+    uint8_t *coils = active_server->regs.coils;
+    uint16_t start = active_server->meta.coils.start_addr;
 
-    k_mutex_lock(&active_server->regs_mutex, K_FOREVER);
-    if (state)
-    {
-        active_server->regs.coils[addr - active_server->meta.coils.start_addr / 8] |=
-            (1 << (addr % 8));
-    }
-    else
-    {
-        active_server->regs.coils[addr - active_server->meta.coils.start_addr / 8] &=
-            ~(1 << (addr % 8));
-    }
-    k_mutex_unlock(&active_server->regs_mutex);
+    uint8_t bit = (addr - start) % 8;
+    size_t offset = (addr - start) / 8;
 
-    return 0;
+    state ? (coils[offset] |= (1 << bit)) : (coils[offset] &= ~(1 << bit));
+
+    return REG_OP_END(active_server);
 }
 
 static int discrete_input_rd(uint16_t addr, bool *state)
 {
-    if (!active_server || !state)
-    {
-        return -EINVAL;
-    }
+    REG_OP_BEGIN(active_server, active_server->meta.discrete_inputs, addr,
+                 active_server->regs.discrete_inputs);
 
-    if (addr < active_server->meta.discrete_inputs.start_addr ||
-        addr >= active_server->meta.discrete_inputs.start_addr +
-                    active_server->meta.discrete_inputs.count)
-    {
-        return -EFAULT;
-    }
+    uint16_t start = active_server->meta.discrete_inputs.start_addr;
+    uint8_t *dinputs = active_server->regs.discrete_inputs;
 
-    k_mutex_lock(&active_server->regs_mutex, K_FOREVER);
-    *state =
-        (active_server->regs
-             .discrete_inputs[addr - active_server->meta.discrete_inputs.start_addr / 8] >>
-         (addr % 8)) &
-        0x01;
-    k_mutex_unlock(&active_server->regs_mutex);
+    uint8_t bit = (addr - start) % 8;
+    size_t offset = (addr - start) / 8;
 
-    return 0;
+    *state = (dinputs[offset] >> bit) & 0x01;
+
+    return REG_OP_END(active_server);
 }
 
 static int input_reg_rd(uint16_t addr, uint16_t *reg)
 {
-    if (!active_server || !reg)
-    {
-        return -EINVAL;
-    }
+    REG_OP_BEGIN(active_server, active_server->meta.input_registers, addr,
+                 active_server->regs.input_registers);
 
-    if (addr < active_server->meta.input_registers.start_addr ||
-        addr >= active_server->meta.input_registers.start_addr +
-                    active_server->meta.input_registers.count)
-    {
-        return -EFAULT;
-    }
+    uint16_t start = active_server->meta.input_registers.start_addr;
+    *reg = active_server->regs.input_registers[addr - start];
 
-    k_mutex_lock(&active_server->regs_mutex, K_FOREVER);
-    *reg = active_server->regs
-               .input_registers[addr - active_server->meta.input_registers.start_addr];
-    k_mutex_unlock(&active_server->regs_mutex);
-
-    return 0;
+    return REG_OP_END(active_server);
 }
 
 static int input_reg_rd_fp(uint16_t addr, float *reg)
 {
-    if (!active_server || !reg)
-    {
-        return -EINVAL;
-    }
+    REG_OP_BEGIN(active_server, active_server->meta.input_registers_fp, addr,
+                 active_server->regs.input_registers_fp);
 
-    if (addr < active_server->meta.input_registers.start_addr ||
-        addr >= active_server->meta.input_registers.start_addr +
-                    active_server->meta.input_registers.count)
-    {
-        return -EFAULT;
-    }
+    uint16_t start = active_server->meta.input_registers_fp.start_addr;
+    *reg = active_server->regs.input_registers_fp[addr - start];
 
-    k_mutex_lock(&active_server->regs_mutex, K_FOREVER);
-    *reg = active_server->regs
-               .input_registers_fp[addr - active_server->meta.input_registers.start_addr];
-    k_mutex_unlock(&active_server->regs_mutex);
-    return 0;
+    return REG_OP_END(active_server);
 }
 
 static int holding_reg_rd(uint16_t addr, uint16_t *reg)
 {
-    if (!active_server || !reg)
-    {
-        return -EINVAL;
-    }
+    REG_OP_BEGIN(active_server, active_server->meta.holding_registers, addr,
+                 active_server->regs.holding_registers);
 
-    if (addr < active_server->meta.holding_registers.start_addr ||
-        addr >= active_server->meta.holding_registers.start_addr +
-                    active_server->meta.holding_registers.count)
-    {
-        return -EFAULT;
-    }
+    uint16_t start = active_server->meta.holding_registers.start_addr;
+    *reg = active_server->regs.holding_registers[addr - start];
 
-    k_mutex_lock(&active_server->regs_mutex, K_FOREVER);
-    *reg = active_server->regs
-               .holding_registers[addr - active_server->meta.holding_registers.start_addr];
-    k_mutex_unlock(&active_server->regs_mutex);
-
-    return 0;
+    return REG_OP_END(active_server);
 }
 
 static int holding_reg_wr(uint16_t addr, uint16_t reg)
 {
-    if (!active_server)
-    {
-        return -EINVAL;
-    }
+    REG_OP_BEGIN(active_server, active_server->meta.holding_registers, addr,
+                 active_server->regs.holding_registers);
 
-    if (addr < active_server->meta.holding_registers.start_addr ||
-        addr >= active_server->meta.holding_registers.start_addr +
-                    active_server->meta.holding_registers.count)
-    {
-        return -EFAULT;
-    }
+    uint16_t start = active_server->meta.holding_registers.start_addr;
+    active_server->regs.holding_registers[addr - start] = reg;
 
-    k_mutex_lock(&active_server->regs_mutex, K_FOREVER);
-    active_server->regs
-        .holding_registers[addr - active_server->meta.holding_registers.start_addr] = reg;
-    k_mutex_unlock(&active_server->regs_mutex);
-
-    return 0;
+    return REG_OP_END(active_server);
 }
 
 static int holding_reg_rd_fp(uint16_t addr, float *reg)
 {
-    if (!active_server || !reg)
-    {
-        return -EINVAL;
-    }
+    REG_OP_BEGIN(active_server, active_server->meta.holding_registers_fp, addr,
+                 active_server->regs.holding_registers_fp);
 
-    if (addr < active_server->meta.holding_registers.start_addr ||
-        addr >= active_server->meta.holding_registers.start_addr +
-                    active_server->meta.holding_registers.count)
-    {
-        return -EFAULT;
-    }
+    uint16_t start = active_server->meta.holding_registers_fp.start_addr;
+    *reg = active_server->regs.holding_registers_fp[addr - start];
 
-    k_mutex_lock(&active_server->regs_mutex, K_FOREVER);
-    *reg = active_server->regs
-               .holding_registers_fp[addr - active_server->meta.holding_registers.start_addr];
-    k_mutex_unlock(&active_server->regs_mutex);
-    return 0;
+    return REG_OP_END(active_server);
 }
 
 static int holding_reg_wr_fp(uint16_t addr, float reg)
 {
-    if (!active_server)
-    {
-        return -EINVAL;
-    }
+    REG_OP_BEGIN(active_server, active_server->meta.holding_registers, addr,
+                 active_server->regs.holding_registers_fp);
 
-    if (addr < active_server->meta.holding_registers.start_addr ||
-        addr >= active_server->meta.holding_registers.start_addr +
-                    active_server->meta.holding_registers.count)
-    {
-        return -EFAULT;
-    }
+    uint16_t start = active_server->meta.holding_registers_fp.start_addr;
+    active_server->regs.holding_registers_fp[addr - start] = reg;
 
-    k_mutex_lock(&active_server->regs_mutex, K_FOREVER);
-    active_server->regs
-        .holding_registers_fp[addr - active_server->meta.holding_registers.start_addr] = reg;
-    k_mutex_unlock(&active_server->regs_mutex);
-
-    return 0;
+    return REG_OP_END(active_server);
 }

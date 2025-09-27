@@ -1,15 +1,18 @@
 menu "Invictus 2 top level modbus configuration"
 
+if INVICTUS2_LIBCOMMON_MODBUS
+
 # ---- --------------- ----
 # ---- General Options ----
 # ---- --------------- ----
 
+config MODBUS_REG_MTX_LOCK_TIMEOUT
+    int "Timeout for locking modbus reg mutexes (in msec)"
+    default 500
 
 # ---- ---------------- ----
 # ---- UF Hydra Options ----
 # ---- ---------------- ----
-
-if INVICTUS2_LIBCOMMON_MODBUS
 
 config MODBUS_HYDRA_UF_SLAVE_ID
     int "Modbus slave address for the Upper Feed HYDRA"
