@@ -22,6 +22,7 @@
         led0 = &led_green_0;
         modbus-rtu = &modbus_uart;
         ad559x = &ad559x;
+        dac = &ad559x_dac;
     };
 
     zephyr,user {
@@ -29,6 +30,9 @@
                <&pwm 3 PWM_MSEC(20) PWM_POLARITY_NORMAL>; // LV
         io-channels = <&adc 0>, // PCB Temperature
                       <&adc 1>; // Fault Detection
+		    dac = <&ad559x_dac>;
+		    dac-channel-id = <5 6 7>;
+		    dac-resolution = <12>;
     };
 
     leds {
