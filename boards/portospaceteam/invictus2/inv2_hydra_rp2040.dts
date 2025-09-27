@@ -237,11 +237,12 @@
 		};
 	};
 
-    i2c1_hydras: i2c1_hydras {
+i2c1_hydras: i2c1_hydras {
         group1 {
             pinmux = <I2C1_SDA_P14>, <I2C1_SCL_P15>;
             input-enable;
             input-schmitt-enable;
+            bias-pull-up;
         };
     };
 };
