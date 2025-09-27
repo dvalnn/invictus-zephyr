@@ -7,6 +7,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/util.h>
 #include "gpio.h"
+#include <zephyr/drivers/mfd/ad559x.h>
 
 LOG_MODULE_REGISTER(valves, LOG_LEVEL_INF);
 
@@ -25,6 +26,9 @@ static const char *const s_valve_names[HYDRA_VALVE_COUNT] = {
 
 static bool s_open_state[HYDRA_VALVE_COUNT];
 
+const struct device *mfd_dev = DEVICE_DT_GET(DT_ALIAS(dac));
+bool dac_initialized = false;
+
 int valves_init(void)
 {
     memset(s_open_state, 0, sizeof(s_open_state));
@@ -32,6 +36,20 @@ int valves_init(void)
     if (rc == 0) {
         LOG_INF("Valves initialized (%d)", HYDRA_VALVE_COUNT);
     }
+
+    if (mfd_dev == NULL)
+    {
+        LOG_ERR("Failed to initialize MFD device");
+
+        return 0;
+    }
+
+    if (!device_is_ready(mfd_dev))
+    {
+        LOG_ERR("MFD device is not ready");
+        return 0;
+    }
+
     return rc;
 }
 
@@ -84,6 +102,18 @@ int valve_open_ms(hydra_valve_t id, uint32_t ms)
     if (r) return r;
     k_msleep(ms);
     return valve_set(id, false);
+}
+
+bool valve_dac_configure(hydra_valve_t id, uint16_t value)
+{
+    if (!dac_initialized)
+    {
+        LOG_ERR("can't configure DAC");
+        return false;
+    }
+
+    LOG_INF("Configuring DAC %d with %d", id, value);
+    return mfd_ad559x_write_dac_chan(mfd_dev, id, value) == 0;
 }
 
 // Sets the servo angle in degrees [0, 270]

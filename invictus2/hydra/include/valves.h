@@ -33,3 +33,6 @@ bool valve_is_open(hydra_valve_t id);
 
 // PWM servo valve control 
 void valve_pwm_set_angle(float angle);
+
+// Configure a given DAC channel
+bool valve_dac_configure(hydra_valve_t id, uint16_t value);
