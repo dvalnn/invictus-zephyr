@@ -1,0 +1,1 @@
+add_subdirectory_ifdef(CONFIG_INVICTUS2_LIBCOMMON_MODBUS modbus)

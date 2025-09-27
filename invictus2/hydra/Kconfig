@@ -1,12 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
+source "Kconfig.zephyr"
 
-menu "Hydra configuration"
+menu "HYDRA variant selection"
 
 choice HYDRA_VARIANT_CHOICE
-    prompt "Hydra variant"
+    prompt "HYDRA variant"
     default HYDRA_UF
     help
-      Select which Hydra variant is used for this build.
+      Select which HYDRA variant is used for this build.
       Exactly one variant must be selected.
 
 config HYDRA_UF
@@ -22,14 +23,40 @@ endchoice
 
 # Optional: string alias with the chosen variant name
 config HYDRA_VARIANT
-    string "Hydra (string)"
+    string "HYDRA (string)"
     default "upper feed" if HYDRA_UF
     default "lower feed" if HYDRA_LF
     default "filling station" if HYDRA_FS
     help
-      String representation of the selected Hydra variant, useful for logs
+      String representation of the selected HYDRA variant, useful for logs
       or build system conditionals.
 
 endmenu
 
-source "Kconfig.zephyr"
+menu "Common HYDRA configuration options"
+
+config MODBUS_ZBUS_LISTENER_PRIO
+    int "zbus priority assigned to the modbus listener callback"
+    default 5
+
+config MODBUS_WORK_Q_PRIO
+    int "priority for the modbus work queue thread"
+    default 5
+
+config MODBUS_WORK_Q_STACK
+    int "stack size for the modbus work q, in bytes"
+    default 1024
+
+config VALVES_ZBUS_LISTENER_PRIO
+    int "zbus priority assigned to the valves listener callback"
+    default 5
+
+config VALVES_WORK_Q_PRIO
+    int "priority for the valves work queue thread"
+    default 5
+
+config VALVES_WORK_Q_STACK
+    int "stack size for the valves work q, in bytes"
+    default 1024
+
+endmenu

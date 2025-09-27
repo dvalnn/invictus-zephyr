@@ -1,0 +1,14 @@
+rsource "modbus/Kconfig"
+
+menu "Invictus2 libcommmon configuration options"
+
+config INVICTUS2_LIBCOMMON
+    bool "Enable invictus2 libcommon."
+    default y
+
+config INVICTUS2_LIBCOMMON_MODBUS
+    bool "enable libcommon modbus module"
+    default y
+    depends on INVICTUS2_LIBCOMMON
+
+endmenu
