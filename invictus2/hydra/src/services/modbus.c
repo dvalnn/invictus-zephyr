@@ -37,26 +37,31 @@ static modbus_memory_t mb_mem = {0};
 
 static void modbus_listener_cb(const struct zbus_channel *chan)
 {
-	if(chan == NULL) {
-		return;
-	}
+    if (chan == NULL)
+    {
+        return;
+    }
 
-	if (chan == &chan_pressures) {
-		const press_msg_t *msg = zbus_chan_const_msg(chan);
-		if (msg == NULL) {
-			return;
-		}
-		k_work_submit_to_queue(&modbus_work_q, &modbus_press_work);
-		return;
-	}
-	if (chan == &chan_temps) {
-		const temps_msg_t *msg = zbus_chan_const_msg(chan);
-		if (msg == NULL) {
-			return;
-		}
-		k_work_submit_to_queue(&modbus_work_q, &modbus_temps_work);
-		return;
-	}
+    if (chan == &chan_pressures)
+    {
+        const press_msg_t *msg = zbus_chan_const_msg(chan);
+        if (msg == NULL)
+        {
+            return;
+        }
+        k_work_submit_to_queue(&modbus_work_q, &modbus_press_work);
+        return;
+    }
+    if (chan == &chan_temps)
+    {
+        const temps_msg_t *msg = zbus_chan_const_msg(chan);
+        if (msg == NULL)
+        {
+            return;
+        }
+        k_work_submit_to_queue(&modbus_work_q, &modbus_temps_work);
+        return;
+    }
 }
 
 static void mb_temps_work_handler(struct k_work *work)
@@ -64,9 +69,9 @@ static void mb_temps_work_handler(struct k_work *work)
     temps_msg_t temps;
     zbus_chan_read(&chan_temps, &temps, K_NO_WAIT);
 
-	mb_mem.holding_registers[THERMO_1] = temps.thermo1;
-	mb_mem.holding_registers[THERMO_2] = temps.thermo2;
-	mb_mem.holding_registers[THERMO_3] = temps.thermo3;
+    mb_mem.holding_registers[THERMO_1] = temps.thermo1;
+    mb_mem.holding_registers[THERMO_2] = temps.thermo2;
+    mb_mem.holding_registers[THERMO_3] = temps.thermo3;
 }
 
 static void mb_press_work_handler(struct k_work *work)
@@ -74,121 +79,135 @@ static void mb_press_work_handler(struct k_work *work)
     press_msg_t pressures;
     zbus_chan_read(&chan_pressures, &pressures, K_NO_WAIT);
 
-	mb_mem.holding_registers[PRESSURE_1] = pressures.pressure1;
-	mb_mem.holding_registers[PRESSURE_2] = pressures.pressure2;
-	mb_mem.holding_registers[PRESSURE_3] = pressures.pressure3;
+    mb_mem.holding_registers[PRESSURE_1] = pressures.pressure1;
+    mb_mem.holding_registers[PRESSURE_2] = pressures.pressure2;
+    mb_mem.holding_registers[PRESSURE_3] = pressures.pressure3;
 }
 
 static void mb_valves_work_handler(struct k_work *work)
 {
-	valves_msg_t msg;
+    valves_msg_t msg;
 
-	for (size_t i = 0; i < sizeof(mb_mem.coils); i++) {
-		msg.valve_states[i] = mb_mem.coils[i];
-	}
+    for (size_t i = 0; i < sizeof(mb_mem.coils); i++)
+    {
+        msg.valve_states[i] = mb_mem.coils[i];
+    }
 
-	zbus_chan_pub(&chan_valves, &msg, K_NO_WAIT);
+    zbus_chan_pub(&chan_valves, &msg, K_NO_WAIT);
 }
 
 static int coil_rd(uint16_t addr, bool *state)
 {
-	if (addr >= VALVE_COUNT) {
-		return -ENOTSUP;
-	}
-	if (mb_mem.coils[addr / 8] & BIT(addr % 8)) {
-		*state = true;
-	} else {
-		*state = false;
-	}
+    if (addr >= VALVE_COUNT)
+    {
+        return -ENOTSUP;
+    }
+    if (mb_mem.coils[addr / 8] & BIT(addr % 8))
+    {
+        *state = true;
+    }
+    else
+    {
+        *state = false;
+    }
 
-	LOG_INF("Coil read, addr %u, %d", addr, (int)*state);
+    LOG_INF("Coil read, addr %u, %d", addr, (int)*state);
 
-	return 0;
+    return 0;
 }
 
 static int coil_wr(uint16_t addr, bool state)
 {
-	bool on;
-	if (addr >= VALVE_COUNT) {
-		return -ENOTSUP;
-	}
+    bool on;
+    if (addr >= VALVE_COUNT)
+    {
+        return -ENOTSUP;
+    }
 
-	if (state == true) {
-		mb_mem.coils[addr / 8] |= BIT(addr % 8);
-		on = true;
-	} else {
-		mb_mem.coils[addr / 8] &= ~BIT(addr % 8);
-		on = false;
-	}
-	k_work_submit_to_queue(&modbus_work_q, &modbus_valves_work);
-	LOG_INF("Coil write, addr %u, %d", addr, (int)state);
+    if (state == true)
+    {
+        mb_mem.coils[addr / 8] |= BIT(addr % 8);
+        on = true;
+    }
+    else
+    {
+        mb_mem.coils[addr / 8] &= ~BIT(addr % 8);
+        on = false;
+    }
+    k_work_submit_to_queue(&modbus_work_q, &modbus_valves_work);
+    LOG_INF("Coil write, addr %u, %d", addr, (int)state);
 
-	return 0;
+    return 0;
 }
 
 static int holding_reg_rd(uint16_t addr, uint16_t *reg)
 {
-	if (addr >= SENSOR_COUNT) {
-		return -ENOTSUP;
-	}
+    if (addr >= SENSOR_COUNT)
+    {
+        return -ENOTSUP;
+    }
 
-	*reg = mb_mem.holding_registers[addr];
+    *reg = mb_mem.holding_registers[addr];
 
-	LOG_INF("Holding register read, addr %u", addr);
+    LOG_INF("Holding register read, addr %u", addr);
 
-	return 0;
+    return 0;
 }
 
 static int holding_reg_wr(uint16_t addr, uint16_t reg)
 {
-	if (addr >= SENSOR_COUNT) {
-		return -ENOTSUP;
-	}
+    if (addr >= SENSOR_COUNT)
+    {
+        return -ENOTSUP;
+    }
 
-	mb_mem.holding_registers[addr] = reg;
+    mb_mem.holding_registers[addr] = reg;
 
-	LOG_INF("Holding register write, addr %u", addr);
+    LOG_INF("Holding register write, addr %u", addr);
 
-	return 0;
+    return 0;
 }
 
 static struct modbus_user_callbacks mbs_cbs = {
-	.coil_rd = coil_rd,
-	.coil_wr = coil_wr,
-	.holding_reg_rd = holding_reg_rd,
-	.holding_reg_wr = holding_reg_wr,
+    .coil_rd = coil_rd,
+    .coil_wr = coil_wr,
+    .holding_reg_rd = holding_reg_rd,
+    .holding_reg_wr = holding_reg_wr,
 };
 
 const static struct modbus_iface_param server_param = {
-	.mode = MODBUS_MODE_RTU,
-	.server = {
-		.user_cb = &mbs_cbs,
-		.unit_id = 1,
-	},
-	.serial = {
-		.baud = 115200,
-		.parity = UART_CFG_PARITY_NONE,
-	},
+    .mode = MODBUS_MODE_RTU,
+    .server =
+        {
+            .user_cb = &mbs_cbs,
+            .unit_id = 1,
+        },
+    .serial =
+        {
+            .baud = 115200,
+            .parity = UART_CFG_PARITY_NONE,
+        },
 };
 
 int modbus_setup(void)
 {
-	const char iface_name[] = {DEVICE_DT_NAME(MODBUS_NODE)};
-	int iface;
+    const char iface_name[] = {DEVICE_DT_NAME(MODBUS_NODE)};
+    int iface;
 
-	iface = modbus_iface_get_by_name(iface_name);
+    iface = modbus_iface_get_by_name(iface_name);
 
-	if (iface < 0) {
-		LOG_ERR("Failed to get iface index for %s", iface_name);
-		return iface;
-	}
+    if (iface < 0)
+    {
+        LOG_ERR("Failed to get iface index for %s", iface_name);
+        return iface;
+    }
 
-	return modbus_init_server(iface, server_param);
+    return modbus_init_server(iface, server_param);
 }
 
-void modbus_start(void) {
-	k_work_queue_start(&modbus_work_q, modbus_work_q_stack,
+void modbus_start(void)
+{
+    k_work_queue_start(&modbus_work_q, modbus_work_q_stack,
                        K_THREAD_STACK_SIZEOF(modbus_work_q_stack), CONFIG_MODBUS_WORK_Q_PRIO,
                        NULL);
-
 }
