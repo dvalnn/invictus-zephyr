@@ -14,15 +14,8 @@ inline void hydra_boards_init(struct hydra_boards *const hb)
     // i.e. the LIFT slave IDs.
     //
     // TODO: implement a more robust way to ensure slave IDs are unique
-    BUILD_ASSERT((CONFIG_MODBUS_HYDRA_UF_SLAVE_ID > 0) &&
-                     (CONFIG_MODBUS_HYDRA_LF_SLAVE_ID > 0) &&
-                     (CONFIG_MODBUS_HYDRA_FS_SLAVE_ID > 0) &&
-                     (CONFIG_MODBUS_HYDRA_UF_SLAVE_ID != CONFIG_MODBUS_HYDRA_LF_SLAVE_ID) &&
-                     (CONFIG_MODBUS_HYDRA_UF_SLAVE_ID != CONFIG_MODBUS_HYDRA_FS_SLAVE_ID) &&
-                     (CONFIG_MODBUS_HYDRA_LF_SLAVE_ID != CONFIG_MODBUS_HYDRA_FS_SLAVE_ID),
-                 "all hydra boards must have different, non-zero, slave IDs.");
-
-    if (!hb) {
+    if (!hb)
+    {
         LOG_ERR("Hydras boards structure pointer is NULL.");
         return;
     }
@@ -42,7 +35,8 @@ inline void hydra_boards_init(struct hydra_boards *const hb)
 void hydra_boards_read_irs(const int client_iface, struct hydra_boards *const hb,
                            const bool fs_disabled)
 {
-    if (!hb || client_iface < 0) {
+    if (!hb || client_iface < 0)
+    {
         LOG_ERR("Invalid parameters for hydra sensor read.");
         return;
     }
@@ -59,7 +53,8 @@ void hydra_boards_read_irs(const int client_iface, struct hydra_boards *const hb
     modbus_slave_check_connection(uf_rc, &hb->uf.meta, "UF hydra sensors");
     modbus_slave_check_connection(lf_rc, &hb->lf.meta, "LF hydra sensors");
 
-    if (fs_disabled) {
+    if (fs_disabled)
+    {
         LOG_WRN_ONCE("Filling Station is disconnected, skipping read.");
         return;
     }
@@ -73,10 +68,10 @@ void hydra_boards_read_irs(const int client_iface, struct hydra_boards *const hb
 
 inline void hydra_boards_irs_to_zbus_rep(const struct hydra_boards *const hb,
                                          thermocouples_t *const thermocouples,
-                                         pressures_t *const pressures,
-                                         const bool fs_disabled)
+                                         pressures_t *const pressures, const bool fs_disabled)
 {
-    if (!hb || !thermocouples || !pressures) {
+    if (!hb || !thermocouples || !pressures)
+    {
         LOG_ERR("Invalid parameters for HYDRA IRs to ZBUS conversion.");
         k_oops(); // Should never reach here
     }

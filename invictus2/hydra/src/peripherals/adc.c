@@ -80,10 +80,10 @@ int read_adcs()
     {
         raw = sample_buffer;
         int ret = adc_raw_to_voltage(raw,
-                                 ADC_REFERENCE,       // reference = 3.3V
-                                 ADC_GAIN, // no scaling
-                                 ADC_RESOLUTION,         // 12-bit resolution
-                                 &mv);
+                                     ADC_REFERENCE,  // reference = 3.3V
+                                     ADC_GAIN,       // no scaling
+                                     ADC_RESOLUTION, // 12-bit resolution
+                                     &mv);
         if (ret < 0)
         {
             LOG_ERR("Failed to convert ADC raw to voltage (%d)", ret);
