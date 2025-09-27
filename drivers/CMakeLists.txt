@@ -1,1 +1,2 @@
 add_subdirectory_ifdef(CONFIG_LORA_SX128X lora_sx128x)
+add_subdirectory_ifdef(CONFIG_MAX31856 sensor/maxim/max31856)

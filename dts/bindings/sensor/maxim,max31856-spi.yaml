@@ -1,0 +1,78 @@
+description: MAX31856 Precision Thermocouple to Digital Converter with Linearization
+
+compatible: "maxim,max31856"
+
+include: spi-device.yaml
+
+properties:
+  thermocouple-type:
+    type: int
+    required: true
+    default: 4
+    enum:
+      - 1  # B Type
+      - 2  # E Type
+      - 3  # J Type
+      - 4  # K Type
+      - 5  # N Type
+      - 6  # R Type
+      - 7  # S Type
+      - 8  # T Type
+    description: |
+      Select the type of Thermocouple. Order: [B E J K N R S T]
+
+  drdy-gpios:
+    type: phandle-array
+    required: false
+    description: |
+      GPIO connected to the negated Data Ready output.
+      Active Low.
+
+  fault-gpios:
+    type: phandle-array
+    required: false
+    description: |
+      GPIO connected to the negated Fault output.
+      Represents cable, thermocouple or temperature fault.
+      Active low.
+
+  filter-50hz:
+    type: boolean
+    required: false
+    description: |
+      Enable 50Hz line noise rejection filter. If not set, 60Hz is used.
+
+  averaging-mode:
+    type: int
+    required: false
+    default: 1
+    enum:
+      - 1  # 1 sample
+      - 2  # 2 samples
+      - 4  # 4 samples
+      - 8  # 8 samples
+      - 16 # 16 samples
+    description: |
+      Select number of samples to average for noise reduction.
+      A higher value increases conversion time but reduces noise.
+
+  open-circuit-mode:
+    type: int
+    required: false
+    default: 0
+    enum:
+      - 0  # disabled
+      - 1  # 10 ms
+      - 2  # 32 ms
+      - 3  # 100 ms
+    description: |
+      Select open-circuit fault detection mode.
+      0 = Disabled, 1 = 10 ms, 2 = 32 ms, 3 = 100 ms.
+
+  cj-offset:
+    type: int
+    required: false
+    default: 0
+    description: |
+      Offset to apply to cold-junction sensor reading, in steps of 0.0625°C.
+      Range: -128 to 127 (signed 8 bit), e.g., offset -2.5°C = -40.

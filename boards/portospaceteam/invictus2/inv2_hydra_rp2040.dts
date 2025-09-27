@@ -26,13 +26,24 @@
     };
 
     zephyr,user {
-        pwms = <&pwm 2 PWM_MSEC(20) PWM_POLARITY_NORMAL>, // Buzzer
-               <&pwm 3 PWM_MSEC(20) PWM_POLARITY_NORMAL>; // LV
         io-channels = <&adc 0>, // PCB Temperature
                       <&adc 1>; // Fault Detection
 		    dac = <&ad559x_dac>;
 		    dac-channel-id = <5 6 7>;
 		    dac-resolution = <12>;
+    };
+
+    pwmleds {
+        compatible = "pwm-leds";
+        status = "okay";
+
+        buzzer: buzzer {
+            pwms = <&pwm 2 PWM_MSEC(20) PWM_POLARITY_NORMAL>; // Buzzer
+        };
+
+        pwmLV: pwmLV {
+            pwms = <&pwm 3 PWM_MSEC(20) PWM_POLARITY_NORMAL>; // LV
+        };
     };
 
     leds {
@@ -92,32 +103,31 @@
 };
 
 &spi1 {
-	clock-frequency = <DT_FREQ_M(5)>;
-	status = "okay";
-	pinctrl-0 = <&spi1_hydra>;
-	pinctrl-names = "default";
+    clock-frequency = <DT_FREQ_M(5)>;
+    status = "okay";
+    pinctrl-0 = <&spi1_hydra>;
+    pinctrl-names = "default";
 
     cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>,  // Thermo1
                <&gpio0 13 GPIO_ACTIVE_LOW>, // Thermo2
                <&gpio0 29 GPIO_ACTIVE_LOW>; // Thermo3
 
-    // TODO: correct compatible strings and properties
     thermo1: thermo@0{
-        reg = <0>;
-        /* compatible = "max31865"; */
-        // drdy-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>; // optional, not connected
+        reg = <0x0>;
+        compatible = "maxim,max31856";
+        drdy-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>; // optional, not connected
     };
 
     thermo2: thermo@1{
-        reg = <1>;
-        /* compatible = "max31865"; */
-        /* drdy-gpios = <&gpio0 12 GPIO_ACTIVE_LOW>; */
+        reg = <0x1>;
+        compatible = "maxim,max31856";
+        drdy-gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
     };
 
     thermo3: thermo@2{
-        reg = <2>;
-        /* compatible = "max31865"; */
-        /* drdy-gpios = <&gpio0 17 GPIO_ACTIVE_LOW>; */
+        reg = <0x2>;
+        compatible = "maxim,max31856";
+        drdy-gpios = <&gpio0 17 GPIO_ACTIVE_LOW>;
     };
 };
 
@@ -184,10 +194,10 @@
 
 // RS483 Modbus RTU master
 &uart1 {
-	current-speed = <115200>;
-	status = "okay";
-	pinctrl-0 = <&uart_rs485>;
-	pinctrl-names = "default";
+    current-speed = <115200>;
+    status = "okay";
+    pinctrl-0 = <&uart_rs485>;
+    pinctrl-names = "default";
 
     modbus_uart: modbus0{
         compatible = "zephyr,modbus-serial";
@@ -220,26 +230,26 @@
 };
 
 &pinctrl{
-	spi1_hydra: spi1_hydra {
-		group1 {
-			pinmux = <SPI1_CSN_P9>, <SPI1_CSN_P13>, <SPI1_CSN_P29>,
+    spi1_hydra: spi1_hydra {
+        group1 {
+            pinmux = <SPI1_CSN_P9>, <SPI1_CSN_P13>, <SPI1_CSN_P29>,
                      <SPI1_SCK_P10>, <SPI1_TX_P11>;
-		};
-		group2 {
-			pinmux = <SPI1_RX_P8>;
-			input-enable;
-		};
-	};
+        };
+        group2 {
+            pinmux = <SPI1_RX_P8>;
+            input-enable;
+        };
+    };
 
-	uart_rs485: uart_rs485 {
-		group1 {
-			pinmux = <UART1_TX_P4>;
-		};
-		group2 {
-			pinmux = <UART1_RX_P5>;
-			input-enable;
-		};
-	};
+    uart_rs485: uart_rs485 {
+        group1 {
+            pinmux = <UART1_TX_P4>;
+        };
+        group2 {
+            pinmux = <UART1_RX_P5>;
+            input-enable;
+        };
+    };
 
 i2c1_hydras: i2c1_hydras {
         group1 {
