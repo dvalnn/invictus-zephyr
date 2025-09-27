@@ -50,7 +50,7 @@ struct modbus_server
 int modbus_server_init(struct modbus_server *server, struct modbus_server_meta meta);
 int modbus_server_free(struct modbus_server *server);
 
-int modbus_server_start(const struct modbus_server *const server,
+int modbus_server_start(const struct modbus_server *const server, int modbus_iface,
                         struct modbus_serial_param serial_param);
 
 int modbus_server_stop(const struct modbus_server *const server);

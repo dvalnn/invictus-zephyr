@@ -18,12 +18,20 @@ config MODBUS_HYDRA_UF_SLAVE_ID
     int "Modbus slave address for the Upper Feed HYDRA"
     default 1
 
-config MODBUS_HYDRA_UF_INPUT_ADDR_START
+config MODBUS_HYDRA_UF_COILS_ADDR_START
+    int "start address for the UF HYDRA coil registers"
+    default 0
+
+config MODBUS_HYDRA_UF_COILS_COUNT
+    int "number of coils on the UF Hydra"
+    default 0
+
+config MODBUS_HYDRA_UF_INPUT_REGS_ADDR_START
     int "start address for the UF HYDRA input registers"
     default 0
 
-config MODBUS_HYDRA_UF_COILS_ADDR_START
-    int "start address for the UF HYDRA coil registers"
+config MODBUS_HYDRA_UF_INPUT_REGS_COUNT
+    int "number of input registers of the UF Hydra"
     default 0
 
 # ---- ---------------- ----

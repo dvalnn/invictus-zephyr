@@ -97,7 +97,7 @@ int modbus_server_free(struct modbus_server *server)
     return 0;
 }
 
-int modbus_server_start(const struct modbus_server *const server,
+int modbus_server_start(const struct modbus_server *const server, int modbus_iface,
                         struct modbus_serial_param serial_param)
 {
     if (!server)
