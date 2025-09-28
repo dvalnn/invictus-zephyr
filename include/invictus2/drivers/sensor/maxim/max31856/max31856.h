@@ -83,8 +83,8 @@ struct max31856_config
 
 struct max31856_data
 {
-    int32_t thermocouple_temp;
-    int32_t cold_junction_temp;
+    uint32_t thermocouple_temp;
+    uint16_t cold_junction_temp;
 };
 
 #endif // MAX31856_H_

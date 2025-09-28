@@ -109,36 +109,36 @@
                <&gpio0 13 GPIO_ACTIVE_LOW>, // Thermo2
                <&gpio0 29 GPIO_ACTIVE_LOW>; // Thermo3
 
-    thermo1: thermo@0{
+    thermo1: thermo1@0{
         reg = <0x0>;
         compatible = "maxim,max31856";
         drdy-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>; // optional, not connected
-        spi-max-frequency = <DT_FREQ_M(1)>;
+        spi-max-frequency = <DT_FREQ_M(5)>;
 
         thermocouple-type = <MAX31856_TCTYPE_K>;
-        averaging-mode = <MAX31856_AVG_MODE_4>;
+        averaging-mode = <MAX31856_AVG_MODE_1>;
         filter-50hz;
     };
 
-    thermo2: thermo@1{
+    thermo2: thermo2@1{
         reg = <0x1>;
         compatible = "maxim,max31856";
         drdy-gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
-        spi-max-frequency = <DT_FREQ_M(1)>;
+        spi-max-frequency = <DT_FREQ_M(5)>;
 
         thermocouple-type = <MAX31856_TCTYPE_K>;
-        averaging-mode = <MAX31856_AVG_MODE_4>;
+        averaging-mode = <MAX31856_AVG_MODE_1>;
         filter-50hz;
     };
 
-    thermo3: thermo@2{
+    thermo3: thermo3@2{
         reg = <0x2>;
         compatible = "maxim,max31856";
         drdy-gpios = <&gpio0 17 GPIO_ACTIVE_LOW>;
-        spi-max-frequency = <DT_FREQ_M(1)>;
+        spi-max-frequency = <DT_FREQ_M(5)>;
 
         thermocouple-type = <MAX31856_TCTYPE_K>;
-        averaging-mode = <MAX31856_AVG_MODE_4>;
+        averaging-mode = <MAX31856_AVG_MODE_1>;
         filter-50hz;
     };
 };

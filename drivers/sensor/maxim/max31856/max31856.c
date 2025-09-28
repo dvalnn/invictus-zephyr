@@ -3,11 +3,12 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#include <stdint.h>
 #define DT_DRV_COMPAT maxim_max31856
 
 #include <invictus2/drivers/sensor/maxim/max31856/max31856.h>
 #include <invictus2/dt-bindings/sensor/maxim/max31856.h>
+
+#include <stdint.h>
 
 #include <zephyr/init.h>
 #include <zephyr/types.h>
@@ -43,18 +44,18 @@ static int max31856_sample_fetch(const struct device *dev, enum sensor_channel c
     __ASSERT_NO_MSG(chan == SENSOR_CHAN_ALL);
 
     /* // Command to trigger a one-shot conversion */
-    uint8_t tx_cr0[] = {MAX31856_CR0_REG | SPI_WRITE_MASK, 0x1 << MAX31856_CR0_1SHOT};
-    struct spi_buf tx_buf = {.buf = tx_cr0, .len = 2};
-    struct spi_buf_set tx = {.buffers = &tx_buf, .count = 1};
-    ret = spi_write_dt(&config->spi, &tx);
-    if (ret < 0)
-    {
-        LOG_ERR("Failed to start one-shot conversion (%d)", ret);
-        return ret;
-    }
+    /* uint8_t tx_cr0[] = {MAX31856_CR0_REG | SPI_WRITE_MASK, 0x1 << MAX31856_CR0_1SHOT}; */
+    /* struct spi_buf tx_buf = {.buf = tx_cr0, .len = 2}; */
+    /* struct spi_buf_set tx = {.buffers = &tx_buf, .count = 1}; */
+    /* ret = spi_write_dt(&config->spi, &tx); */
+    /* if (ret < 0) */
+    /* { */
+    /*     LOG_ERR("Failed to start one-shot conversion (%d)", ret); */
+    /*     return ret; */
+    /* } */
 
     /* // Wait for conversion to complete (DRDY pin could also be used here) */
-    k_sleep(K_MSEC(220));
+    /* k_sleep(K_MSEC(220)); */
 
     // Read Linearized Thermocouple Temperature (3 bytes)
     uint8_t tx_ltc[] = {MAX31856_LTCBH_REG & SPI_READ_MASK}; // Read command for register 0x0C
@@ -70,9 +71,7 @@ static int max31856_sample_fetch(const struct device *dev, enum sensor_channel c
         return ret;
     }
 
-    LOG_HEXDUMP_DBG(rx_ltc, sizeof(rx_ltc), "Raw LTC bytes");
-    data->thermocouple_temp = sys_get_be24(rx_ltc);
-    LOG_DBG("Raw thermocouple temp: 0x%06X", data->thermocouple_temp);
+    data->thermocouple_temp = (rx_ltc[0] << 16) | (rx_ltc[1] << 8) | rx_ltc[2];
 
     // Read Cold-Junction Temperature (2 bytes)
     uint8_t tx_cj[] = {MAX31856_CJTH_REG & SPI_READ_MASK}; // Read command for register 0x0A
@@ -88,7 +87,7 @@ static int max31856_sample_fetch(const struct device *dev, enum sensor_channel c
         LOG_ERR("Failed to read cold-junction temperature (%d)", ret);
         return ret;
     }
-    data->cold_junction_temp = sys_get_be16(rx_cj);
+    data->cold_junction_temp = rx_cj[0] << 8 | rx_cj[1];
 
     // Read Fault Status Register
     uint8_t tx_fault[] = {MAX31856_SR_REG & SPI_READ_MASK}; // Read command for register 0x0F
@@ -106,7 +105,7 @@ static int max31856_sample_fetch(const struct device *dev, enum sensor_channel c
     }
     if (rx_fault[0] != 0)
     {
-        LOG_WRN("MAX31856 fault detected: %02x", rx_fault[0]);
+        LOG_WRN("fault detected on %s: %02x", dev->name, rx_fault[0]);
     }
 
     return 0;
@@ -116,32 +115,31 @@ static int max31856_channel_get(const struct device *dev, enum sensor_channel ch
                                 struct sensor_value *val)
 {
     struct max31856_data *data = dev->data;
-    int32_t temp24;
-    int64_t micro_degrees;
-
     switch (chan)
     {
     case SENSOR_CHAN_AMBIENT_TEMP:
+    {
         // Thermocouple temperature (19-bit, signed)
-        temp24 = data->thermocouple_temp;
-        // The value is 19 bits, with sign bit at MSB
-        // If the MSB is 1, the value is negative.
-        if (temp24 & BIT(19))
+        int32_t temperature = (data->thermocouple_temp >> 5) & GENMASK(18, 0);
+        if (temperature & BIT(18))
         {
-            temp24 |= 0xFF000000; // Sign extend to 32 bits
+            temperature |= 0xFFF80000; // Sign extend to 32 bits
         }
-        micro_degrees = (int64_t)temp24 * THERMOCOUPLE_RESOLUTION_UDC;
+
+        int64_t micro_degrees = (int64_t)temperature * THERMOCOUPLE_RESOLUTION_UDC;
         val->val1 = micro_degrees / 1000000;
-        val->val2 = micro_degrees % 1000000;
-        break;
+        val->val2 = llabs(micro_degrees % 1000000);
+    }
+    break;
 
     case SENSOR_CHAN_DIE_TEMP:
-        // Cold-junction temperature (16-bit, signed)
-        temp24 = data->cold_junction_temp;
-        micro_degrees = (int64_t)temp24 * COLD_JUNCTION_RESOLUTION_UDC;
+    {
+        int16_t cj_temp = (int16_t)data->cold_junction_temp;
+        int64_t micro_degrees = (int64_t)cj_temp * COLD_JUNCTION_RESOLUTION_UDC;
         val->val1 = micro_degrees / 1000000;
-        val->val2 = micro_degrees % 1000000;
-        break;
+        val->val2 = llabs(micro_degrees % 1000000);
+    } // Cold-junction temperature (16-bit, signed)
+    break;
 
     default:
         return -ENOTSUP;
@@ -254,8 +252,8 @@ static int max31856_init(const struct device *const dev)
         // Register 00h (Configuration 0):
         MAX31856_CR0_REG | SPI_WRITE_MASK,
         0x00
-        | ((0x0                 << MAX31856_CR0_AUTOCONVERT) & BIT(7))
-        | ((0x1                 << MAX31856_CR0_1SHOT      ) & BIT(6))
+        | ((0x1                 << MAX31856_CR0_AUTOCONVERT) & BIT(7))
+        | ((0x0                 << MAX31856_CR0_1SHOT      ) & BIT(6))
         | ((cfg->oc_fault_mode  << MAX31856_CR0_OCFAULT    ) & GENMASK(5,4))
         | ((0x0                 << MAX31856_CR0_CJ         ) & BIT(3))
         | ((cfg->has_fault_gpio << MAX31856_CR0_FAULT      ) & BIT(2))
