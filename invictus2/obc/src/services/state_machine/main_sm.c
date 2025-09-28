@@ -157,12 +157,37 @@ static void idle_run(void *o)
     switch (cmd)
     {
     case CMD_FILL_EXEC:
-        smf_set_state(SMF_CTX(s), &states[FILL]);
+        LOG_INF("[>] FILL_EXEC");
+
+        switch (s->fill_command)
+        {
+        case CMD_FILL_N2:
+            smf_set_state(SMF_CTX(s), &states[FILL_SST(FILL_N2)]);
+            break;
+        case CMD_FILL_PRE_PRESS:
+            smf_set_state(SMF_CTX(s), &states[FILL_SST(PRE_PRESS)]);
+            break;
+        case CMD_FILL_N2O:
+            smf_set_state(SMF_CTX(s), &states[FILL_SST(FILL_N2O)]);
+            break;
+        case CMD_FILL_POST_PRESS:
+            smf_set_state(SMF_CTX(s), &states[FILL_SST(POST_PRESS)]);
+            break;
+        case CMD_FILL_SAFE_PAUSE:
+            LOG_INF("[>] FILL_SAFE_PAUSE");
+            smf_set_state(SMF_CTX(s), &states[FILL_SST(SAFE_PAUSE)]);
+            break;
+        default:
+            LOG_INF("[?]");
+            smf_set_handled(SMF_CTX(s));
+        }
+
         break;
     case CMD_READY:
         smf_set_state(SMF_CTX(s), &states[READY]);
         break;
     default:
+        LOG_INF("[?]");
         break; // Let root state handle it
         // smf_set_handled(SMF_CTX(s));
     }
@@ -170,7 +195,6 @@ static void idle_run(void *o)
 
 static void idle_exit(void *o)
 {
-
     LOG_INF("[O] IDLE");
     ARG_UNUSED(o);
 }
@@ -181,6 +205,7 @@ static void idle_exit(void *o)
 
 static void fill_entry(void *o)
 {
+    LOG_INF("[E] FILL_EXEC");
     struct sm_object *s = (struct sm_object *)o;
     close_all_valves(s);
     s->state_data.main_state = FILL;
@@ -193,8 +218,10 @@ static void fill_run(void *o)
     fill_command_t cmd = s->fill_command;
     if (!cmd)
     {
+        LOG_ERR("[R] FILL_EXEC");
         return;
     }
+    LOG_INF("[R] FILL_EXEC");
 
     switch (cmd)
     {
@@ -210,7 +237,12 @@ static void fill_run(void *o)
     case CMD_FILL_POST_PRESS:
         smf_set_state(SMF_CTX(s), &states[FILL_SST(POST_PRESS)]);
         break;
+    case CMD_FILL_SAFE_PAUSE:
+        LOG_INF("[>] FILL_SAFE_PAUSE");
+        smf_set_state(SMF_CTX(s), &states[FILL_SST(SAFE_PAUSE)]);
+        break;
     default:
+        LOG_INF("[?]");
         smf_set_handled(SMF_CTX(s));
     }
 }
@@ -393,7 +425,7 @@ const struct smf_state states[] = {
 
     [IDLE]   = SMF_CREATE_STATE(idle_entry, idle_run, idle_exit, &states[ROOT], NULL),
     [ABORT]  = SMF_CREATE_STATE(abort_entry, abort_run, abort_exit,&states[ROOT], NULL),
-    [FILL]   = SMF_CREATE_STATE(fill_entry, fill_run, fill_exit, &states[ROOT], &states[FILL_SST(SAFE_PAUSE)]),
+    [FILL]   = SMF_CREATE_STATE(fill_entry, fill_run, fill_exit, &states[ROOT], NULL),
     [READY]  = SMF_CREATE_STATE(ready_entry, ready_run, ready_exit, &states[ROOT], NULL),
     [ARMED]  = SMF_CREATE_STATE(armed_entry, armed_run, armed_exit, &states[ROOT], NULL),
     [FLIGHT] = SMF_CREATE_STATE(flight_entry, flight_run, flight_exit, &states[ROOT], NULL),
