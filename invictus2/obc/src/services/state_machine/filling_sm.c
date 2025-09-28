@@ -14,6 +14,7 @@ LOG_MODULE_DECLARE(state_machine_service);
 /* ======================================================================== */
 void safe_pause_entry(void *o)
 {
+    LOG_INF("[IN] SAFE_PAUSE");
     // Close all valves for safety.
     struct sm_object *s = (struct sm_object *)o;
     s->state_data.filling_state = SAFE_PAUSE;
@@ -22,11 +23,13 @@ void safe_pause_entry(void *o)
 
 void safe_pause_run(void *o)
 {
+    LOG_INF("[R] SAFE_PAUSE");
     // Wait for CMD_RESUME to transition to idle.
     struct sm_object *s = (struct sm_object *)o;
     command_t cmd = s->command;
     if (!cmd)
     {
+        LOG_ERR("[R] SAFE_PAUSE cmd == NULL");
         return;
     }
 
@@ -43,6 +46,7 @@ void safe_pause_run(void *o)
 
 void safe_pause_exit(void *o)
 {
+    LOG_INF("[OUT] SAFE_PAUSE");
     ARG_UNUSED(o);
 }
 

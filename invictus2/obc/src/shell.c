@@ -8,6 +8,7 @@
 #include <zephyr/shell/shell_string_conv.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/uart.h>
+#include "packets.h"
 
 LOG_MODULE_REGISTER(obc_shell, LOG_LEVEL_DBG);
 
@@ -48,6 +49,9 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
     SHELL_CMD_ARG(press, NULL,
                   "post-press command. Params: <target_tank_deci_bar> <trigger_tank_deci_bar>",
                   packet_fill_post_press_handler, 0, 2),
+    SHELL_CMD_ARG(safe_pause, NULL,
+                  "safe_pause command. Params: <target_tank_dcbar> <trigger_tank_dcbar>",
+                  packet_safe_pause_handler, 0, 2),
 
     SHELL_SUBCMD_SET_END);
 
@@ -143,10 +147,33 @@ static int packet_stop_handler(const struct shell *sh, size_t argc, char **argv)
 
 static int packet_safe_pause_handler(const struct shell *sh, size_t argc, char **argv)
 {
-    ARG_UNUSED(argc);
-    ARG_UNUSED(argv);
+    if (argc < 3)
+    {
+        shell_print(sh, "Usage: packet fill_exec safe_pause <target_tank_deci_bar> "
+                        "<trigger_tank_deci_bar>");
+        return -EINVAL;
+    }
 
-    return pub_cmd(sh, CMD_SAFE_PAUSE);
+    int err = 0;
+    struct fill_safe_pause_params_s payload = {
+        .target_tank_dbar = (uint16_t)shell_strtol(argv[1], 10, &err),
+        .trigger_tank_dbar = (uint16_t)shell_strtol(argv[2], 10, &err),
+    };
+
+    if (err != 0)
+    {
+        shell_print(sh, "Invalid argument");
+        return -EINVAL;
+    }
+
+    generic_packet_t generic_pack = create_cmd_packet(CMD_FILL_EXEC);
+    struct cmd_fill_exec_s *const fill_exec = (struct cmd_fill_exec_s *)&generic_pack;
+    fill_exec->payload.program_id = CMD_FILL_SAFE_PAUSE;
+    memcpy(fill_exec->payload.params, &payload, sizeof(payload));
+
+    int ret = zbus_chan_pub(&chan_packets, (const void *)&generic_pack, K_MSEC(100));
+    LOG_INF("publish %d", ret);
+    return ret;
 }
 
 static int packet_resume_handler(const struct shell *sh, size_t argc, char **argv)

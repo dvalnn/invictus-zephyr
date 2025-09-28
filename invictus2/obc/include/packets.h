@@ -77,6 +77,12 @@ struct fill_N2O_params_s
     int16_t trigger_temp_deci_c;
 };
 
+struct fill_safe_pause_params_s
+{
+    uint16_t target_tank_dbar;
+    uint16_t trigger_tank_dbar;
+};
+
 // Fill exec generic envelope
 struct fill_exec_s
 {
@@ -161,7 +167,6 @@ typedef enum cmd_e
     CMD_FIRE,
     CMD_LAUNCH_OVERRIDE,
     CMD_STOP,
-    CMD_SAFE_PAUSE,
     CMD_RESUME,
     CMD_MANUAL_TOGGLE,
 
@@ -180,6 +185,7 @@ typedef enum cmd_e
 typedef enum fill_cmd_e
 {
     CMD_FILL_NONE = 0,
+    CMD_FILL_SAFE_PAUSE,
     CMD_FILL_N2,
     CMD_FILL_PRE_PRESS,
     CMD_FILL_N2O,

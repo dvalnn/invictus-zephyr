@@ -1,3 +1,4 @@
+#include "packets.h"
 #include "services/state_machine/main_sm.h"
 #include "services/state_machine/filling_sm.h"
 #include "services/state_machine/flight_sm.h"
@@ -56,6 +57,7 @@ void set_valve(struct sm_object *s, valve_t valve, bool open)
 
 inline void close_all_valves(struct sm_object *s)
 {
+    LOG_INF("Closing all valves");
     s->data.actuators.rocket_valves_mask = 0;
     s->data.actuators.fill_station_valves_mask = 0;
     s->data.actuators.quick_dc_mask = 0;
@@ -68,12 +70,18 @@ inline void open_single_valve(struct sm_object *s, valve_t valve)
     set_valve(s, valve, true);
 }
 
+static void log_entry(const char *name)
+{
+    LOG_INF("[E] %s", name);
+}
+
 /* ===================================================================== */
 /* root: Top level state. Used to check for global commands.             */
 /* ===================================================================== */
 
 static void root_entry(void *o)
 {
+    LOG_INF("[E] ROOT");
     struct sm_object *s = (struct sm_object *)o;
     s->state_data.main_state = ROOT;
     s->state_data.filling_state = _FILL_SST_START;
@@ -90,16 +98,26 @@ static void root_run(void *o)
         return;
     }
 
+    LOG_INF("[R] ROOT");
     switch (cmd)
     {
     case CMD_STOP:
+        LOG_INF("[>] STOP");
         smf_set_state(SMF_CTX(s), &states[IDLE]);
         break;
-
     case CMD_ABORT:
+        LOG_INF("[>] ABORT");
         smf_set_state(SMF_CTX(s), &states[ABORT]);
         break;
+    case CMD_FILL_EXEC:
+        if (s->fill_command == CMD_FILL_SAFE_PAUSE)
+        {
+            LOG_INF("[>] CMD_FILL_SAFE_PAUSE");
+            smf_set_state(SMF_CTX(s), &states[SAFE_PAUSE]);
+        }
+        break;
     default:
+        LOG_INF("[?] %d", cmd);
         // Unknown global command
         ;
     }
@@ -109,6 +127,7 @@ static void root_run(void *o)
 
 static void root_exit(void *o)
 {
+    LOG_INF("[O] ROOT");
     ARG_UNUSED(o);
 }
 
@@ -118,6 +137,7 @@ static void root_exit(void *o)
 
 static void idle_entry(void *o)
 {
+    LOG_INF("[E] IDLE");
     struct sm_object *s = (struct sm_object *)o;
     close_all_valves(s);
     s->state_data.main_state = IDLE;
@@ -132,6 +152,7 @@ static void idle_run(void *o)
     {
         return;
     }
+    LOG_INF("[R] IDLE");
 
     switch (cmd)
     {
@@ -142,12 +163,15 @@ static void idle_run(void *o)
         smf_set_state(SMF_CTX(s), &states[READY]);
         break;
     default:
-        smf_set_handled(SMF_CTX(s));
+        break; // Let root state handle it
+        // smf_set_handled(SMF_CTX(s));
     }
 }
 
 static void idle_exit(void *o)
 {
+
+    LOG_INF("[O] IDLE");
     ARG_UNUSED(o);
 }
 

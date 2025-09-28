@@ -178,6 +178,22 @@ static void handle_fill_exec_command(struct cmd_fill_exec_s *fill_exec)
         break;
     }
 
+    case CMD_FILL_SAFE_PAUSE:
+    {
+        struct fill_safe_pause_params_s *params =
+            (struct fill_safe_pause_params_s *)fill_exec->payload.params;
+
+        CHECK_PARAMS(params, CMD_FILL_SAFE_PAUSE);
+
+        uint16_t target_post = params->target_tank_dbar;
+        uint16_t trigger_post = params->trigger_tank_dbar;
+
+        ASSIGN_NON_ZERO(fill_cfg->post_press.target_n2o_tank_pressure, target_post);
+        ASSIGN_NON_ZERO(fill_cfg->post_press.trigger_n2o_tank_pressure, trigger_post);
+
+        break;
+    }
+
     default:
         LOG_ERR("Received fill exec with unknown fill command: %d", fill_cmd);
         return;
@@ -202,13 +218,13 @@ static void command_work_handler(struct k_work *work)
     case CMD_FIRE:
     case CMD_LAUNCH_OVERRIDE:
     case CMD_STOP:
-    case CMD_SAFE_PAUSE:
     case CMD_RESUME:
     case CMD_MANUAL_TOGGLE:
         sm_obj.command = cmd;
         break;
 
     case CMD_FILL_EXEC:
+        LOG_INF("[CMD] FILL_EXEC");
         handle_fill_exec_command((struct cmd_fill_exec_s *)&generic_packet);
         break;
 

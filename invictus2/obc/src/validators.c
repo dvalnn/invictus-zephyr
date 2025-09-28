@@ -6,6 +6,7 @@ bool validate_fill_exec_cmd(const struct cmd_fill_exec_s *const cmd)
     // TODO: Validate the params for sane values
     switch ((fill_command_t)cmd->payload.program_id)
     {
+    case CMD_FILL_SAFE_PAUSE:
     case CMD_FILL_N2:
     {
         return true;
@@ -87,7 +88,6 @@ bool packet_validator(const void *msg, size_t msg_size)
     case CMD_LAUNCH_OVERRIDE:
     case CMD_STOP:
     case CMD_RESUME:
-    case CMD_SAFE_PAUSE:
     case CMD_MANUAL_TOGGLE:
         return true; // No payload data, just reserved bytes
 
