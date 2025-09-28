@@ -14,6 +14,8 @@
 #include <zephyr/dt-bindings/adc/adc.h>
 #include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2040-pinctrl.h>
 
+#include <invictus2/dt-bindings/sensor/maxim/max31856.h>
+
 #include "common/inv2_pinctrl_common.dtsi"
 #include "common/inv2_common.dtsi"
 
@@ -111,18 +113,33 @@
         reg = <0x0>;
         compatible = "maxim,max31856";
         drdy-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>; // optional, not connected
+        spi-max-frequency = <DT_FREQ_M(1)>;
+
+        thermocouple-type = <MAX31856_TCTYPE_K>;
+        averaging-mode = <MAX31856_AVG_MODE_4>;
+        filter-50hz;
     };
 
     thermo2: thermo@1{
         reg = <0x1>;
         compatible = "maxim,max31856";
         drdy-gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
+        spi-max-frequency = <DT_FREQ_M(1)>;
+
+        thermocouple-type = <MAX31856_TCTYPE_K>;
+        averaging-mode = <MAX31856_AVG_MODE_4>;
+        filter-50hz;
     };
 
     thermo3: thermo@2{
         reg = <0x2>;
         compatible = "maxim,max31856";
         drdy-gpios = <&gpio0 17 GPIO_ACTIVE_LOW>;
+        spi-max-frequency = <DT_FREQ_M(1)>;
+
+        thermocouple-type = <MAX31856_TCTYPE_K>;
+        averaging-mode = <MAX31856_AVG_MODE_4>;
+        filter-50hz;
     };
 };
 

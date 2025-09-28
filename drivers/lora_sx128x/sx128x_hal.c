@@ -1,5 +1,5 @@
-#include <invictus2/drivers/sx128x_hal.h>
-#include <invictus2/drivers/sx128x_context.h>
+#include <invictus2/drivers/lora_sx128x/sx128x_hal.h>
+#include <invictus2/drivers/lora_sx128x/sx128x_context.h>
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/spi.h>

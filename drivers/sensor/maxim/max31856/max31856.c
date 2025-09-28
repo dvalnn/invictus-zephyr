@@ -3,7 +3,11 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#include <stdint.h>
 #define DT_DRV_COMPAT maxim_max31856
+
+#include <invictus2/drivers/sensor/maxim/max31856/max31856.h>
+#include <invictus2/dt-bindings/sensor/maxim/max31856.h>
 
 #include <zephyr/init.h>
 #include <zephyr/types.h>
@@ -22,39 +26,14 @@
 
 LOG_MODULE_REGISTER(MAX31856, CONFIG_SENSOR_LOG_LEVEL);
 
-// MAX31856 Register Addresses
-#define MAX31856_REG_CR0   0x00
-#define MAX31856_REG_CR1   0x01
-#define MAX31856_REG_LTCB  0x0C // Linearized Thermocouple MSB
-#define MAX31856_REG_CJTH  0x0A // Cold-Junction MSB
-#define MAX31856_REG_FAULT 0x0F
+// Resolution constants (in microdegrees Celsius)
+#define THERMOCOUPLE_RESOLUTION_UDC  7812
+#define COLD_JUNCTION_RESOLUTION_UDC 15625
 
-// Configuration 0 Register Masks
-#define MAX31856_CR0_OCONV_MASK 0x80 // One-shot conversion mask
-#define MAX31856_CR0_50HZ_MASK  0x01 // 50Hz filter mask
-
-// Configuration 1 Register Masks
-#define MAX31856_CR1_TC_TYPE_MASK 0x07 // Thermocouple type selection mask
-
-// MAX31856 Thermocouple Resolution in micro-degrees Celsius (0.0078125 * 1000000)
-#define THERMOCOUPLE_RESOLUTION  7812
-// MAX31856 Cold-Junction Resolution in micro-degrees Celsius (0.015625 * 1000000)
-#define COLD_JUNCTION_RESOLUTION 15625
-
-// Structure for device configuration
-struct max31856_config
-{
-    struct spi_dt_spec spi;
-    uint8_t thermocouple_type;
-};
+#define SPI_WRITE_MASK BIT(7)
+#define SPI_READ_MASK  GENMASK(6, 0)
 
 // Structure for device data
-struct max31856_data
-{
-    int32_t thermocouple_temp;
-    int32_t cold_junction_temp;
-};
-
 static int max31856_sample_fetch(const struct device *dev, enum sensor_channel chan)
 {
     struct max31856_data *data = dev->data;
@@ -63,8 +42,8 @@ static int max31856_sample_fetch(const struct device *dev, enum sensor_channel c
 
     __ASSERT_NO_MSG(chan == SENSOR_CHAN_ALL);
 
-    // Command to trigger a one-shot conversion
-    uint8_t tx_cr0[] = {MAX31856_REG_CR0 | 0x80, MAX31856_CR0_OCONV_MASK};
+    /* // Command to trigger a one-shot conversion */
+    uint8_t tx_cr0[] = {MAX31856_CR0_REG | SPI_WRITE_MASK, 0x1 << MAX31856_CR0_1SHOT};
     struct spi_buf tx_buf = {.buf = tx_cr0, .len = 2};
     struct spi_buf_set tx = {.buffers = &tx_buf, .count = 1};
     ret = spi_write_dt(&config->spi, &tx);
@@ -74,27 +53,29 @@ static int max31856_sample_fetch(const struct device *dev, enum sensor_channel c
         return ret;
     }
 
-    // Wait for conversion to complete (DRDY pin could also be used here)
+    /* // Wait for conversion to complete (DRDY pin could also be used here) */
     k_sleep(K_MSEC(220));
 
     // Read Linearized Thermocouple Temperature (3 bytes)
-    uint8_t tx_ltc[] = {MAX31856_REG_LTCB & 0x7F}; // Read command for register 0x0C
+    uint8_t tx_ltc[] = {MAX31856_LTCBH_REG & SPI_READ_MASK}; // Read command for register 0x0C
     uint8_t rx_ltc[3];
     struct spi_buf tx_ltc_buf = {.buf = tx_ltc, .len = 1};
     struct spi_buf rx_ltc_buf = {.buf = rx_ltc, .len = 3};
     const struct spi_buf_set tx_ltc_set = {.buffers = &tx_ltc_buf, .count = 1};
     const struct spi_buf_set rx_ltc_set = {.buffers = &rx_ltc_buf, .count = 1};
-
     ret = spi_transceive_dt(&config->spi, &tx_ltc_set, &rx_ltc_set);
     if (ret < 0)
     {
         LOG_ERR("Failed to read thermocouple temperature (%d)", ret);
         return ret;
     }
+
+    LOG_HEXDUMP_DBG(rx_ltc, sizeof(rx_ltc), "Raw LTC bytes");
     data->thermocouple_temp = sys_get_be24(rx_ltc);
+    LOG_DBG("Raw thermocouple temp: 0x%06X", data->thermocouple_temp);
 
     // Read Cold-Junction Temperature (2 bytes)
-    uint8_t tx_cj[] = {MAX31856_REG_CJTH & 0x7F}; // Read command for register 0x0A
+    uint8_t tx_cj[] = {MAX31856_CJTH_REG & SPI_READ_MASK}; // Read command for register 0x0A
     uint8_t rx_cj[2];
     struct spi_buf tx_cj_buf = {.buf = tx_cj, .len = 1};
     struct spi_buf rx_cj_buf = {.buf = rx_cj, .len = 2};
@@ -110,7 +91,7 @@ static int max31856_sample_fetch(const struct device *dev, enum sensor_channel c
     data->cold_junction_temp = sys_get_be16(rx_cj);
 
     // Read Fault Status Register
-    uint8_t tx_fault[] = {MAX31856_REG_FAULT & 0x7F}; // Read command for register 0x0F
+    uint8_t tx_fault[] = {MAX31856_SR_REG & SPI_READ_MASK}; // Read command for register 0x0F
     uint8_t rx_fault[1];
     struct spi_buf tx_fault_buf = {.buf = tx_fault, .len = 1};
     struct spi_buf rx_fault_buf = {.buf = rx_fault, .len = 1};
@@ -125,9 +106,7 @@ static int max31856_sample_fetch(const struct device *dev, enum sensor_channel c
     }
     if (rx_fault[0] != 0)
     {
-        LOG_ERR("MAX31856 fault detected: %02x", rx_fault[0]);
-        // Return a specific error code based on the fault flags
-        return -EIO;
+        LOG_WRN("MAX31856 fault detected: %02x", rx_fault[0]);
     }
 
     return 0;
@@ -137,29 +116,29 @@ static int max31856_channel_get(const struct device *dev, enum sensor_channel ch
                                 struct sensor_value *val)
 {
     struct max31856_data *data = dev->data;
-    int32_t temp;
+    int32_t temp24;
     int64_t micro_degrees;
 
     switch (chan)
     {
     case SENSOR_CHAN_AMBIENT_TEMP:
         // Thermocouple temperature (19-bit, signed)
-        temp = data->thermocouple_temp;
-        // The value is 19 bits, with sign bit at MSB (bit 18).
+        temp24 = data->thermocouple_temp;
+        // The value is 19 bits, with sign bit at MSB
         // If the MSB is 1, the value is negative.
-        if (temp & BIT(18))
+        if (temp24 & BIT(19))
         {
-            temp |= 0xFFF80000; // Sign extend to 32 bits
+            temp24 |= 0xFF000000; // Sign extend to 32 bits
         }
-        micro_degrees = (int64_t)temp * THERMOCOUPLE_RESOLUTION;
+        micro_degrees = (int64_t)temp24 * THERMOCOUPLE_RESOLUTION_UDC;
         val->val1 = micro_degrees / 1000000;
         val->val2 = micro_degrees % 1000000;
         break;
 
     case SENSOR_CHAN_DIE_TEMP:
         // Cold-junction temperature (16-bit, signed)
-        temp = data->cold_junction_temp;
-        micro_degrees = (int64_t)temp * COLD_JUNCTION_RESOLUTION;
+        temp24 = data->cold_junction_temp;
+        micro_degrees = (int64_t)temp24 * COLD_JUNCTION_RESOLUTION_UDC;
         val->val1 = micro_degrees / 1000000;
         val->val2 = micro_degrees % 1000000;
         break;
@@ -176,64 +155,164 @@ static const struct sensor_driver_api max31856_api = {
     .channel_get = max31856_channel_get,
 };
 
-static int max31856_init(const struct device *dev)
+static void check_config(const struct device *dev)
 {
-    const struct max31856_config *config = dev->config;
+    const struct max31856_config *const cfg = dev->config;
+    uint8_t tx_buf[] = {MAX31856_CR0_REG & SPI_READ_MASK, 0x00, 0x00, 0x00};
+    uint8_t rx_buf[] = {0x00, 0x00, 0x00, 0x00};
+
+    struct spi_buf tx_bufs[] = {
+        {.buf = tx_buf, .len = sizeof(tx_buf)},
+    };
+
+    struct spi_buf rx_bufs[] = {
+        {.buf = rx_buf, .len = sizeof(rx_buf)},
+    };
+
+    const struct spi_buf_set tx_buf_set = {.buffers = tx_bufs, .count = 1};
+    const struct spi_buf_set rx_buf_set = {.buffers = rx_bufs, .count = 1};
+
+    int ret = spi_transceive_dt(&cfg->spi, &tx_buf_set, &rx_buf_set);
+    if (ret < 0)
+    {
+        LOG_ERR("Failed to read back config (%d)", ret);
+        return;
+    }
+
+    LOG_HEXDUMP_DBG(rx_buf, sizeof(rx_buf), "Config state");
+}
+
+static int write_init_config(const struct device *dev, uint8_t *config, size_t len)
+{
+    const struct max31856_config *const cfg = dev->config;
     int ret;
 
-    if (!spi_is_ready_dt(&config->spi))
+    struct spi_buf tx_bufs[] = {
+        {.buf = config, .len = len},
+    };
+
+    const struct spi_buf_set tx_set = {.buffers = tx_bufs, .count = 1};
+    ret = spi_write_dt(&cfg->spi, &tx_set);
+    if (ret < 0)
+    {
+        LOG_ERR("Failed to write init config (%d)", ret);
+        return ret;
+    }
+
+    LOG_HEXDUMP_DBG(tx_bufs[0].buf, tx_bufs[0].len, "Written");
+    return 0;
+}
+
+static int max31856_init(const struct device *const dev)
+{
+    const struct max31856_config *const cfg = dev->config;
+    int ret;
+
+    if (!spi_is_ready_dt(&cfg->spi))
     {
         LOG_ERR("SPI bus is not ready");
         return -ENODEV;
     }
 
-    // Configure the MAX31856 for continuous conversion and thermocouple type
-    // Write to Configuration 0 and Configuration 1 registers
-    uint8_t config_tx[] = {// Register 00h (Configuration 0):
-                           // 0x00 | (0 << 7) -> Continuous conversion mode (CMODE=0)
-                           // | (0 << 6) -> No fault clear (FCLR=0)
-                           // | (0 << 5) -> Open circuit detection disabled (OCDET=0)
-                           // | (0 << 4) -> Internal Cold-Junction (CJ=0)
-                           // | (0 << 3) -> Average mode disabled (AVG=0)
-                           // | (0 << 2) -> Fault interrupt enabled (FAULT_INT=0)
-                           // | (0 << 1) -> No bias voltage (BIAS=0)
-                           // | (0 << 0) -> 60Hz filtering (50HZ=0)
-                           MAX31856_REG_CR0, 0x00,
-                           // Register 01h (Configuration 1):
-                           // 0x01 | (0 << 7) -> No fault checking (FAULT_CHECK=0)
-                           // | (0 << 6-4) -> No averaging (AVG=0)
-                           // | (0 << 3) -> No VMODE
-                           // | (thermocouple_type & 0x07) -> Set TC type
-                           MAX31856_REG_CR1, config->thermocouple_type & 0x07};
-    struct spi_buf tx_buf = {.buf = config_tx, .len = sizeof(config_tx)};
-    const struct spi_buf_set tx_set = {.buffers = &tx_buf, .count = 1};
-
-    ret = spi_write_dt(&config->spi, &tx_set);
-    if (ret < 0)
+    if (cfg->has_fault_gpio)
     {
-        LOG_ERR("Failed to configure MAX31856 (%d)", ret);
-        return ret;
+        if (!gpio_is_ready_dt(&cfg->fault_gpio))
+        {
+            LOG_ERR("Fault GPIO not ready");
+            return -ENODEV;
+        }
+
+        ret = gpio_pin_configure_dt(&cfg->fault_gpio, GPIO_INPUT);
+        if (ret < 0)
+        {
+            LOG_ERR("Failed to configure Fault GPIO (%d)", ret);
+            return ret;
+        }
     }
 
+    if (cfg->has_drdy_gpio)
+    {
+        if (!gpio_is_ready_dt(&cfg->drdy_gpio))
+        {
+            LOG_ERR("DRDY GPIO not ready");
+            return -ENODEV;
+        }
+
+        ret = gpio_pin_configure_dt(&cfg->drdy_gpio, GPIO_INPUT);
+        if (ret < 0)
+        {
+            LOG_ERR("Failed to configure DRDY GPIO (%d)", ret);
+            return ret;
+        }
+    }
+
+    // Configure the MAX31856 for continuous conversion and thermocouple type
+    // Write to Configuration 0 and Configuration 1 registers
+
+    // clang-format off
+    uint8_t config_tx[] = {
+        // Register 00h (Configuration 0):
+        MAX31856_CR0_REG | SPI_WRITE_MASK,
+        0x00
+        | ((0x0                 << MAX31856_CR0_AUTOCONVERT) & BIT(7))
+        | ((0x1                 << MAX31856_CR0_1SHOT      ) & BIT(6))
+        | ((cfg->oc_fault_mode  << MAX31856_CR0_OCFAULT    ) & GENMASK(5,4))
+        | ((0x0                 << MAX31856_CR0_CJ         ) & BIT(3))
+        | ((cfg->has_fault_gpio << MAX31856_CR0_FAULT      ) & BIT(2))
+        | ((cfg->has_fault_gpio << MAX31856_CR0_FAULTCLR   ) & BIT(1))
+        | ((cfg->filter_50hz    << MAX31856_CR0_50HZ       ) & BIT(0)),
+
+        /* Register 01h (Configuration 1): */
+        /* MAX31856_CR1_REG | SPI_WRITE_MASK, */
+        0x00
+        | ((cfg->avg_mode          << MAX31856_CR1_AVG_SEL) & GENMASK(6,4))
+        | ((cfg->thermocouple_type << MAX31856_CR1_TCTYPE ) & GENMASK(3,0)),
+
+        /* Register 02h (Fault Mask): */
+        /* MAX31856_MASK_REG | SPI_WRITE_MASK, */
+        0x00, // Mask all faults (disable fault detection)
+    };
+
+    LOG_INF("Initializing MAX31856 %s", dev->name);
+    ret = write_init_config(dev, config_tx, sizeof(config_tx));
+    if (ret < 0)
+    {
+        return ret;
+    }
+    check_config(dev);
+
+    uint8_t config_cjto[] = {
+        // Register 09h (Cold-Junction Temperature Offset):
+        MAX31856_CJTO_REG | SPI_WRITE_MASK,
+        cfg->cj_offset_raw,
+    };
+
+    ret = spi_write_dt(&cfg->spi, &(struct spi_buf_set){
+        .buffers = (struct spi_buf[]){
+            {.buf = config_cjto, .len = sizeof(config_cjto)},
+        },
+        .count = 1,
+    });
+
+    LOG_INF("MAX31856 %s INIT END", dev->name);
     return 0;
 }
+
+#define SPI_FLAGS (SPI_WORD_SET(8U) | SPI_TRANSFER_MSB | SPI_MODE_CPHA)
 
 #define MAX31856_INIT(n)                                                                      \
     static struct max31856_data max31856_data_##n;                                            \
     static const struct max31856_config max31856_config_##n = {                               \
-        .spi = SPI_DT_SPEC_INST_GET(n, SPI_WORD_SET(8U) | SPI_TRANSFER_MSB, 0),               \
+        .spi = SPI_DT_SPEC_INST_GET(n, SPI_FLAGS, 0),                                         \
+        .drdy_gpio = GPIO_DT_SPEC_INST_GET_OR(n, drdy_gpios, {0}),                            \
+        .has_drdy_gpio = DT_INST_NODE_HAS_PROP(n, drdy_gpios),                                \
+        .fault_gpio = GPIO_DT_SPEC_INST_GET_OR(n, fault_gpios, {0}),                          \
+        .has_fault_gpio = DT_INST_NODE_HAS_PROP(n, fault_gpios),                              \
         .thermocouple_type = DT_INST_PROP_OR(n, thermocouple_type, 4),                        \
         .filter_50hz = DT_INST_PROP_OR(n, filter_50hz, false),                                \
-        .avg_mode = (DT_INST_PROP_OR(n, averaging_mode, 1) == 1)   ? MAX31856_AVG_1           \
-                    : (DT_INST_PROP_OR(n, averaging_mode, 1) == 2) ? MAX31856_AVG_2           \
-                    : (DT_INST_PROP_OR(n, averaging_mode, 1) == 4) ? MAX31856_AVG_4           \
-                    : (DT_INST_PROP_OR(n, averaging_mode, 1) == 8) ? MAX31856_AVG_8           \
-                                                                   : MAX31856_AVG_16,         \
+        .avg_mode = DT_INST_PROP_OR(n, averaging_mode, MAX31856_AVG_MODE_1),                  \
         .oc_fault_mode =                                                                      \
-            (DT_INST_PROP_OR(n, open_circuit_mode, 0) == 1)   ? MAX31856_OCFAULT_10MS         \
-            : (DT_INST_PROP_OR(n, open_circuit_mode, 0) == 2) ? MAX31856_OCFAULT_32MS         \
-            : (DT_INST_PROP_OR(n, open_circuit_mode, 0) == 3) ? MAX31856_OCFAULT_100MS        \
-                                                              : MAX31856_OCFAULT_DISABLED,    \
+            DT_INST_PROP_OR(n, open_circuit_mode, MAX31856_OCFAULT_DET_DISABLED),             \
         .cj_offset_raw = DT_INST_PROP_OR(n, cj_offset, 0),                                    \
     };                                                                                        \
     SENSOR_DEVICE_DT_INST_DEFINE(n, &max31856_init, NULL, &max31856_data_##n,                 \

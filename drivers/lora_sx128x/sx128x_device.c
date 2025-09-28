@@ -14,9 +14,9 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(sx128x_device, CONFIG_LORA_SX128X_LOG_LEVEL);
 
-#include <invictus2/drivers/sx128x.h>
-#include <invictus2/drivers/sx128x_context.h>
-#include <invictus2/drivers/sx128x_hal.h>
+#include <invictus2/drivers/lora_sx128x/sx128x.h>
+#include <invictus2/drivers/lora_sx128x/sx128x_context.h>
+#include <invictus2/drivers/lora_sx128x/sx128x_hal.h>
 
 #define SX128X_SPI_OPERATION (SPI_WORD_SET(8) | SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB)
 

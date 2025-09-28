@@ -1,26 +1,13 @@
-description: MAX31856 Precision Thermocouple to Digital Converter with Linearization
+---
+
+description: |
+  MAX31856 Precision Thermocouple to Digital Converter with Linearization
 
 compatible: "maxim,max31856"
 
 include: spi-device.yaml
 
 properties:
-  thermocouple-type:
-    type: int
-    required: true
-    default: 4
-    enum:
-      - 1  # B Type
-      - 2  # E Type
-      - 3  # J Type
-      - 4  # K Type
-      - 5  # N Type
-      - 6  # R Type
-      - 7  # S Type
-      - 8  # T Type
-    description: |
-      Select the type of Thermocouple. Order: [B E J K N R S T]
-
   drdy-gpios:
     type: phandle-array
     required: false
@@ -36,6 +23,24 @@ properties:
       Represents cable, thermocouple or temperature fault.
       Active low.
 
+  thermocouple-type:
+    type: int
+    required: true
+    enum:
+      - 0   # B Type
+      - 1   # E Type
+      - 2   # J Type
+      - 3   # K Type
+      - 4   # N Type
+      - 5   # R Type
+      - 6   # S Type
+      - 7   # T Type
+      - 8   # VMODE G8
+      - 12  # VMODE G32
+    description: |
+      Select the type of Thermocouple. Order: [B E J K N R S T G8 G32]
+      (See include/invictus2/dt-bindings/sensor/maxim/max31856.h)
+
   filter-50hz:
     type: boolean
     required: false
@@ -45,16 +50,17 @@ properties:
   averaging-mode:
     type: int
     required: false
-    default: 1
+    default: 0
     enum:
-      - 1  # 1 sample
-      - 2  # 2 samples
-      - 4  # 4 samples
-      - 8  # 8 samples
-      - 16 # 16 samples
+      - 0  # 1 sample
+      - 1  # 2 samples
+      - 2  # 4 samples
+      - 3  # 8 samples
+      - 4  # 16 samples
     description: |
       Select number of samples to average for noise reduction.
       A higher value increases conversion time but reduces noise.
+      (See include/invictus2/dt-bindings/sensor/maxim/max31856.h)
 
   open-circuit-mode:
     type: int
@@ -62,12 +68,13 @@ properties:
     default: 0
     enum:
       - 0  # disabled
-      - 1  # 10 ms
-      - 2  # 32 ms
-      - 3  # 100 ms
+      - 1  # Rs < 5k
+      - 2  # 5k < Rs < 40k, t < 2ms
+      - 3  # 5k < Rs < 40k, t > 2ms
     description: |
       Select open-circuit fault detection mode.
-      0 = Disabled, 1 = 10 ms, 2 = 32 ms, 3 = 100 ms.
+      Runs once every 16 samples if active. Depends on RS and time constant.
+      (See include/invictus2/dt-bindings/sensor/maxim/max31856.h)
 
   cj-offset:
     type: int
